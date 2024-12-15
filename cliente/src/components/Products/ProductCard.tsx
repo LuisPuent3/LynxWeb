@@ -1,6 +1,6 @@
 // src/components/ProductCard.tsx
 import React from "react";
-import { Producto } from "../../types/types.js";
+import { Producto } from "../../types/types.tsx";
 
 interface ProductCardProps {
   producto: Producto;

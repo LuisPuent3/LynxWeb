@@ -1,19 +1,24 @@
 const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
 const productRoutes = require('./routes/productRoutes');
-const categoryRoutes = require('./routes/categoryRoutes');
-const userRoutes = require('./routes/userRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 
+dotenv.config();
 const app = express();
-const port = 5000;
+
+app.use(cors({
+  origin: 'http://localhost:5173', // URL de tu frontend
+  credentials: true
+}));
 
 app.use(express.json());
 
-app.use('/api/products', productRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/orders', orderRoutes);
+// Rutas
+app.use('/api/productos', productRoutes);
+app.use('/api/pedidos', orderRoutes);
 
-app.listen(port, () => {
- console.log(`Server running on port ${port}`);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
