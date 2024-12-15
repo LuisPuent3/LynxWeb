@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'http://localhost:5000/api',
 });
 
 api.interceptors.request.use((config) => {
@@ -19,7 +19,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Token expirado o inválido
       localStorage.removeItem('token');
       window.location.href = '/login';
     }

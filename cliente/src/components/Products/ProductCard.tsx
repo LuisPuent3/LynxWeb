@@ -1,18 +1,10 @@
 // src/components/ProductCard.tsx
 import React from "react";
-
-// Definir la interfaz para el producto
-interface Producto {
-  id_producto: number;
-  nombre: string;
-  precio: number;
-  cantidad: number;
-  imagen: string;
-}
+import { Producto } from "../../types/types.js";
 
 interface ProductCardProps {
-  producto: Producto; // Tipo del objeto producto
-  addToCart: (producto: Producto) => void; // Función que recibe un producto
+  producto: Producto;
+  addToCart: (producto: Producto) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ producto, addToCart }) => {
