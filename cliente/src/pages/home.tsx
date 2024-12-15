@@ -44,7 +44,7 @@ const Home = () => {
             </div>
 
             {/* Barra de búsqueda */}
-            <div className="flex-1 flex items-center justify-center px-2 lg:ml-6 lg:justify-end">
+            <div className="flex-1 flex items-center justify-center px-5 lg:ml-6 lg:justify-end">
               <div className="max-w-lg w-full lg:max-w-xs">
                 <label htmlFor="search" className="sr-only">Buscar</label>
                 <div className="relative">
@@ -96,7 +96,7 @@ const Home = () => {
       <div className="pt-16 pb-80 sm:pt-24 sm:pb-40 lg:pt-40 lg:pb-48">
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 sm:static">
           <div className="sm:max-w-lg">
-            <h1 className="text-4xl font font-bold tracking-tight text-gray-900 sm:text-6xl">
+            <h1 className="text-4xl font font-bold tracking-tight text-red-900 sm:text-6xl">
               Bienvenido a LYNX
             </h1>
             <p className="mt-4 text-xl text-gray-500">
