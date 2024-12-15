@@ -1,35 +1,56 @@
-const db = require("../db");
+const db = require('../config/db');
 
-// Crear nueva categoría
-exports.createCategory = async (req, res) => {
-  const { nombre, descripcion } = req.body;
-
-  try {
-    const existingCategory = await db.query(
-      "SELECT * FROM Categorias WHERE nombre = ?",
-      [nombre]
-    );
-    if (existingCategory.length) {
-      return res.status(400).json({ message: "La categoría ya existe." });
-    }
-
-    await db.query(
-      "INSERT INTO Categorias (nombre, descripcion) VALUES (?, ?)",
-      [nombre, descripcion]
-    );
-
-    res.status(201).json({ message: "Categoría creada con éxito." });
-  } catch (error) {
-    res.status(500).json({ message: "Error creando categoría.", error });
-  }
+exports.createCategory = (req, res) => {
+    const { nombre, descripcion } = req.body;
+    const query = 'INSERT INTO Categorias (nombre, descripcion) VALUES (?, ?)';
+    db.query(query, [nombre, descripcion], (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.status(201).json({ id: result.insertId, nombre, descripcion });
+    });
 };
 
-// Obtener todas las categorías
-exports.getAllCategories = async (req, res) => {
-  try {
-    const categories = await db.query("SELECT * FROM Categorias");
-    res.status(200).json(categories);
-  } catch (error) {
-    res.status(500).json({ message: "Error obteniendo categorías.", error });
-  }
+exports.getCategories = (req, res) => {
+    const query = 'SELECT * FROM Categorias';
+    db.query(query, (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(results);
+    });
+};
+
+exports.getCategoryById = (req, res) => {
+    const query = 'SELECT * FROM Categorias WHERE id_categoria = ?';
+    db.query(query, [req.params.id], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'Categoría no encontrada' });
+        }
+        res.json(results[0]);
+    });
+};
+
+exports.updateCategory = (req, res) => {
+    const { nombre, descripcion } = req.body;
+    const query = 'UPDATE Categorias SET nombre = ?, descripcion = ? WHERE id_categoria = ?';
+    db.query(query, [nombre, descripcion, req.params.id], (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: 'Categoría actualizada' });
+    });
+};
+
+exports.deleteCategory = (req, res) => {
+    const query = 'DELETE FROM Categorias WHERE id_categoria = ?';
+    db.query(query, [req.params.id], (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: 'Categoría eliminada' });
+    });
 };

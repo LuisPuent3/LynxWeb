@@ -1,20 +1,19 @@
 const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
 const productRoutes = require('./routes/productRoutes');
-const pedidoRoutes = require('./routes/pedidoRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const userRoutes = require('./routes/userRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
-dotenv.config();
 const app = express();
+const port = 5000;
 
-app.use(cors());
 app.use(express.json());
 
-// Rutas
-app.use('/api/productos', productRoutes);
-app.use('/api/pedidos', pedidoRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/orders', orderRoutes);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
+app.listen(port, () => {
+ console.log(`Server running on port ${port}`);
 });

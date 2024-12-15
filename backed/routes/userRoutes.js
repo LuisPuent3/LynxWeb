@@ -1,11 +1,10 @@
 const express = require('express');
-const router = express.Router();
 const userController = require('../controllers/userController');
+const router = express.Router();
 
-// Obtener todos los usuarios (solo para administradores)
-router.get('/', userController.getAllUsers);
-
-// Obtener un usuario específico
+router.post('/register', userController.register);
+router.post('/login', userController.login);
 router.get('/:id', userController.getUserById);
+router.put('/:id', userController.updateUser);
 
 module.exports = router;

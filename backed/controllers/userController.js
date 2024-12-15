@@ -1,100 +1,93 @@
-const db = require('../db');
+const db = require('../config/db');
+const bcrypt = require('bcryptjs');
 
-// Registrar un usuario
-const registerUser = async (req, res) => {
-    const { id_nombre, correo, telefono, contraseña, id_rol } = req.body;
-    try {
-        const [result] = await db.query(
-            `INSERT INTO Usuarios (id_nombre, correo, telefono, contraseña, id_rol) 
-            VALUES (?, ?, ?, AES_ENCRYPT(?, 'clave_secreta'), ?)`,
-            [id_nombre, correo, telefono, contraseña, id_rol]
-        );
-        res.status(201).json({ message: 'Usuario registrado con éxito', id_usuario: result.insertId });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
-// Iniciar sesión
-const loginUser = async (req, res) => {
-    const { correo, contraseña } = req.body;
-    try {
-        const [rows] = await db.query(
-            `SELECT id_usuario, id_nombre, correo, id_rol, AES_DECRYPT(contraseña, 'clave_secreta') AS contraseña 
-            FROM Usuarios WHERE correo = ?`,
-            [correo]
-        );
-        if (rows.length === 0 || rows[0].contraseña !== contraseña) {
-            return res.status(401).json({ message: 'Credenciales incorrectas' });
+exports.register = async (req, res) => {
+    const { nombre, apellidoP, apellidoM, correo, telefono, contraseña } = req.body;
+    
+    // Primero insertar en la tabla Nombres
+    const nombreQuery = 'INSERT INTO Nombres (nombre, apellidoP, apellidoM) VALUES (?, ?, ?)';
+    db.query(nombreQuery, [nombre, apellidoP, apellidoM], (err, nombreResult) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
         }
-        res.status(200).json({ message: 'Inicio de sesión exitoso', usuario: rows[0] });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+
+        // Luego insertar en la tabla Usuarios
+        const hashedPassword = bcrypt.hashSync(contraseña, 10);
+        const usuarioQuery = 'INSERT INTO Usuarios (id_nombre, correo, telefono, contraseña, id_rol) VALUES (?, ?, ?, ?, 1)';
+        db.query(usuarioQuery, [nombreResult.insertId, correo, telefono, hashedPassword], (err, usuarioResult) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            res.status(201).json({ message: 'Usuario registrado exitosamente' });
+        });
+    });
 };
 
-// Obtener detalles del usuario
-const getUserDetails = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const [rows] = await db.query(
-            `SELECT id_usuario, correo, telefono, id_rol, fecha_registro FROM Usuarios WHERE id_usuario = ?`,
-            [id]
-        );
-        if (rows.length === 0) {
+exports.login = (req, res) => {
+    const { correo, contraseña } = req.body;
+    const query = 'SELECT * FROM Usuarios WHERE correo = ?';
+    db.query(query, [correo], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (results.length === 0) {
+            return res.status(401).json({ message: 'Credenciales inválidas' });
+        }
+        const user = results[0];
+        const validPassword = bcrypt.compareSync(contraseña, user.contraseña);
+        if (!validPassword) {
+            return res.status(401).json({ message: 'Credenciales inválidas' });
+        }
+        res.json({ message: 'Login exitoso', userId: user.id_usuario });
+    });
+};
+
+exports.getUserById = (req, res) => {
+    const query = `
+        SELECT u.*, n.nombre, n.apellidoP, n.apellidoM 
+        FROM Usuarios u 
+        JOIN Nombres n ON u.id_nombre = n.id_nombre 
+        WHERE u.id_usuario = ?`;
+    db.query(query, [req.params.id], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (results.length === 0) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
-        res.status(200).json(rows[0]);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+        res.json(results[0]);
+    });
 };
 
-// Listar todos los usuarios
-exports.listarUsuarios = async (req, res) => {
-    try {
-      const [usuarios] = await db.execute(`
-        SELECT 
-          Usuarios.id_usuario, 
-          Nombres.nombre, 
-          Nombres.apellidoP, 
-          Nombres.apellidoM, 
-          Usuarios.correo, 
-          Usuarios.telefono, 
-          Roles.nombre AS rol 
-        FROM Usuarios
-        JOIN Nombres ON Usuarios.id_nombre = Nombres.id_nombre
-        JOIN Roles ON Usuarios.id_rol = Roles.id_rol
-      `);
-      res.status(200).json(usuarios);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ mensaje: "Error al obtener los usuarios" });
-    }
-  };
-  
-  // Crear un nuevo usuario
-  exports.crearUsuario = async (req, res) => {
-    const { nombre, apellidoP, apellidoM, correo, telefono, contraseña, id_rol } = req.body;
-    try {
-      const [nombreRegistro] = await db.execute(
-        "INSERT INTO Nombres (nombre, apellidoP, apellidoM) VALUES (?, ?, ?)",
-        [nombre, apellidoP, apellidoM]
-      );
-  
-      const id_nombre = nombreRegistro.insertId;
-  
-      await db.execute(
-        "INSERT INTO Usuarios (id_nombre, correo, telefono, contraseña, id_rol) VALUES (?, ?, ?, AES_ENCRYPT(?, 'clave_secreta'), ?)",
-        [id_nombre, correo, telefono, contraseña, id_rol]
-      );
-  
-      res.status(201).json({ mensaje: "Usuario creado con éxito" });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ mensaje: "Error al crear el usuario" });
-    }
-  };
+exports.updateUser = (req, res) => {
+    const { nombre, apellidoP, apellidoM, correo, telefono } = req.body;
+    const userId = req.params.id;
 
-  
-module.exports = { registerUser, loginUser, getUserDetails };
+    // Primero actualizar la tabla Nombres
+    const getUserQuery = 'SELECT id_nombre FROM Usuarios WHERE id_usuario = ?';
+    db.query(getUserQuery, [userId], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        const idNombre = results[0].id_nombre;
+        const updateNombreQuery = 'UPDATE Nombres SET nombre = ?, apellidoP = ?, apellidoM = ? WHERE id_nombre = ?';
+        db.query(updateNombreQuery, [nombre, apellidoP, apellidoM, idNombre], (err) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+
+            // Luego actualizar la tabla Usuarios
+            const updateUsuarioQuery = 'UPDATE Usuarios SET correo = ?, telefono = ? WHERE id_usuario = ?';
+            db.query(updateUsuarioQuery, [correo, telefono, userId], (err) => {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
+                res.json({ message: 'Usuario actualizado exitosamente' });
+            });
+        });
+    });
+};
