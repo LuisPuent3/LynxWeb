@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["cliente/src", "cliente/tailwind.config.js", "cliente/postcss.config.js"]
+  "include": ["cliente/src", "cliente/tailwind.config.cjs", "cliente/postcss.config.cjs"]
 }
