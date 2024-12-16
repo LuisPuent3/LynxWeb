@@ -1,11 +1,10 @@
 const express = require('express');
+const { createOrder, getOrdersByUser, getOrderDetails } = require('../controllers/orderController');
+
 const router = express.Router();
-const orderController = require('../controllers/orderController');
 
-// Rutas de pedidos
-router.post('/', orderController.createOrder);
-router.get('/user/:id_usuario', orderController.getOrdersByUser);
-router.get('/order', orderController.getOrder); 
-
+router.post('/', createOrder); // Crear un nuevo pedido
+router.get('/:id_usuario', getOrdersByUser); // Obtener pedidos de un usuario
+router.get('/:id', getOrderDetails); // Obtener detalles de un pedido específico
 
 module.exports = router;

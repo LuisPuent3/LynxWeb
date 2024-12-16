@@ -1,91 +1,115 @@
-const pool = require('../config/db'); // Asegúrate de que la ruta sea correcta
+const pool = require('../config/db');
 
-// Controlador para crear una orden
 exports.createOrder = async (req, res) => {
+  const connection = await pool; // Esperamos a obtener la conexión del pool
+  let orderConnection;
+
   try {
-    // Extrae los datos de la solicitud
-    const { productos, id_usuario } = req.body;
+    orderConnection = await connection.getConnection();
+    const { carrito, id_usuario } = req.body;
 
-    // Verifica que los datos estén presentes
-    if (!productos || !Array.isArray(productos) || productos.length === 0) {
-      return res.status(400).json({
-        success: false,
-        mensaje: 'Debe proporcionar una lista de productos válida.'
-      });
+    // Validar que carrito sea un array y tenga al menos un elemento
+    if (!Array.isArray(carrito) || carrito.length === 0) {
+      return res.status(400).json({ error: 'El carrito de compras está vacío' });
     }
 
-    if (!id_usuario) {
-      return res.status(400).json({
-        success: false,
-        mensaje: 'El ID de usuario es obligatorio.'
-      });
+    // Validar que cada elemento del carrito tenga las propiedades necesarias
+    for (const item of carrito) {
+      if (!item.id_producto || !item.cantidad || !item.precio) {
+        return res.status(400).json({ error: 'Los detalles del producto están incompletos' });
+      }
     }
 
-    console.log('Datos recibidos:', { productos, id_usuario });
+    await orderConnection.beginTransaction();
 
-    // Conexión a la base de datos
-    const connection = await pool;
-
-    // Obtener el ID del usuario invitado si es necesario
+    // Obtener el ID del usuario (guest o normal)
     let userIdForDB;
     if (id_usuario === 'guest') {
-      const [guestUser] = await connection.query(
+      const [guestUser] = await orderConnection.query(
         'SELECT id_usuario FROM Usuarios WHERE correo = ?',
         ['guest@lynxshop.com']
       );
-      userIdForDB = guestUser[0]?.id_usuario || null;
-
-      if (!userIdForDB) {
-        return res.status(404).json({
-          success: false,
-          mensaje: 'No se encontró un usuario invitado con el correo proporcionado.'
-        });
+      if (!guestUser || guestUser.length === 0) {
+        await orderConnection.rollback();
+        return res.status(400).json({ error: 'Usuario invitado no encontrado' });
       }
+      userIdForDB = guestUser[0].id_usuario;
     } else {
       userIdForDB = id_usuario;
     }
 
-    // Insertar el pedido en la tabla "Pedidos"
-    const [orderResult] = await connection.query(
-      'INSERT INTO Pedidos (id_usuario, id_estado, fecha) VALUES (?, 1, NOW())',
+    const [orderResult] = await orderConnection.query(
+      'INSERT INTO Pedidos (id_usuario, id_estado) VALUES (?, 1)',
       [userIdForDB]
     );
+    console.log('Pedido insertado correctamente:', orderResult);
 
     const id_pedido = orderResult.insertId;
 
-    // Insertar los detalles del pedido en la tabla "DetallePedido"
-    for (const producto of productos) {
-      if (!producto.id_producto || !producto.cantidad || !producto.precio) {
-        return res.status(400).json({
-          success: false,
-          mensaje: 'Cada producto debe tener id_producto, cantidad y precio.'
-        });
-      }
+    const detalles = carrito.map((item) => [
+      id_pedido,
+      item.id_producto,
+      item.cantidad,
+      item.cantidad * item.precio,
+    ]);
 
-      await connection.query(
-        'INSERT INTO DetallePedido (id_pedido, id_producto, cantidad, subtotal) VALUES (?, ?, ?, ?)',
-        [
-          id_pedido, 
-          producto.id_producto, 
-          producto.cantidad, 
-          producto.precio * producto.cantidad
-        ]
-      );
-    }
+    await orderConnection.query(
+      'INSERT INTO DetallePedido (id_pedido, id_producto, cantidad, subtotal) VALUES ?',
+      [detalles]
+    );
+    console.log('Detalles del pedido insertados correctamente');
 
-    // Respuesta exitosa
-    res.status(201).json({
-      success: true,
-      mensaje: 'Pedido creado exitosamente',
-      id_pedido
-    });
-
+    await orderConnection.commit();
+    
+    res.status(201).json({ mensaje: 'Pedido creado exitosamente', id_pedido });
   } catch (error) {
-    console.error('Error completo:', error);
-    res.status(500).json({
-      success: false,
-      mensaje: 'Error al crear el pedido',
-      detalles: error.message
-    });
+    if (orderConnection) {
+      await orderConnection.rollback();
+    }
+    console.error('Error al crear el pedido:', error);
+    if (error.code) {
+      console.error('Código de error de MySQL:', error.code);
+      console.error('Mensaje de error de MySQL:', error.sqlMessage);
+    }
+    res.status(500).json({ error: 'Error al procesar el pedido', detalles: error.message });
+  } finally {
+    if (orderConnection) {
+      orderConnection.release();
+    }
+  }
+};
+
+exports.getOrdersByUser = async (req, res) => {
+  try {
+    const connection = await pool;
+    const { id_usuario } = req.params;
+
+    const [orders] = await connection.query(
+      'SELECT * FROM Pedidos WHERE id_usuario = ?',
+      [id_usuario]
+    );
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener pedidos', detalles: error.message });
+  }
+};
+
+// Función para obtener detalles de un pedido
+exports.getOrderDetails = async (req, res) => {
+  try {
+    const connection = await pool;
+    const { id } = req.params;
+
+    const [details] = await connection.query(
+      `SELECT p.id_pedido, p.fecha, dp.id_producto, prod.nombre, dp.cantidad, dp.subtotal
+       FROM Pedidos p
+       JOIN DetallePedido dp ON p.id_pedido = dp.id_pedido
+       JOIN Productos prod ON dp.id_producto = prod.id_producto
+       WHERE p.id_pedido = ?`,
+      [id]
+    );
+    res.json(details);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener detalles del pedido', detalles: error.message });
   }
 };

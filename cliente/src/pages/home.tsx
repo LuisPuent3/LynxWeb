@@ -56,31 +56,33 @@ const Home = () => {
 
   const procesarPedido = async () => {
     try {
-      // Formatear los datos del pedido correctamente
+      // Verificar si hay productos en el carrito
+      if (carrito.length === 0) {
+        alert("El carrito está vacío");
+        return;
+      }
+  
       const pedidoData = {
-        id_usuario: localStorage.getItem("guestMode") ? 'guest' : 10,
-        productos: carrito.map(item => ({
-          id_producto: item.id_producto,
-          cantidad: item.cantidad,
-          precio: item.precio
-        }))
+        carrito: carrito.map(item => ({  // Cambiamos 'productos' a 'carrito' para coincidir con el backend
+          id_producto: Number(item.id_producto),
+          cantidad: Number(item.cantidad),
+          precio: Number(item.precio)
+        })),
+        id_usuario: localStorage.getItem("guestMode") ? 'guest' : 10
       };
   
-      console.log('Datos a enviar:', pedidoData); // Debug
+      console.log('Datos a enviar:', pedidoData);
   
       const response = await api.post("/pedidos", pedidoData);
       
-      if (response.data.success) {
-        alert("¡Pedido realizado con éxito!");
+      if (response.data.mensaje) {
+        alert(response.data.mensaje);
         vaciarCarrito();
-      } else {
-        throw new Error(response.data.mensaje || 'Error al procesar el pedido');
       }
     } catch (error: any) {
       console.error("Error completo:", error);
       console.error("Detalles del error:", error.response?.data);
-      alert("Error al procesar el pedido: " + 
-            (error.response?.data?.detalles || error.message));
+      alert(error.response?.data?.error || "Error al procesar el pedido");
     }
   };
 
@@ -95,8 +97,13 @@ const Home = () => {
     procesarPedido();
   };
 
-  const calculateTotal = () => {
-    return carrito.reduce((total, item) => total + item.precio * item.cantidad, 0);
+  const calculateTotal = (): number => {
+    const total = carrito.reduce((total, item) => {
+      const precio = Number(item.precio);
+      return total + (precio * item.cantidad);
+    }, 0);
+    
+    return Number(total.toFixed(2));
   };
 
   return (
@@ -247,7 +254,7 @@ const Home = () => {
       {/* Modal de Autenticación */}
       <AuthModal
         isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
+        onClose={() => setShowAuthModal(true)}
         onLogin={handleLoginSuccess}
         onGuestCheckout={handleGuestCheckout}
         vaciarCarrito={vaciarCarrito}
