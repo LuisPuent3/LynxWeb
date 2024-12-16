@@ -1,10 +1,29 @@
-const pool = require('../config/db');
+const pool = require('../config/db'); // Asegúrate de que la ruta sea correcta
 
+// Controlador para crear una orden
 exports.createOrder = async (req, res) => {
   try {
+    // Extrae los datos de la solicitud
     const { productos, id_usuario } = req.body;
+
+    // Verifica que los datos estén presentes
+    if (!productos || !Array.isArray(productos) || productos.length === 0) {
+      return res.status(400).json({
+        success: false,
+        mensaje: 'Debe proporcionar una lista de productos válida.'
+      });
+    }
+
+    if (!id_usuario) {
+      return res.status(400).json({
+        success: false,
+        mensaje: 'El ID de usuario es obligatorio.'
+      });
+    }
+
     console.log('Datos recibidos:', { productos, id_usuario });
 
+    // Conexión a la base de datos
     const connection = await pool;
 
     // Obtener el ID del usuario invitado si es necesario
@@ -15,11 +34,18 @@ exports.createOrder = async (req, res) => {
         ['guest@lynxshop.com']
       );
       userIdForDB = guestUser[0]?.id_usuario || null;
+
+      if (!userIdForDB) {
+        return res.status(404).json({
+          success: false,
+          mensaje: 'No se encontró un usuario invitado con el correo proporcionado.'
+        });
+      }
     } else {
       userIdForDB = id_usuario;
     }
 
-    // Insertar el pedido
+    // Insertar el pedido en la tabla "Pedidos"
     const [orderResult] = await connection.query(
       'INSERT INTO Pedidos (id_usuario, id_estado, fecha) VALUES (?, 1, NOW())',
       [userIdForDB]
@@ -27,8 +53,15 @@ exports.createOrder = async (req, res) => {
 
     const id_pedido = orderResult.insertId;
 
-    // Insertar los detalles del pedido
+    // Insertar los detalles del pedido en la tabla "DetallePedido"
     for (const producto of productos) {
+      if (!producto.id_producto || !producto.cantidad || !producto.precio) {
+        return res.status(400).json({
+          success: false,
+          mensaje: 'Cada producto debe tener id_producto, cantidad y precio.'
+        });
+      }
+
       await connection.query(
         'INSERT INTO DetallePedido (id_pedido, id_producto, cantidad, subtotal) VALUES (?, ?, ?, ?)',
         [
@@ -40,6 +73,7 @@ exports.createOrder = async (req, res) => {
       );
     }
 
+    // Respuesta exitosa
     res.status(201).json({
       success: true,
       mensaje: 'Pedido creado exitosamente',
@@ -50,7 +84,7 @@ exports.createOrder = async (req, res) => {
     console.error('Error completo:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al crear pedido',
+      mensaje: 'Error al crear el pedido',
       detalles: error.message
     });
   }
