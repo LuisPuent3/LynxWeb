@@ -1,20 +1,24 @@
-// config/db.js
 require('dotenv').config();
-const mysql = require('mysql2');
+const mysql = require('mysql2/promise');
 
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME
-});
+const createPool = async () => {
+  try {
+    const pool = await mysql.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0
+    });
 
-db.connect((err) => {
-  if (err) {
-    console.error('Error conectando a la base de datos:', err);
-  } else {
     console.log('Conexión exitosa a la base de datos');
+    return pool;
+  } catch (err) {
+    console.error('Error conectando a la base de datos:', err);
+    throw err;
   }
-});
+};
 
-module.exports = db;
+module.exports = createPool();
