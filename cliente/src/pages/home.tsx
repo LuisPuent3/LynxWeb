@@ -56,7 +56,7 @@ const Home = () => {
 
   const procesarPedido = async () => {
     try {
-      // Formatear los datos del carrito correctamente
+      // Formatear los datos del pedido correctamente
       const pedidoData = {
         id_usuario: localStorage.getItem("guestMode") ? 'guest' : 10,
         productos: carrito.map(item => ({
@@ -65,20 +65,22 @@ const Home = () => {
           precio: item.precio
         }))
       };
-
-      console.log('Datos del pedido:', pedidoData); // Para debug
-
+  
+      console.log('Datos a enviar:', pedidoData); // Debug
+  
       const response = await api.post("/pedidos", pedidoData);
       
       if (response.data.success) {
-        alert("Pedido realizado con éxito");
+        alert("¡Pedido realizado con éxito!");
         vaciarCarrito();
       } else {
         throw new Error(response.data.mensaje || 'Error al procesar el pedido');
       }
-    } catch (error) {
-      console.error("Error detallado:", error);
-      alert("No se pudo confirmar el pedido. Por favor, intente nuevamente.");
+    } catch (error: any) {
+      console.error("Error completo:", error);
+      console.error("Detalles del error:", error.response?.data);
+      alert("Error al procesar el pedido: " + 
+            (error.response?.data?.detalles || error.message));
     }
   };
 
