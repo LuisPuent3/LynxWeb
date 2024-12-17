@@ -1,17 +1,45 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProductList from "../components/products/ProductList";
 import AuthModal from "../components/auth/AuthModal";
 import api from "../utils/api";
 import { useNavigate } from "react-router-dom";
 import { Producto } from "../types/types";
+import { AxiosError, AxiosResponse } from 'axios';
+
+interface ApiErrorResponse {
+  error?: string;
+  mensaje?: string;
+}
+
+interface ApiError extends AxiosError {
+  response?: AxiosResponse<ApiErrorResponse>; 
+}
 
 const Home = () => {
-  const [carrito, setCarrito] = useState<Producto[]>([]);
+  const [carrito, setCarrito] = useState<Producto[]>(() => {
+    const savedCarrito = localStorage.getItem('tempCarrito');
+    return savedCarrito ? JSON.parse(savedCarrito) : [];
+  });
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
-  // Función para agregar productos al carrito
+  useEffect(() => {
+    localStorage.setItem('tempCarrito', JSON.stringify(carrito));
+  }, [carrito]);
+
+  useEffect(() => {
+    if (showAuthModal) {
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('modal-open');
+      console.log("Modal abierto");
+    } else {
+      document.body.style.overflow = 'unset';
+      document.body.classList.remove('modal-open');
+      console.log("Modal cerrado");
+    }
+  }, [showAuthModal]);
+
   const addToCart = (producto: Producto) => {
     const existe = carrito.find((item) => item.id_producto === producto.id_producto);
     if (existe) {
@@ -27,22 +55,26 @@ const Home = () => {
     }
   };
 
-  // Función para eliminar productos del carrito
   const removeFromCart = (id_producto: number) => {
     setCarrito(carrito.filter((item) => item.id_producto !== id_producto));
   };
 
-  // Función para vaciar el carrito
   const vaciarCarrito = () => {
     setCarrito([]);
+    localStorage.removeItem('tempCarrito');
   };
 
   const handleConfirmarPedido = async () => {
+    if (carrito.length === 0) {
+      alert("El carrito está vacío");
+      return;
+    }
+
     const token = localStorage.getItem("token");
-    const isGuest = localStorage.getItem("guestMode");
+    console.log("Verificando token:", token);
     
-    if (!token && !isGuest) {
-      console.log("Mostrando modal");
+    if (!token) {
+      console.log("No hay token, mostrando modal");
       setShowAuthModal(true);
       return;
     }
@@ -50,46 +82,77 @@ const Home = () => {
     try {
       await procesarPedido();
     } catch (error) {
-      console.error("Error al procesar pedido:", error);
+      const apiError = error as ApiError;
+      console.error("Error al procesar pedido:", apiError);
+      if (apiError.response?.status === 401) {
+        localStorage.removeItem("token");
+        console.log("Token inválido, mostrando modal");
+        setShowAuthModal(true);
+      }
     }
   };
 
   const procesarPedido = async () => {
     try {
-      // Verificar si hay productos en el carrito
-      if (carrito.length === 0) {
-        alert("El carrito está vacío");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setShowAuthModal(true);
         return;
       }
-  
+
+      // Estructura simplificada que espera el backend
       const pedidoData = {
-        carrito: carrito.map(item => ({  // Cambiamos 'productos' a 'carrito' para coincidir con el backend
+        productos: carrito.map(item => ({
           id_producto: Number(item.id_producto),
           cantidad: Number(item.cantidad),
           precio: Number(item.precio)
-        })),
-        id_usuario: localStorage.getItem("guestMode") ? 'guest' : 10
+        }))
       };
-  
+
       console.log('Datos a enviar:', pedidoData);
-  
-      const response = await api.post("/pedidos", pedidoData);
+
+      // Configurar el token en los headers
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      const response = await api.post<ApiErrorResponse>("/pedidos", pedidoData);
       
       if (response.data.mensaje) {
         alert(response.data.mensaje);
         vaciarCarrito();
       }
-    } catch (error: any) {
-      console.error("Error completo:", error);
-      console.error("Detalles del error:", error.response?.data);
-      alert(error.response?.data?.error || "Error al procesar el pedido");
+    } catch (error) {
+      const apiError = error as ApiError;
+      console.error("Error completo:", apiError);
+      console.error("Detalles del error:", apiError.response?.data);
+
+      if (apiError.response?.status === 401) {
+        localStorage.removeItem("token");
+        setShowAuthModal(true);
+      } else if (apiError.response?.data?.error) {
+        alert(apiError.response.data.error);
+      } else {
+        alert("Error al procesar el pedido");
+      }
     }
   };
 
-  const handleGuestCheckout = () => {
-    localStorage.setItem("guestMode", "true");
-    setShowAuthModal(false);
-    procesarPedido();
+  const handleGuestCheckout = async () => {
+    try {
+      console.log("Iniciando checkout como invitado");
+      const response = await api.post("/auth/guest");
+      
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+        console.log("Token de invitado obtenido");
+        setShowAuthModal(false);
+        await procesarPedido();
+      } else {
+        throw new Error("No se recibió token de invitado");
+      }
+    } catch (error) {
+      console.error("Error en checkout invitado:", error);
+      alert("Error al procesar como invitado. Por favor intente nuevamente.");
+    }
   };
 
   const handleLoginSuccess = () => {
@@ -252,13 +315,36 @@ const Home = () => {
       </div>
 
       {/* Modal de Autenticación */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(true)}
-        onLogin={handleLoginSuccess}
-        onGuestCheckout={handleGuestCheckout}
-        vaciarCarrito={vaciarCarrito}
-      />
+      <div
+        className={`modal fade ${showAuthModal ? 'show' : ''}`}
+        style={{ display: showAuthModal ? 'block' : 'none' }}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content">
+            <AuthModal
+              isOpen={true}
+              onClose={() => {
+                console.log("Cerrando modal");
+                setShowAuthModal(false);
+              }}
+              onLogin={handleLoginSuccess}
+              onGuestCheckout={handleGuestCheckout}
+              vaciarCarrito={vaciarCarrito}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Backdrop */}
+      {showAuthModal && (
+        <div 
+          className="modal-backdrop fade show" 
+          style={{ display: 'block' }}
+        />
+      )}
     </>
   );
 };

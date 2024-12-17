@@ -1,3 +1,4 @@
+// Login.tsx
 import React, { useState } from "react";
 import api from "../../utils/api";
 import { useNavigate } from "react-router-dom";
@@ -18,10 +19,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isModal = false }) => {
     try {
       const response = await api.post("/auth/login", { correo, contraseña });
       localStorage.setItem("token", response.data.token);
+      localStorage.removeItem("guestMode"); // Limpiar modo invitado si existe
       
       if (isModal && onLoginSuccess) {
         onLoginSuccess();
       } else {
+        // Si hay un carrito temporal, se mantiene en localStorage
+        // y será recuperado en Home
         navigate("/");
       }
     } catch (err) {
