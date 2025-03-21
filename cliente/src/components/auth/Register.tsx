@@ -1,7 +1,8 @@
 // Register.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { useNavigate } from "react-router-dom";
+import { signUpWithEmail, signInWithGoogle, getGoogleRedirectResult } from "../../utils/firebase";
 
 const Register = () => {
   const [nombre, setNombre] = useState<string>("");
@@ -10,14 +11,60 @@ const Register = () => {
   const [contraseña, setContraseña] = useState<string>("");
   const [mensaje, setMensaje] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setMensaje("");
+    setIsLoading(true);
 
     try {
+      // Primero intentar registro con Firebase
+      const firebaseResult = await signUpWithEmail(correo, contraseña);
+      
+      if (firebaseResult.user) {
+        // Si el registro en Firebase es exitoso, obtén el token
+        const idToken = await firebaseResult.user.getIdToken();
+        
+        try {
+          // Enviar los datos del usuario al backend junto con el token de Firebase
+          const response = await api.post("/auth/firebase-register", { 
+            nombre, 
+            correo, 
+            telefono,
+            idToken
+          });
+
+          // Guardar el token JWT del backend
+          if (response.data.token) {
+            localStorage.setItem("token", response.data.token);
+          }
+
+          setMensaje("Registro exitoso. Redirigiendo...");
+          
+          // Esperar un momento antes de redirigir
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
+          
+        } catch (backendErr) {
+          // Si el backend falla, intentar el método tradicional
+          fallbackRegister();
+        }
+      } else if (firebaseResult.error) {
+        // Si Firebase reporta un error, intentar el método tradicional
+        fallbackRegister();
+      }
+    } catch (err) {
+      fallbackRegister();
+    }
+  };
+
+  const fallbackRegister = async () => {
+    try {
+      // Método de registro tradicional como respaldo
       const response = await api.post("/auth/register", { 
         nombre, 
         correo, 
@@ -32,13 +79,75 @@ const Register = () => {
 
       setMensaje("Registro exitoso. Redirigiendo...");
       
-      // Esperar un momento antes de redirigir para que el usuario vea el mensaje
       setTimeout(() => {
-        navigate("/");  // El carrito temporal se mantendrá en localStorage
+        navigate("/");
       }, 2000);
       
     } catch (err: any) {
       setError(err.response?.data?.error || "Error al registrar. Intenta nuevamente.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Añadir un useEffect para manejar el resultado de la redirección
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      setIsLoading(true);
+      setError("");
+      setMensaje("");
+      
+      try {
+        const googleResult = await getGoogleRedirectResult();
+        
+        if (googleResult.user) {
+          const idToken = await googleResult.user.getIdToken();
+          const userInfo = googleResult.user;
+          
+          try {
+            // Enviar los datos del usuario obtenidos de Google al backend
+            const response = await api.post("/auth/firebase-register", { 
+              nombre: userInfo.displayName || "Usuario de Google", 
+              correo: userInfo.email, 
+              telefono: telefono || "No disponible",
+              idToken
+            });
+
+            if (response.data.token) {
+              localStorage.setItem("token", response.data.token);
+            }
+
+            setMensaje("Registro con Google exitoso. Redirigiendo...");
+            
+            setTimeout(() => {
+              navigate("/");
+            }, 2000);
+            
+          } catch (backendErr) {
+            setError("Error al procesar el registro con Google en el servidor.");
+          }
+        }
+      } catch (err) {
+        // No mostrar error si no hay resultado de redirección
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    handleRedirectResult();
+  }, []);
+
+  const handleGoogleRegister = async () => {
+    setError("");
+    setMensaje("");
+    setIsLoading(true);
+    
+    try {
+      await signInWithGoogle();
+      // La redirección ocurrirá, no es necesario hacer nada más aquí
+    } catch (err) {
+      setError("Error al conectar con el servicio de autenticación");
+      setIsLoading(false);
     }
   };
 
@@ -134,10 +243,28 @@ const Register = () => {
                     </div>
                   </div>
 
-                  <div className="d-grid">
-                    <button type="submit" className="btn btn-primary">
-                      <i className="bi bi-person-plus-fill me-2"></i>
-                      Registrarse
+                  <div className="d-grid gap-2">
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Procesando...</>
+                      ) : (
+                        <><i className="bi bi-person-plus-fill me-2"></i> Registrarse</>
+                      )}
+                    </button>
+                    
+                    <div className="text-center my-2"><span className="text-muted">o</span></div>
+                    
+                    <button 
+                      type="button" 
+                      className="btn btn-outline-danger"
+                      onClick={handleGoogleRegister}
+                      disabled={isLoading}
+                    >
+                      <i className="bi bi-google me-2"></i> Registrarse con Google
                     </button>
                   </div>
                 </form>

@@ -1,0 +1,52 @@
+.modal-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1050;
+  }
+  
+  .modal-backdrop {
+    opacity: 0.5;
+  }
+
+  /* Nuevos estilos para el modal */
+  .icon-circle {
+    width: 65px;
+    height: 65px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+  }
+
+  .hover-card {
+    transition: all 0.3s ease;
+    border-radius: 10px;
+  }
+
+  .hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .hover-card:hover .icon-circle {
+    transform: scale(1.1);
+  }
+
+  .modal-content {
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
+  .btn {
+    border-radius: 6px;
+    transition: all 0.3s ease;
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  }
