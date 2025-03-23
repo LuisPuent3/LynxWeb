@@ -1,31 +1,21 @@
-version: '3.8'
+version: '3'
 
 services:
   # Servicio para ejecutar las pruebas del frontend
   frontend-test:
-    build:
-      context: ./cliente
+    build: 
+      context: .
       dockerfile: Dockerfile.test
-    volumes:
-      - ./cliente:/app
-      - /app/node_modules
-    depends_on:
-      - backend
     environment:
       - NODE_ENV=test
-      - API_URL=http://backend:5000/api
-    command: npm run test
-
-  # Servicio del backend para pruebas de integración
-  backend:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    ports:
-      - "5000:5000"
-    environment:
-      - NODE_ENV=test
-      - PORT=5000
     volumes:
-      - ./server:/app
-      - /app/node_modules 
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tsconfig.app.json:/app/tsconfig.app.json
+      - ./tsconfig.node.json:/app/tsconfig.node.json
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./vitest.config.ts:/app/vitest.config.ts
+      - ./.eslintrc.cjs:/app/.eslintrc.cjs
+      # Asegurar que los archivos de test se copian correctamente
+      - ./src/__tests__:/app/src/__tests__ 

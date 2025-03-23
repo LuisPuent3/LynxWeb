@@ -1,0 +1,23 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Instalar dependencias
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copiar archivos de configuración
+COPY tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts vitest.config.ts .eslintrc.cjs ./
+
+# Copiar archivos fuente y tests
+COPY src /app/src
+
+# Asegurar que los directorios de test existen
+RUN mkdir -p /app/src/__tests__/utils
+RUN mkdir -p /app/src/__tests__/cases/LYNX_003/utils
+RUN mkdir -p /app/src/__tests__/cases/LYNX_003/components/products
+
+# Los volúmenes en docker-compose.yml sobreescribirán estos directorios,
+# pero es bueno tenerlos como respaldo
+
+CMD ["npm", "test"] 

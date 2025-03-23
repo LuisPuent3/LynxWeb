@@ -18,9 +18,24 @@ Este directorio contiene pruebas automatizadas para el proyecto LYNX, que verifi
 
 ## Cómo Ejecutar las Pruebas
 
-### Ejecución Manual
+### Ejecución en Docker (Recomendado)
 
-Para ejecutar las pruebas manualmente, utiliza los siguientes comandos:
+Para ejecutar las pruebas en un entorno Docker aislado y controlado:
+
+```bash
+# Ejecutar todas las pruebas en Docker
+docker-compose -f docker-compose.test.yml up --build
+
+# Ejecutar un caso de prueba específico en Docker
+docker-compose -f docker-compose.test.yml run --rm frontend-test npm run test -- cases/LYNX_003/ApiConnection.test.tsx
+
+# Ejecutar y mantener el contenedor activo para desarrollo
+docker-compose -f docker-compose.test.yml run --rm frontend-test sh
+```
+
+### Ejecución Manual (Local)
+
+Para ejecutar las pruebas manualmente en un entorno local:
 
 ```bash
 # Ejecutar todas las pruebas
@@ -44,6 +59,17 @@ node src/__tests__/cases/LYNX_003/runLYNX003Tests.js
 # Para el caso LYNX_010
 node src/__tests__/cases/LYNX_010/runLYNX010Tests.mjs
 ```
+
+## Entorno de Pruebas
+
+Este proyecto utiliza Jest+Vitest como framework de pruebas, proporcionando:
+
+- **Jest**: Framework principal de pruebas con amplio soporte para mocks, spies y aserciones.
+- **Vitest**: Motor de ejecución de pruebas optimizado para proyectos Vite, compatible con la API de Jest.
+
+Las pruebas están configuradas para ejecutarse en:
+- **Entorno de desarrollo local**: Para pruebas rápidas durante el desarrollo.
+- **Entorno Docker**: Para pruebas en un entorno aislado y reproducible, requerido para CI/CD.
 
 ## Estructura de Carpetas
 
@@ -107,6 +133,11 @@ Este proyecto incluye recursos compartidos para facilitar las pruebas:
 
 ## Prerrequisitos para las Pruebas
 
+### Para ejecución en Docker:
+- Docker y Docker Compose instalados
+- Sin otros requisitos (todas las dependencias se instalan en el contenedor)
+
+### Para ejecución local:
 - Node.js y npm instalados
 - Dependencias del proyecto instaladas (`npm install`)
 - Entorno de desarrollo configurado
