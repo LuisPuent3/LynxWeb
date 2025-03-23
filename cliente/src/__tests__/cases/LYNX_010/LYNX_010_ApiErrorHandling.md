@@ -99,3 +99,77 @@ Todas las pruebas han sido exitosas. La API maneja correctamente los errores y d
 ## Recomendaciones
 
 Mantener el sistema de manejo de errores actual y considerar implementar pruebas de integración reales para verificar el comportamiento con el backend. 
+
+## Cambios recomendados al Plan de Pruebas
+
+### 1. En la sección "Herramientas de Pruebas Requeridas" (línea aprox. 320-340)
+
+Cambiar:
+```
+1. **Pruebas Unitarias y de Integración**:
+   - Jest + Supertest para backend
+   - Vitest + Testing Library para frontend
+   - Storybook para componentes UI
+```
+
+Por:
+```
+1. **Pruebas Unitarias y de Integración**:
+   - Vitest v3.0.9 como framework principal para pruebas unitarias y de integración
+   - Testing Library v16.2.0 para pruebas de componentes React
+   - @testing-library/jest-dom v6.6.3 para aserciones de DOM
+   - jsdom v26.0.0 para simular el DOM en entorno Node.js
+```
+
+### 2. En la sección "Requerimientos de Entornos – Software" (línea aprox. 290-315)
+
+Añadir específicamente todas las versiones que estamos utilizando:
+
+```
+2. **Software de Desarrollo**:
+   - IDE: Visual Studio Code v1.86.1
+   - Control de versiones: Git, GitHub
+   - Gestión de dependencias: npm v10.2.3
+   - Herramientas de diseño: Figma
+
+3. **Entorno de Ejecución**:
+   - Frontend: Node.js v18.19.0, React v18.3.1, React DOM v18.3.1
+   - Backend: Node.js v18.19.0, Express.js
+   - Base de datos: MySQL 8.0
+   - Contenedores: Docker v27.5.1, Docker Compose v2.17+
+   - Framework de pruebas: Vitest v3.0.9
+   - Biblioteca de utilidades HTTP: Axios v1.7.9
+   - TypeScript v5.6.2
+```
+
+### 3. En la sección "Tipos de Pruebas" (línea aprox. 195-225)
+
+Modificar:
+
+```
+1. **Pruebas Unitarias**:
+   - **Frontend**: Implementación con Vitest + Testing Library
+   - **Backend**: Implementación con Jest + Supertest
+   - Enfoque en componentes individuales, funciones y métodos
+   - Cobertura mínima del 70% para código crítico
+```
+
+Por:
+
+```
+1. **Pruebas Unitarias**:
+   - **Frontend y Backend**: Implementación con Vitest v3.0.9 + Testing Library v16.2.0
+   - Enfoque en componentes individuales, funciones y métodos
+   - Utilización de jsdom v26.0.0 para simular el DOM
+   - Cobertura mínima del 70% para código crítico
+```
+
+### 4. Añadir una referencia a la configuración de Vitest
+
+En la sección "Referencias" (al final del documento), añadir:
+
+```
+8. Configuración de Vitest (vitest.config.ts)
+```
+
+Con estas modificaciones, el Plan de Pruebas reflejará correctamente las herramientas que realmente estamos utilizando en el proyecto, con sus versiones específicas, y eliminará referencias a Jest que no está siendo utilizado directamente (aunque se mantienen las utilidades compatibles con Jest como @testing-library/jest-dom). 

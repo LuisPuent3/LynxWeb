@@ -9,13 +9,13 @@ services:
     environment:
       - NODE_ENV=test
     volumes:
-      - ./src:/app/src
+      - ./cliente/src:/app/src
       - ./package.json:/app/package.json
       - ./tsconfig.json:/app/tsconfig.json
       - ./tsconfig.app.json:/app/tsconfig.app.json
       - ./tsconfig.node.json:/app/tsconfig.node.json
-      - ./vite.config.ts:/app/vite.config.ts
+      - ./vite.config.mts:/app/vite.config.mts
       - ./vitest.config.ts:/app/vitest.config.ts
       - ./.eslintrc.cjs:/app/.eslintrc.cjs
       # Asegurar que los archivos de test se copian correctamente
-      - ./src/__tests__:/app/src/__tests__ 
+      - ./cliente/src/__tests__:/app/src/__tests__ 

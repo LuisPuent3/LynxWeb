@@ -8,8 +8,6 @@
 
 ## Información del Proyecto
 
-## Información del Proyecto
-
 | Empresa / Organización | LYNX |
 |------------------------|------|
 | Proyecto | Sistema de Gestión de Inventarios y Pedidos LYNX |
@@ -66,6 +64,11 @@ El alcance del esfuerzo de pruebas está alineado con los sprints definidos en e
 4. **Integración**:
    - Comunicación entre frontend y backend
    - Integración con sistemas de pago (planificado para fases futuras)
+
+### Requisitos Previos
+
+- **XAMPP**: Se debe tener instalado y configurado XAMPP para el servidor de MariaDB. Asegúrese de que el servidor esté en funcionamiento antes de ejecutar las pruebas.
+- **Configuración de la Base de Datos**: La base de datos debe estar configurada con las tablas y datos necesarios para las pruebas. Se recomienda utilizar un entorno de base de datos de pruebas que simule la producción.
 
 ### Nuevas Funcionalidades a Probar
 
@@ -347,6 +350,7 @@ Las siguientes funcionalidades ya implementadas deben ser validadas para asegura
    - Servidores: Linux Ubuntu 22.04 LTS
    - Estaciones de trabajo: Windows 10/11, macOS Ventura
    - Dispositivos móviles: Android 11+, iOS 15+
+   - **XAMPP**: Para la gestión de la base de datos MariaDB
 
 2. **Software de Desarrollo**:
    - IDE: Visual Studio Code
@@ -357,7 +361,7 @@ Las siguientes funcionalidades ya implementadas deben ser validadas para asegura
 3. **Entorno de Ejecución**:
    - Frontend: Node.js v18+, React v18+
    - Backend: Node.js v18+, Express.js
-   - Base de datos: MySQL 8.0
+   - Base de datos: MySQL 8.0 o MariaDB 10
    - Contenedores: Docker v24+, Docker Compose v2.17+
 
 4. **Navegadores**:
@@ -562,6 +566,7 @@ R: Responsable, A: Aprobador, C: Consultado, I: Informado
 2. **Dependencias con Recursos**:
    - Disponibilidad de servidores para entorno de pruebas
    - Acceso a datos de prueba representativos
+   - **XAMPP** debe estar en funcionamiento para la conexión a la base de datos
    - Licencias para herramientas de prueba
 
 3. **Dependencias Externas**:
@@ -594,6 +599,7 @@ R: Responsable, A: Aprobador, C: Consultado, I: Informado
 
 ## Glosario
 
+- **XAMPP**: Paquete de software que incluye Apache, MariaDB, PHP y Perl, utilizado para crear un entorno de desarrollo local
 - **API**: Application Programming Interface - Interfaz que permite la comunicación entre diferentes componentes de software
 - **CORS**: Cross-Origin Resource Sharing - Mecanismo que permite solicitar recursos restringidos en una página web desde otro dominio
 - **CI/CD**: Continuous Integration/Continuous Deployment - Práctica de integrar código y desplegar cambios de forma continua y automatizada

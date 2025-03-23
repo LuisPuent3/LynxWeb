@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import axios from 'axios';
+import api from '../utils/api';
 import { render, screen, waitFor } from '@testing-library/react';
-import ProductList from './components/products/ProductList';
+import ProductList from '../components/products/ProductList';
 import { BrowserRouter } from 'react-router-dom';
 
 /**
@@ -28,8 +29,7 @@ vi.mock('axios', async () => {
       headers: {
         common: {}
       }
-    },
-    get: vi.fn(),
+    }
   };
   return {
     default: mockAxios,
@@ -46,7 +46,11 @@ describe('LYNX_003: Prueba de Conexión API Frontend-Backend', () => {
     
     // Configurar el mock para axios.get
     mockAxiosGet = vi.fn();
-    axios.get = mockAxiosGet;
+    const axiosInstance = axios.create();
+    axiosInstance.get = mockAxiosGet;
+    
+    // Sobrescribir la implementación de api.get para usar nuestro mock
+    api.get = mockAxiosGet;
   });
 
   afterEach(() => {
@@ -85,8 +89,8 @@ describe('LYNX_003: Prueba de Conexión API Frontend-Backend', () => {
     // Verificar que los productos se muestran en la interfaz
     // Esto valida el paso #5 del Caso de Prueba: "Verificar renderizado"
     await waitFor(() => {
-      expect(screen.getByText('Producto 1')).toBeTruthy();
-      expect(screen.getByText('Producto 2')).toBeTruthy();
+      expect(screen.getByText('Producto 1')).toBeInTheDocument();
+      expect(screen.getByText('Producto 2')).toBeInTheDocument();
     });
   });
 
@@ -127,7 +131,7 @@ describe('LYNX_003: Prueba de Conexión API Frontend-Backend', () => {
     // Según el Plan de Pruebas, esto cubre el aspecto "Manejo de errores en la comunicación frontend-backend"
     await waitFor(() => {
       expect(console.error).toHaveBeenCalled();
-      expect(screen.getByText('No se encontraron productos')).toBeTruthy();
+      expect(screen.getByText('No se encontraron productos')).toBeInTheDocument();
     });
 
     // Restaurar console.error
@@ -167,7 +171,7 @@ describe('LYNX_003: Prueba de Conexión API Frontend-Backend', () => {
 
     // Esperar a que los datos se muestren
     await waitFor(() => {
-      expect(screen.getByText('Producto 1')).toBeTruthy();
+      expect(screen.getByText('Producto 1')).toBeInTheDocument();
     });
 
     // Registrar tiempo final

@@ -7,14 +7,14 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/__tests__/setup.ts']
+    // setupFiles: ['./cliente/src/__tests__/setup.ts']
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
-      '@utils': resolve(__dirname, './src/utils'),
-      '@components': resolve(__dirname, './src/components'),
-      '@tests': resolve(__dirname, './src/__tests__')
+      '@': resolve(__dirname, './cliente/src'),
+      '@utils': resolve(__dirname, './cliente/src/utils'),
+      '@components': resolve(__dirname, './cliente/src/components'),
+      '@tests': resolve(__dirname, './cliente/src/__tests__')
     }
   }
 }); 

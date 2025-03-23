@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "test:docker": "docker-compose -f docker-compose.test.yml up --build",
     "test:docker:run": "docker-compose -f docker-compose.test.yml run --rm frontend-test",
-    "test:docker:single": "docker-compose -f docker-compose.test.yml run --rm frontend-test npm run test --"
+    "test:docker:single": "docker-compose -f docker-compose.test.yml run --rm frontend-test npm run test --",
+    "test:lynx": "vitest run cliente/src/__tests__/cases/LYNX_003 cliente/src/__tests__/cases/LYNX_010",
+    "test:docker:lynx": "npm run test:docker:single \"src/__tests__/cases/LYNX_010/ApiErrorHandling.test.ts\" && npm run test:docker:single \"src/__tests__/cases/LYNX_003/ApiConnectionSimple.test.ts\" && npm run test:docker:single \"src/__tests__/cases/LYNX_003/ApiConnection.test.tsx\""
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
