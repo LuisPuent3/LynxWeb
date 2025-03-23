@@ -1,0 +1,357 @@
+# Casos de Prueba - Proyecto LYNX
+
+## 1. Prueba de Inicio de Sesión
+
+| Test Case ID | LYNX_001 |
+|--------------|----------|
+| Test Case Description | Verificar la funcionalidad de inicio de sesión |
+| Created By | Luis Ángel Puente Quevedo |
+| Reviewed By | Ing. Julieta Santander Castillo |
+| Version | 1.0 |
+| QA Tester's Log | Versión inicial |
+| Tester's Name | Uriel Pérez Acolco |
+| Date Tested | Pendiente |
+| Test Case Status | No ejecutado |
+
+**Prerrequisitos:**
+1. Acceso a navegador web (Chrome, Firefox o Edge)
+2. Servidor backend en ejecución
+3. Base de datos con usuarios pre-registrados
+4. Componente de login implementado
+
+**Datos de Prueba:**
+1. Correo = cliente@lynx.com
+2. Contraseña = Lynx2025*
+
+**Escenario de Prueba:**
+Verificar que un usuario puede iniciar sesión con credenciales válidas
+
+| Paso # | Detalles del Paso | Resultados Esperados | Resultados Actuales | Estado |
+|--------|-------------------|----------------------|--------------------|--------|
+| 1 | Navegar a la pantalla de inicio de sesión | Se muestra el formulario de login con campos para correo y contraseña | | |
+| 2 | Ingresar credenciales válidas | Los datos se pueden introducir correctamente | | |
+| 3 | Hacer clic en el botón "Iniciar Sesión" | El sistema valida las credenciales y muestra mensaje de carga | | |
+| 4 | Esperar a la respuesta del sistema | Usuario redirigido a página principal con sesión iniciada | | |
+| 5 | Verificar token de sesión | Token JWT almacenado en localStorage | | |
+
+## 2. Prueba de Registro de Usuario
+
+| Test Case ID | LYNX_002 |
+|--------------|----------|
+| Test Case Description | Verificar la funcionalidad de registro de nuevos usuarios |
+| Created By | Luis Ángel Puente Quevedo |
+| Reviewed By | Ing. Julieta Santander Castillo |
+| Version | 1.0 |
+| QA Tester's Log | Versión inicial |
+| Tester's Name | Uriel Pérez Acolco |
+| Date Tested | Pendiente |
+| Test Case Status | No ejecutado |
+
+**Prerrequisitos:**
+1. Acceso a navegador web (Chrome, Firefox o Edge)
+2. Servidor backend en ejecución
+3. Componente de registro implementado
+
+**Datos de Prueba:**
+1. Nombre = Usuario Test
+2. Correo = nuevo@lynx.com
+3. Teléfono = 5551234567
+4. Contraseña = Lynx2025*
+
+**Escenario de Prueba:**
+Verificar que un nuevo usuario puede registrarse en el sistema
+
+| Paso # | Detalles del Paso | Resultados Esperados | Resultados Actuales | Estado |
+|--------|-------------------|----------------------|--------------------|--------|
+| 1 | Navegar a la pantalla de registro | Se muestra el formulario de registro con todos los campos requeridos | | |
+| 2 | Ingresar datos válidos en todos los campos | Los datos se pueden introducir correctamente | | |
+| 3 | Hacer clic en el botón "Registrarse" | El sistema valida los datos y muestra mensaje de carga | | |
+| 4 | Esperar a la respuesta del sistema | Usuario registrado exitosamente, mostrar mensaje de éxito | | |
+| 5 | Verificar redirección | Usuario redirigido a página de inicio de sesión o página principal según configuración | | |
+| 6 | Verificar base de datos | Nuevo usuario agregado a la tabla Usuarios con rol de Cliente | | |
+
+## 3. Prueba de Conexión API Frontend-Backend
+
+| Test Case ID | LYNX_003 |
+|--------------|----------|
+| Test Case Description | Verificar la correcta conexión entre frontend y backend |
+| Created By | Luis Ángel Puente Quevedo |
+| Reviewed By | Oscar Pérez Luna |
+| Version | 1.0 |
+| QA Tester's Log | Versión inicial |
+| Tester's Name | Luis Ángel Puente Quevedo |
+| Date Tested | Pendiente |
+| Test Case Status | No ejecutado |
+
+**Prerrequisitos:**
+1. Entorno de desarrollo configurado
+2. Servidor backend en ejecución
+3. Aplicación frontend en ejecución
+4. API configurada en ambos extremos
+
+**Datos de Prueba:**
+1. Ruta API = /api/productos
+2. Método = GET
+
+**Escenario de Prueba:**
+Verificar que la aplicación frontend puede comunicarse correctamente con el backend
+
+| Paso # | Detalles del Paso | Resultados Esperados | Resultados Actuales | Estado |
+|--------|-------------------|----------------------|--------------------|--------|
+| 1 | Abrir las herramientas de desarrollo del navegador (pestaña Network) | Herramientas de desarrollo muestran panel de red | | |
+| 2 | Navegar a la página de productos | La interfaz intenta cargar la lista de productos | | |
+| 3 | Observar las llamadas de red | Se realiza petición GET a /api/productos sin errores CORS | | |
+| 4 | Verificar respuesta del servidor | Código de estado 200 y datos en formato JSON | | |
+| 5 | Verificar renderizado | Datos recibidos se muestran correctamente en la interfaz | | |
+
+## 4. Prueba de Gestión de Productos (CRUD)
+
+| Test Case ID | LYNX_004 |
+|--------------|----------|
+| Test Case Description | Verificar las operaciones CRUD para productos |
+| Created By | Luis Ángel Puente Quevedo |
+| Reviewed By | Ing. Julieta Santander Castillo |
+| Version | 1.0 |
+| QA Tester's Log | Versión inicial |
+| Tester's Name | Luis Ángel Puente Quevedo |
+| Date Tested | Pendiente |
+| Test Case Status | No ejecutado |
+
+**Prerrequisitos:**
+1. Usuario administrador autenticado
+2. Acceso al panel de administración
+3. Base de datos con categorías pre-configuradas
+
+**Datos de Prueba:**
+1. Nombre Producto = "Producto Test"
+2. Precio = 99.99
+3. Cantidad = 50
+4. Categoría = 1 (Bebidas)
+5. Imagen = "producto-test.jpg"
+
+**Escenario de Prueba:**
+Verificar que un administrador puede crear, leer, actualizar y eliminar productos
+
+| Paso # | Detalles del Paso | Resultados Esperados | Resultados Actuales | Estado |
+|--------|-------------------|----------------------|--------------------|--------|
+| 1 | Navegar al panel de gestión de productos | Se muestra la lista de productos existentes | | |
+| 2 | Hacer clic en "Agregar Producto" | Se muestra formulario para nuevo producto | | |
+| 3 | Ingresar datos del producto y guardar | Producto creado y agregado a la lista | | |
+| 4 | Buscar el producto creado y hacer clic en "Editar" | Se muestra formulario con datos del producto | | |
+| 5 | Modificar precio a 109.99 y guardar | Producto actualizado en la lista | | |
+| 6 | Verificar vista de detalle del producto | Los datos actualizados se muestran correctamente | | |
+| 7 | Hacer clic en "Eliminar" | Se muestra confirmación de eliminación | | |
+| 8 | Confirmar eliminación | Producto eliminado de la lista | | |
+| 9 | Verificar base de datos | Producto eliminado de la tabla Productos | | |
+
+## 5. Prueba del Carrito de Compras
+
+| Test Case ID | LYNX_005 |
+|--------------|----------|
+| Test Case Description | Verificar la funcionalidad del carrito de compras |
+| Created By | Luis Ángel Puente Quevedo |
+| Reviewed By | Uriel Pérez Acolco |
+| Version | 1.0 |
+| QA Tester's Log | Versión inicial |
+| Tester's Name | Uriel Pérez Acolco |
+| Date Tested | Pendiente |
+| Test Case Status | No ejecutado |
+
+**Prerrequisitos:**
+1. Usuario cliente autenticado
+2. Productos disponibles en el sistema
+3. Componente de carrito implementado
+
+**Datos de Prueba:**
+1. Producto 1 = "Coca-Cola" (ID: 1, Precio: 15.50)
+2. Producto 2 = "Doritos" (ID: 2, Precio: 25.00)
+
+**Escenario de Prueba:**
+Verificar que un cliente puede agregar productos al carrito, modificar cantidades y proceder al checkout
+
+| Paso # | Detalles del Paso | Resultados Esperados | Resultados Actuales | Estado |
+|--------|-------------------|----------------------|--------------------|--------|
+| 1 | Navegar a la página de productos | Se muestra la lista de productos disponibles | | |
+| 2 | Agregar Producto 1 al carrito | Producto agregado, contador de carrito muestra (1) | | |
+| 3 | Agregar Producto 2 al carrito | Producto agregado, contador de carrito muestra (2) | | |
+| 4 | Hacer clic en el ícono del carrito | Se muestra página del carrito con ambos productos | | |
+| 5 | Incrementar cantidad del Producto 1 a 2 | Cantidad actualizada, subtotal y total recalculados | | |
+| 6 | Eliminar Producto 2 del carrito | Producto eliminado, solo queda Producto 1 | | |
+| 7 | Hacer clic en "Proceder al pago" | Usuario redirigido a página de checkout | | |
+
+## 6. Prueba del Flujo de Pedido Completo
+
+| Test Case ID | LYNX_006 |
+|--------------|----------|
+| Test Case Description | Verificar el flujo completo de realización de pedidos |
+| Created By | Luis Ángel Puente Quevedo |
+| Reviewed By | Ing. Julieta Santander Castillo |
+| Version | 1.0 |
+| QA Tester's Log | Versión inicial |
+| Tester's Name | Uriel Pérez Acolco |
+| Date Tested | Pendiente |
+| Test Case Status | No ejecutado |
+
+**Prerrequisitos:**
+1. Usuario cliente autenticado
+2. Productos en el carrito
+3. Componentes de checkout y confirmación implementados
+
+**Datos de Prueba:**
+1. Método de pago seleccionado = "Efectivo"
+2. Productos en carrito = [{"id": 1, "cantidad": 2, "precio": 15.50}]
+3. Total = 31.00
+
+**Escenario de Prueba:**
+Verificar que un cliente puede completar el proceso de compra de principio a fin
+
+| Paso # | Detalles del Paso | Resultados Esperados | Resultados Actuales | Estado |
+|--------|-------------------|----------------------|--------------------|--------|
+| 1 | Continuar desde página de checkout | Se muestra resumen del pedido y opciones de pago | | |
+| 2 | Seleccionar método de pago | Opción seleccionada correctamente | | |
+| 3 | Hacer clic en "Confirmar Pedido" | Se muestra pantalla de carga/procesamiento | | |
+| 4 | Esperar confirmación | Se muestra mensaje de confirmación con número de pedido | | |
+| 5 | Verificar historial de pedidos | Nuevo pedido aparece en el historial del cliente | | |
+| 6 | Verificar inventario | Cantidades de productos reducidas en inventario | | |
+| 7 | Verificar base de datos | Pedido guardado en tablas Pedidos y DetallePedido | | |
+
+## 7. Prueba de Gestión de Pedidos (Administrador)
+
+| Test Case ID | LYNX_007 |
+|--------------|----------|
+| Test Case Description | Verificar la gestión de pedidos por parte del administrador |
+| Created By | Luis Ángel Puente Quevedo |
+| Reviewed By | Oscar Pérez Luna |
+| Version | 1.0 |
+| QA Tester's Log | Versión inicial |
+| Tester's Name | Luis Ángel Puente Quevedo |
+| Date Tested | Pendiente |
+| Test Case Status | No ejecutado |
+
+**Prerrequisitos:**
+1. Usuario administrador autenticado
+2. Pedidos existentes en el sistema
+3. Panel de administración implementado
+
+**Datos de Prueba:**
+1. ID Pedido = 1
+2. Estados disponibles = ["Pendiente", "Entregado", "Cancelado"]
+
+**Escenario de Prueba:**
+Verificar que un administrador puede gestionar y actualizar el estado de los pedidos
+
+| Paso # | Detalles del Paso | Resultados Esperados | Resultados Actuales | Estado |
+|--------|-------------------|----------------------|--------------------|--------|
+| 1 | Navegar al panel de gestión de pedidos | Se muestra la lista de pedidos | | |
+| 2 | Localizar el pedido con ID 1 | Pedido visualizado con detalles y estado actual | | |
+| 3 | Hacer clic en "Ver Detalles" | Se muestra información detallada del pedido | | |
+| 4 | Cambiar estado a "Entregado" | Lista desplegable permite seleccionar nuevo estado | | |
+| 5 | Guardar cambios | Estado actualizado con mensaje de confirmación | | |
+| 6 | Verificar base de datos | Campo id_estado actualizado en tabla Pedidos | | |
+| 7 | Verificar vista de cliente | Cliente puede ver el estado actualizado en su historial | | |
+
+## 8. Prueba de Validación de Datos en Formularios
+
+| Test Case ID | LYNX_008 |
+|--------------|----------|
+| Test Case Description | Verificar la validación de datos en formularios |
+| Created By | Luis Ángel Puente Quevedo |
+| Reviewed By | Uriel Pérez Acolco |
+| Version | 1.0 |
+| QA Tester's Log | Versión inicial |
+| Tester's Name | Uriel Pérez Acolco |
+| Date Tested | Pendiente |
+| Test Case Status | No ejecutado |
+
+**Prerrequisitos:**
+1. Acceso a formularios de registro y productos
+2. Validaciones implementadas en frontend y backend
+
+**Datos de Prueba:**
+1. Correo inválido = "correo.invalido"
+2. Contraseña débil = "123"
+3. Precio negativo = -10.50
+4. Cantidad negativa = -5
+
+**Escenario de Prueba:**
+Verificar que los formularios validan correctamente los datos ingresados
+
+| Paso # | Detalles del Paso | Resultados Esperados | Resultados Actuales | Estado |
+|--------|-------------------|----------------------|--------------------|--------|
+| 1 | Navegar al formulario de registro | Se muestra formulario con campos requeridos | | |
+| 2 | Ingresar correo inválido | Mensaje de error indicando formato inválido | | |
+| 3 | Ingresar contraseña débil | Mensaje de error sobre requisitos de contraseña | | |
+| 4 | Navegar al formulario de productos | Se muestra formulario de productos | | |
+| 5 | Ingresar precio negativo | Mensaje de error indicando valor no permitido | | |
+| 6 | Ingresar cantidad negativa | Mensaje de error indicando valor no permitido | | |
+| 7 | Verificar validaciones en backend | Backend rechaza datos inválidos y retorna errores | | |
+
+## 9. Prueba de Responsividad
+
+| Test Case ID | LYNX_009 |
+|--------------|----------|
+| Test Case Description | Verificar la responsividad de la interfaz en diferentes dispositivos |
+| Created By | Luis Ángel Puente Quevedo |
+| Reviewed By | Uriel Pérez Acolco |
+| Version | 1.0 |
+| QA Tester's Log | Versión inicial |
+| Tester's Name | Uriel Pérez Acolco |
+| Date Tested | Pendiente |
+| Test Case Status | No ejecutado |
+
+**Prerrequisitos:**
+1. Aplicación frontend desplegada
+2. Herramientas de desarrollo del navegador
+3. Diseño responsive implementado
+
+**Datos de Prueba:**
+1. Tamaño de pantalla móvil = 375x667px (iPhone 8)
+2. Tamaño de pantalla tablet = 768x1024px (iPad)
+3. Tamaño de pantalla desktop = 1366x768px
+
+**Escenario de Prueba:**
+Verificar que la interfaz se adapta correctamente a diferentes tamaños de pantalla
+
+| Paso # | Detalles del Paso | Resultados Esperados | Resultados Actuales | Estado |
+|--------|-------------------|----------------------|--------------------|--------|
+| 1 | Abrir la aplicación en tamaño desktop | Interfaz se muestra correctamente con menú horizontal | | |
+| 2 | Cambiar a vista tablet con herramientas de desarrollo | Interfaz se adapta al nuevo tamaño | | |
+| 3 | Verificar navegación en tablet | Menú y elementos son accesibles y usables | | |
+| 4 | Cambiar a vista móvil | Interfaz se adapta con menú hamburguesa | | |
+| 5 | Verificar carrito en móvil | Carrito y proceso de checkout son funcionales | | |
+| 6 | Verificar formularios en móvil | Campos de formulario son legibles y utilizables | | |
+
+## 10. Prueba de Manejo de Errores API
+
+| Test Case ID | LYNX_010 |
+|--------------|----------|
+| Test Case Description | Verificar el manejo de errores en la API |
+| Created By | Luis Ángel Puente Quevedo |
+| Reviewed By | Oscar Pérez Luna |
+| Version | 1.0 |
+| QA Tester's Log | Versión inicial |
+| Tester's Name | Luis Ángel Puente Quevedo |
+| Date Tested | Pendiente |
+| Test Case Status | No ejecutado |
+
+**Prerrequisitos:**
+1. Entorno de desarrollo configurado
+2. Servidor backend en ejecución
+3. Postman o herramienta similar disponible
+
+**Datos de Prueba:**
+1. Ruta API inexistente = /api/rutainexistente
+2. Producto inexistente = ID 9999
+3. Token inválido = "Bearer invalidtoken12345"
+
+**Escenario de Prueba:**
+Verificar que la API maneja correctamente los errores y devuelve respuestas apropiadas
+
+| Paso # | Detalles del Paso | Resultados Esperados | Resultados Actuales | Estado |
+|--------|-------------------|----------------------|--------------------|--------|
+| 1 | Enviar petición GET a ruta inexistente | Código 404 con mensaje de error claro | | |
+| 2 | Enviar petición GET a producto inexistente | Código 404 con mensaje "Producto no encontrado" | | |
+| 3 | Enviar petición a ruta protegida sin token | Código 401 con mensaje de error de autenticación | | |
+| 4 | Enviar petición con token inválido | Código 401 con mensaje de token inválido | | |
+| 5 | Enviar datos inválidos en POST | Código 400 con detalles de validación | | |
+| 6 | Intentar acción sin permisos | Código 403 con mensaje de autorización | | |

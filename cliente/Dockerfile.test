@@ -1,0 +1,17 @@
+# Dockerfile para el entorno de pruebas del proyecto LYNX
+FROM node:20-alpine
+
+# Directorio de trabajo
+WORKDIR /app
+
+# Copiar archivos de configuración del proyecto
+COPY package.json package-lock.json ./
+
+# Instalar dependencias
+RUN npm ci
+
+# Copiar el código fuente
+COPY . .
+
+# Comando por defecto para ejecutar las pruebas
+CMD ["npm", "run", "test"] 

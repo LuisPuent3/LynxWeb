@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # Servicio para ejecutar las pruebas del frontend
+  frontend-test:
+    build:
+      context: ./cliente
+      dockerfile: Dockerfile.test
+    volumes:
+      - ./cliente:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=test
+      - API_URL=http://backend:5000/api
+    command: npm run test
+
+  # Servicio del backend para pruebas de integración
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=test
+      - PORT=5000
+    volumes:
+      - ./server:/app
+      - /app/node_modules 

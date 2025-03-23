@@ -1,0 +1,618 @@
+# Plan de Pruebas de Software - Proyecto LYNX
+
+## Historial de Versiones
+
+| Fecha | Versión | Autor | Organización | Descripción |
+|-------|---------|-------|--------------|-------------|
+| 21/03/2025 | 1.0 | Luis Ángel Puente Quevedo | LYNX | Versión inicial del plan de pruebas |
+
+## Información del Proyecto
+
+## Información del Proyecto
+
+| Empresa / Organización | LYNX |
+|------------------------|------|
+| Proyecto | Sistema de Gestión de Inventarios y Pedidos LYNX |
+| Fecha de preparación | 21/03/2025 |
+| Cliente | Entorno escolar / Entorno comercial |
+| Patrocinador principal | Ing. Julieta Santander Castillo |
+| Gerente / Líder de Proyecto | Luis Ángel Puente Quevedo |
+| Líder de Pruebas de Software | Luis Ángel Puente Quevedo |
+
+## Aprobaciones
+
+| Nombre y Apellido | Cargo | Departamento u Organización | Fecha | Firma |
+|-------------------|-------|------------------------------|-------|-------|
+| Ing. Julieta Santander Castillo | Supervisora | LYNX | 22/03/2025 | |
+| Luis Ángel Puente Quevedo | Líder de Pruebas/Ingeniero Senior | LYNX | 21/03/2025 | |
+| Oscar Pérez Luna | Desarrollador Junior/Documentación | LYNX | 21/03/2025 | |
+| Uriel Pérez Acolco | Tester Manual/Usabilidad | LYNX | 21/03/2025 | |
+
+## Resumen Ejecutivo
+
+Este Plan de Pruebas de Software define la estrategia, recursos, metodología y actividades necesarias para validar el sistema de gestión de inventarios y pedidos LYNX. El plan establece un enfoque estructurado para verificar que el sistema cumple con los requisitos funcionales y no funcionales establecidos en las especificaciones, así como con las expectativas de los usuarios y stakeholders.
+
+El sistema LYNX es una plataforma diseñada para optimizar la gestión de inventarios y pedidos en entornos escolares, proporcionando herramientas digitales que mejoran la accesibilidad, personalización y eficiencia en los procesos de compra.
+
+Este documento constituye un plan maestro que abarca las pruebas de todos los componentes del sistema, desde las pruebas unitarias hasta las pruebas de aceptación, con especial énfasis en solucionar los problemas actuales de conectividad entre el frontend y el backend.
+
+El alcance del esfuerzo de pruebas está alineado con los sprints definidos en el plan de proyecto, y se extenderá durante todo el ciclo de vida del desarrollo, desde la fase actual (corrección de la conectividad API) hasta el despliegue final.
+
+## Alcance de las Pruebas
+
+### Elementos de Pruebas
+
+1. **Componentes Frontend**:
+   - Componente de Login
+   - Componente de Registro
+   - Componente de Gestión de Productos
+   - Componente de Gestión de Categorías
+   - Componente de Carrito de Compras
+   - Componente de Gestión de Pedidos
+
+2. **Componentes Backend**:
+   - API REST para autenticación y autorización
+   - API REST para gestión de usuarios
+   - API REST para gestión de productos
+   - API REST para gestión de categorías
+   - API REST para gestión de pedidos
+   - Capa de acceso a datos (MySQL)
+
+3. **Base de Datos**:
+   - Estructura de la base de datos (tablas, relaciones)
+   - Procedimientos almacenados
+   - Consultas complejas
+
+4. **Integración**:
+   - Comunicación entre frontend y backend
+   - Integración con sistemas de pago (planificado para fases futuras)
+
+### Nuevas Funcionalidades a Probar
+
+1. **Corrección de la Conectividad API**:
+   - Configuración correcta de CORS
+   - Verificación de rutas y endpoints
+   - Manejo de errores en la comunicación frontend-backend
+   - Implementación de logging para depuración
+
+2. **Autenticación y Gestión de Usuarios**:
+   - Registro de usuarios nuevos
+   - Inicio de sesión con credenciales válidas
+   - Persistencia de sesión (token)
+   - Validación de roles y permisos
+   - Cierre de sesión
+
+3. **Gestión de Productos y Categorías**:
+   - Creación de nuevos productos
+   - Edición de productos existentes
+   - Eliminación de productos
+   - Listado y filtrado de productos
+   - Creación, edición y eliminación de categorías
+
+4. **Carrito de Compras y Pedidos**:
+   - Agregar productos al carrito
+   - Modificar cantidades en el carrito
+   - Eliminar productos del carrito
+   - Realizar checkout y confirmar pedido
+   - Visualizar historial de pedidos
+
+5. **Panel de Administración**:
+   - Dashboard con estadísticas básicas
+   - Gestión de pedidos (cambio de estado)
+   - Gestión de inventario
+
+### Pruebas de Regresión
+
+Las siguientes funcionalidades ya implementadas deben ser validadas para asegurar que no se vean afectadas por los cambios:
+
+1. **Estructura de Base de Datos**:
+   - Verificar que las tablas y relaciones mantienen su integridad
+   - Comprobar que los datos existentes no se han corrompido
+
+2. **Login y Autenticación Básica**:
+   - Verificar que el componente de login sigue funcionando tras las modificaciones
+   - Validar que el manejo de tokens se mantiene consistente
+
+3. **Operaciones Básicas de Datos**:
+   - Verificar que las operaciones CRUD básicas siguen funcionando correctamente
+   - Comprobar que las consultas a la base de datos mantienen su rendimiento
+
+4. **Navegación**:
+   - Verificar que la navegación entre las diferentes secciones de la aplicación funciona correctamente
+   - Comprobar que las rutas protegidas siguen protegidas
+
+### Funcionalidades a No Probar
+
+1. **Módulos no desarrollados aún**:
+   - Integración con sistemas de pago digital (planificado para fases futuras)
+   - Módulo de notificaciones en tiempo real (planificado para fases futuras)
+   - Análisis avanzado de datos e inteligencia artificial (planificado para fases futuras)
+
+2. **Componentes de terceros**:
+   - Funcionamiento interno de bibliotecas de terceros utilizadas en el proyecto
+   - Infraestructura de servidor y base de datos proporcionada por proveedores de servicios
+
+3. **Aspectos de seguridad avanzados**:
+   - Pruebas de penetración avanzadas (se realizarán por un equipo especializado)
+   - Auditorías de seguridad (se realizarán por personal dedicado)
+
+**Razones**: Estas funcionalidades no forman parte del alcance actual del sprint o están planificadas para fases posteriores del proyecto. Las herramientas de terceros se consideran validadas por sus respectivos proveedores. Las pruebas de seguridad avanzadas requieren especialistas y herramientas específicas que se implementarán en una fase posterior.
+
+## Enfoque de Pruebas (Estrategia)
+
+### Tipos de Pruebas
+
+1. **Pruebas Unitarias**:
+   - **Frontend**: Implementación con Vitest + Testing Library
+   - **Backend**: Implementación con Jest + Supertest
+   - Enfoque en componentes individuales, funciones y métodos
+   - Cobertura mínima del 70% para código crítico
+
+2. **Pruebas de Integración**:
+   - Verificación de la comunicación correcta entre frontend y backend
+   - Validación de flujos completos (registro, login, compra, etc.)
+   - Verificación de la integración con la base de datos
+
+3. **Pruebas Funcionales**:
+   - Validación de requisitos funcionales definidos en las historias de usuario
+   - Pruebas de caja negra basadas en casos de uso
+   - Verificación de flujos de trabajo completos
+
+4. **Pruebas de Interfaz de Usuario**:
+   - Verificación de la navegación y usabilidad
+   - Validación de formularios y campos
+   - Pruebas de responsividad en diferentes dispositivos
+
+5. **Pruebas de Rendimiento**:
+   - Tiempo de respuesta para operaciones críticas
+   - Comportamiento bajo carga moderada
+   - Eficiencia en consultas a la base de datos
+
+6. **Pruebas de Seguridad**:
+   - Validación de autenticación y autorización
+   - Protección contra inyección SQL
+   - Manejo seguro de sesiones y tokens
+
+7. **Pruebas de Aceptación**:
+   - Validación por parte de usuarios finales
+   - Verificación de criterios de aceptación de historias de usuario
+   - Pruebas de usabilidad con usuarios reales
+
+### Metodología de Pruebas
+
+1. **Desarrollo Guiado por Pruebas (TDD)**:
+   - Implementación de pruebas unitarias antes del desarrollo
+   - Verificación continua durante el desarrollo
+   - Refactorización con seguridad
+
+2. **Pruebas Automatizadas**:
+   - Integración continua con GitHub Actions
+   - Ejecución automática de pruebas unitarias y de integración
+   - Informes automáticos de cobertura
+
+3. **Pruebas Manuales**:
+   - Pruebas exploratorias para descubrir defectos no evidentes
+   - Validación de experiencia de usuario
+   - Verificación de escenarios complejos
+
+4. **Priorización basada en Riesgos**:
+   - Mayor enfoque en componentes críticos y de alto uso
+   - Pruebas exhaustivas en funcionalidades con alta probabilidad de fallos
+   - Análisis de impacto para guiar la priorización
+
+## Criterios de Aceptación o Rechazo
+
+### Criterios de Aceptación
+
+1. **Cobertura de Código**:
+   - 80% mínimo de cobertura para código crítico (autenticación, transacciones)
+   - 70% mínimo de cobertura general
+
+2. **Calidad del Código**:
+   - 0 vulnerabilidades críticas
+   - Cumplimiento de estándares de codificación
+   - Menos de 10 problemas de calidad moderados por módulo
+
+3. **Funcionalidad**:
+   - 100% de pruebas exitosas para funcionalidades críticas
+   - 95% de pruebas exitosas para funcionalidades generales
+   - Todos los criterios de aceptación de historias de usuario cumplidos
+
+4. **Rendimiento**:
+   - Tiempo de respuesta de API < 300ms para operaciones CRUD
+   - Tiempo de carga inicial < 3 segundos
+   - Consultas a base de datos < 500ms
+
+5. **Usabilidad**:
+   - Puntuación media de satisfacción de usuario > 4/5
+   - Compleción exitosa de tareas clave > 90%
+
+### Criterios de Rechazo
+
+1. **Defectos Críticos**:
+   - Cualquier fallo que impida la función principal (autenticación, pedidos)
+   - Problemas de seguridad que expongan datos sensibles
+   - Pérdida o corrupción de datos
+
+2. **Rendimiento Inaceptable**:
+   - Tiempos de respuesta > 2 segundos para operaciones CRUD básicas
+   - Errores de timeout frecuentes
+   - Alto consumo de recursos que afecte al servicio
+
+3. **Incumplimiento de Requisitos**:
+   - No cumplir con los requisitos funcionales críticos
+   - No cumplir con los requisitos no funcionales de seguridad
+   - No pasar las pruebas de aceptación del usuario
+
+## Criterios de Suspensión
+
+1. **Defectos Bloqueantes**:
+   - Fallos en la API que impidan la comunicación frontend-backend
+   - Errores críticos en la autenticación/autorización
+   - Problemas que impidan el registro de usuarios o la realización de pedidos
+
+2. **Inestabilidad del Entorno**:
+   - Fallos frecuentes en la base de datos
+   - Problemas de red que impidan pruebas adecuadas
+   - Indisponibilidad del entorno de pruebas
+
+3. **Cambios Significativos**:
+   - Modificaciones mayores en los requisitos durante la fase de pruebas
+   - Cambios estructurales en la arquitectura o diseño
+   - Actualización crítica de dependencias o frameworks
+
+4. **Métricas de Suspensión**:
+   - Más del 30% de casos de prueba fallando
+   - Más de 5 defectos críticos identificados
+   - Cobertura de código por debajo del 50%
+
+## Criterios de Reanudación
+
+1. **Resolución de Defectos Bloqueantes**:
+   - Verificación de la corrección de todos los defectos críticos
+   - Pruebas de humo exitosas en las áreas afectadas
+   - Aprobación del líder de desarrollo
+
+2. **Estabilidad del Entorno**:
+   - Entorno de pruebas completamente funcional
+   - Conexiones de red estables
+   - Base de datos operativa y con datos de prueba adecuados
+
+3. **Gestión de Cambios**:
+   - Documentación actualizada tras los cambios
+   - Refactorización completada y verificada
+   - Nuevos casos de prueba desarrollados para cubrir los cambios
+
+4. **Métricas de Reanudación**:
+   - Pruebas de regresión básicas pasando al 100%
+   - Cobertura de código recuperada al menos al 60%
+   - Aprobación formal del líder de pruebas
+
+## Entregables
+
+1. **Documentación**:
+   - Plan de Pruebas completo (este documento)
+   - Casos de prueba detallados para cada funcionalidad
+   - Manual de procedimientos de prueba
+   - Matrices de trazabilidad de requisitos vs pruebas
+
+2. **Casos de Prueba**:
+   - Repositorio de casos de prueba automatizados
+   - Scripts de prueba para frontend y backend
+   - Datos de prueba para diferentes escenarios
+
+3. **Informes de Pruebas**:
+   - Informes de ejecución de pruebas unitarias
+   - Informes de ejecución de pruebas de integración
+   - Informes de pruebas de rendimiento
+   - Informes de cobertura de código
+
+4. **Registro de Defectos**:
+   - Lista completa de defectos encontrados
+   - Estado de resolución de cada defecto
+   - Análisis de tendencias de defectos
+
+5. **Evidencias de Pruebas**:
+   - Capturas de pantalla de resultados de pruebas
+   - Logs de ejecución
+   - Videos de reproducción de defectos críticos
+
+6. **Documentación Final**:
+   - Informe final de pruebas
+   - Análisis de métricas de calidad
+   - Recomendaciones para mejoras futuras
+
+## Recursos
+
+### Requerimientos de Entornos – Hardware
+
+1. **Servidores**:
+   - Entorno de desarrollo/pruebas: Instancia EC2 t2.micro (1 vCPU, 1GB RAM) o equivalente
+   - Base de datos: Instancia RDS t2.micro compartida o MySQL local en la misma máquina
+   - Alternativa económica: Máquina local con partición dedicada para desarrollo/pruebas
+
+2. **Estaciones de Trabajo**:
+   - Equipos estándar para desarrolladores/testers: Procesador i3/Ryzen 3 o superior, 8GB RAM mínimo
+   - Dispositivos personales de los miembros del equipo para pruebas de responsive
+   - Navegadores instalados en las estaciones de trabajo para pruebas multiplataforma
+
+3. **Infraestructura de Red**:
+   - Conexión a Internet estándar (10Mbps mínimo)
+   - Red WiFi para entorno de desarrollo
+   - No se requiere VPN específica en esta fase
+
+### Requerimientos de Entornos – Software
+
+1. **Sistemas Operativos**:
+   - Servidores: Linux Ubuntu 22.04 LTS
+   - Estaciones de trabajo: Windows 10/11, macOS Ventura
+   - Dispositivos móviles: Android 11+, iOS 15+
+
+2. **Software de Desarrollo**:
+   - IDE: Visual Studio Code
+   - Control de versiones: Git, GitHub
+   - Gestión de dependencias: npm, Yarn
+   - Herramientas de diseño: Figma
+
+3. **Entorno de Ejecución**:
+   - Frontend: Node.js v18+, React v18+
+   - Backend: Node.js v18+, Express.js
+   - Base de datos: MySQL 8.0
+   - Contenedores: Docker v24+, Docker Compose v2.17+
+
+4. **Navegadores**:
+   - Google Chrome (última versión)
+   - Mozilla Firefox (última versión)
+   - Safari (última versión)
+   - Microsoft Edge (última versión)
+
+### Herramientas de Pruebas Requeridas
+
+1. **Pruebas Unitarias y de Integración**:
+   - Jest + Supertest para backend
+   - Vitest + Testing Library para frontend
+   - Storybook para componentes UI
+
+2. **Automatización de Pruebas**:
+   - GitHub Actions para CI/CD
+   - Playwright para pruebas end-to-end
+   - Postman/Insomnia para pruebas de API
+
+3. **Análisis de Código**:
+   - ESLint para análisis estático
+   - SonarQube para calidad de código
+   - Istanbul/NYC para cobertura de código
+
+4. **Gestión de Pruebas**:
+   - JIRA para seguimiento de issues
+   - TestRail para gestión de casos de prueba
+   - Zephyr para integración con JIRA
+
+5. **Monitoreo y Rendimiento**:
+   - Lighthouse para rendimiento web
+   - New Relic para monitoreo de aplicación
+   - MySQL Workbench para análisis de consultas
+
+### Personal
+
+| Rol | Nombre | Responsabilidades |
+|-----|--------|-------------------|
+| Líder de Pruebas/Ingeniero Senior | Luis Ángel Puente Quevedo | Diseño de estrategia de pruebas, planificación, supervisión técnica, desarrollo de pruebas avanzadas |
+| Desarrollador Junior/Documentación | Oscar Pérez Luna | Asistencia en pruebas, documentación, gestión de datos de prueba |
+| Tester Manual/Usabilidad | Uriel Pérez Acolco | Ejecución de pruebas manuales, validación de requerimientos, verificación de experiencia de usuario |
+| Usuario Final (Colaborador) | [Pendiente] | Pruebas de aceptación, feedback de usabilidad |
+
+## Entrenamiento
+
+1. **Formación Autodidacta**:
+   - Recursos gratuitos online para Jest/Vitest (documentación oficial, tutoriales YouTube)
+   - Sesiones de pair programming para transferencia de conocimiento (2 horas semanales)
+   - Biblioteca de recursos compartida en GitHub con tutoriales seleccionados
+
+2. **Capacitación Interna**:
+   - Sesión de introducción al sistema por el líder del proyecto (1 hora)
+   - Documentación del sistema accesible en el repositorio de código
+   - Sesiones periódicas de revisión de código con enfoque educativo
+
+3. **Metodología de Pruebas**:
+   - Plantillas de casos de prueba disponibles en el repositorio
+   - Guía de buenas prácticas para pruebas (documento colaborativo)
+   - Ejemplos de código de pruebas ya implementados como referencia
+
+## Planificación y Organización
+
+### Implementación de Docker para Entornos de Prueba
+
+### Infraestructura Docker
+
+### Implementación de Docker para Entornos de Prueba
+
+1. **Configuración Docker Ligera**:
+   - Imágenes Alpine Linux para reducir tamaño y consumo de recursos
+   - Configuración de límites de memoria para contenedores (máximo 512MB por contenedor)
+   - Optimización de capas de imágenes para reducir tamaño total
+
+2. **Imágenes Docker Optimizadas**:
+   - Imagen de Node.js Alpine para frontend y backend (node:18-alpine)
+   - Imagen de MySQL 8.0 o MariaDB 10 (más ligera) con configuración de bajo consumo
+   - Sin imágenes adicionales para herramientas de prueba (instaladas directamente en las imágenes principales)
+
+3. **Flujo de Trabajo con Docker**:
+   - Scripts simplificados para levantar el entorno de pruebas
+   - Multi-stage builds para reducir el tamaño final de las imágenes
+   - Uso de volúmenes compartidos para evitar reconstruir imágenes constantemente
+
+4. **Beneficios de esta Implementación**:
+   - Funciona en equipos con recursos limitados
+   - Tiempos de inicio rápidos (<15 segundos para el entorno completo)
+   - Compatible con integración continua gratuita
+   - Configuración replicable y portable
+
+### Procedimientos para las Pruebas
+
+1. **Pruebas Unitarias**:
+   - Desarrolladas en paralelo con el código o previo a su implementación (TDD)
+   - Ejecutadas automáticamente con cada commit y pull request
+   - Mantenidas por cada desarrollador para su código
+   - Ejecutadas en entornos Docker para garantizar consistencia
+
+2. **Pruebas de Integración**:
+   - Desarrolladas por el equipo QA en colaboración con desarrolladores
+   - Ejecutadas diariamente en entorno de integración
+   - Resultados revisados en daily stand-up
+
+3. **Pruebas Funcionales**:
+   - Basadas en historias de usuario y criterios de aceptación
+   - Ejecutadas manualmente por el equipo QA
+   - Registradas en la herramienta de gestión de pruebas
+
+4. **Pruebas de Regresión**:
+   - Automatizadas cuando sea posible
+   - Ejecutadas antes de cada release
+   - Incluyen casos de prueba críticos de todas las funcionalidades
+
+5. **Pruebas de Aceptación**:
+   - Realizadas por usuarios finales o representantes
+   - Focalizadas en escenarios de uso real
+   - Feedback recogido y priorizado para mejoras
+
+6. **Gestión de Defectos**:
+   - Todos los defectos registrados en JIRA con severidad y prioridad
+   - Reunión semanal de triage de bugs
+   - Defectos críticos atendidos inmediatamente
+
+### Matriz de Responsabilidades
+
+| Actividad | Líder de Pruebas/Ingeniero Senior | Desarrollador Junior/Documentación | Tester Manual/Usabilidad | Usuario Final |
+|-----------|-----------------------------------|-------------------------------------|--------------------------|---------------|
+| Planificación de pruebas | R | I | C | I |
+| Diseño de casos de prueba | R | C | C | I |
+| Desarrollo pruebas unitarias | R | I | I | I |
+| Automatización básica | R | C | I | I |
+| Ejecución pruebas manuales | A | I | R | C |
+| Documentación de pruebas | A | R | C | I |
+| Gestión de datos de prueba | C | R | C | I |
+| Pruebas de interfaz de usuario | A | I | R | C |
+| Reporte y seguimiento de bugs | R | C | C | I |
+| Pruebas de usabilidad | A | I | R | C |
+| Pruebas de aceptación | A | I | C | R |
+| Gestión de defectos | R | C | C | I |
+| Informes de pruebas | R | C | C | I |
+
+R: Responsable, A: Aprobador, C: Consultado, I: Informado
+
+### Cronograma
+
+| Fase | Actividad | Duración | Fecha Inicio | Fecha Fin | Responsable Principal | Dependencias |
+|------|-----------|----------|-------------|-----------|------------------------|--------------|
+| **Sprint 4** | Configuración entorno pruebas | 2 días | 25/03/2025 | 26/03/2025 | Luis Ángel Puente | - |
+| **Sprint 4** | Pruebas unitarias API | 3 días | 27/03/2025 | 29/03/2025 | Luis Ángel Puente | Config. entorno |
+| **Sprint 4** | Preparación datos de prueba | 2 días | 27/03/2025 | 28/03/2025 | Oscar Pérez Luna | Config. entorno |
+| **Sprint 4** | Pruebas de conexión frontend-backend | 2 días | 30/03/2025 | 31/03/2025 | Luis Ángel Puente | Pruebas unitarias API |
+| **Sprint 4** | Pruebas manuales de interfaz | 2 días | 30/03/2025 | 31/03/2025 | Uriel Pérez Acolco | - |
+| **Sprint 4** | Documentación de pruebas API | 2 días | 30/03/2025 | 31/03/2025 | Oscar Pérez Luna | Pruebas unitarias API |
+| **Sprint 4** | Pruebas autenticación | 2 días | 01/04/2025 | 02/04/2025 | Luis Ángel Puente | Conexión frontend-backend |
+| **Sprint 4** | Verificación de usabilidad login | 1 día | 02/04/2025 | 02/04/2025 | Uriel Pérez Acolco | Pruebas autenticación |
+| **Sprint 5** | Pruebas unitarias registro | 2 días | 08/04/2025 | 09/04/2025 | Luis Ángel Puente | Sprint 4 completado |
+| **Sprint 5** | Pruebas unitarias módulo productos | 3 días | 10/04/2025 | 12/04/2025 | Luis Ángel Puente | - |
+| **Sprint 5** | Pruebas de experiencia de usuario | 3 días | 10/04/2025 | 12/04/2025 | Uriel Pérez Acolco | - |
+| **Sprint 5** | Documentación de módulos | 3 días | 10/04/2025 | 12/04/2025 | Oscar Pérez Luna | - |
+| **Sprint 5** | Pruebas unitarias módulo categorías | 2 días | 13/04/2025 | 14/04/2025 | Luis Ángel Puente | - |
+| **Sprint 5** | Pruebas integración usuarios-productos | 2 días | 15/04/2025 | 16/04/2025 | Luis Ángel Puente | Módulos unitarios |
+| **Sprint 5** | Reporte de bugs detectados | 1 día | 16/04/2025 | 16/04/2025 | Uriel Pérez Acolco | Pruebas de experiencia |
+| **Sprint 6** | Pruebas unitarias carrito | 3 días | 22/04/2025 | 24/04/2025 | Luis Ángel Puente | Sprint 5 completado |
+| **Sprint 6** | Pruebas unitarias pedidos | 3 días | 25/04/2025 | 27/04/2025 | Luis Ángel Puente | - |
+| **Sprint 6** | Pruebas de usabilidad carrito/checkout | 3 días | 25/04/2025 | 27/04/2025 | Uriel Pérez Acolco | - |
+| **Sprint 6** | Mantenimiento documentación | 3 días | 25/04/2025 | 27/04/2025 | Oscar Pérez Luna | - |
+| **Sprint 6** | Pruebas integración carrito-pedidos | 2 días | 28/04/2025 | 29/04/2025 | Luis Ángel Puente | Pruebas unitarias |
+| **Sprint 6** | Verificación final experiencia usuario | 2 días | 28/04/2025 | 29/04/2025 | Uriel Pérez Acolco | - |
+| **Sprint 6** | Pruebas flujo completo compra | 3 días | 30/04/2025 | 02/05/2025 | Todos | Integración carrito-pedidos |
+
+## Premisas
+
+1. **Disponibilidad de recursos**:
+   - El equipo de desarrollo y pruebas estará disponible durante todo el proyecto
+   - Los recursos hardware y software estarán disponibles según lo especificado
+   - Se contará con el apoyo de usuarios finales para pruebas de aceptación
+
+2. **Entorno de pruebas**:
+   - El entorno de pruebas será independiente del de desarrollo
+   - La base de datos de pruebas podrá ser reseteada según necesidad
+   - El entorno simulará condiciones de producción lo más fielmente posible
+
+3. **Metodología y herramientas**:
+   - Se seguirá una metodología ágil con Scrum
+   - Las herramientas especificadas estarán disponibles y configuradas
+   - El repositorio de código tendrá integración continua configurada
+
+4. **Calendario y plazos**:
+   - Los sprints tienen una duración de 2 semanas
+   - Se respetarán las fechas de inicio y fin planificadas
+   - Se mantendrán reuniones diarias de 15 minutos para seguimiento
+
+## Dependencias y Riesgos
+
+### Dependencias
+
+1. **Dependencias con Desarrollos**:
+   - Corrección de la conectividad API antes de pruebas de integración
+   - Implementación completa de autenticación antes de pruebas de seguridad
+   - Desarrollo de módulo de productos antes de pruebas de carrito
+
+2. **Dependencias con Recursos**:
+   - Disponibilidad de servidores para entorno de pruebas
+   - Acceso a datos de prueba representativos
+   - Licencias para herramientas de prueba
+
+3. **Dependencias Externas**:
+   - Estabilidad de servicios de terceros utilizados
+   - Disponibilidad de usuarios beta para pruebas de aceptación
+   - Cumplimiento de proveedores con fechas de entrega
+
+### Riesgos
+
+| Riesgo | Probabilidad | Impacto | Mitigación | Contingencia |
+|--------|--------------|---------|------------|--------------|
+| Retrasos en corrección API | Alta | Alto | Priorizar tareas, asignar recursos adicionales | Implementar solución temporal con mock services |
+| Cambios en requisitos | Media | Alto | Gestión de cambios rigurosa, documentación clara | Buffer de tiempo en planificación, priorización de cambios |
+| Problemas entorno pruebas | Media | Medio | Configuración previa, verificación periódica | Entorno alternativo disponible, pruebas en local |
+| Falta experiencia equipo QA | Baja | Alto | Capacitación previa, documentación detallada | Consultores externos, pair testing |
+| Defectos bloqueantes | Media | Alto | Pruebas tempranas, CI continuo | Procedimiento de rollback, versiones estables |
+| Problemas rendimiento | Media | Medio | Pruebas carga tempranas, optimización continua | Escalado recursos, cacheo, optimización DB |
+| Seguridad insuficiente | Baja | Crítico | Revisiones código, pruebas seguridad automatizadas | Auditoría externa, parches urgentes |
+
+## Referencias
+
+1. Plan de Proyecto de Software LYNX
+2. Documentación de Modelo de Negocio LYNX (modelodenegocio.pdf)
+3. Especificación de Requisitos IEEE 830 (2.6 Avance de proyecto.pdf)
+4. Historias de Usuario (Historias UsuarioPuenteLuisAngel.pdf)
+5. Casos de Uso (Casos de uso.pdf)
+6. Esquema de Base de Datos (lynx.sql)
+7. Componente de Login (Login Component Updated.tsx)
+8. Estándares IEEE 829-2008 para Documentación de Pruebas de Software
+
+## Glosario
+
+- **API**: Application Programming Interface - Interfaz que permite la comunicación entre diferentes componentes de software
+- **CORS**: Cross-Origin Resource Sharing - Mecanismo que permite solicitar recursos restringidos en una página web desde otro dominio
+- **CI/CD**: Continuous Integration/Continuous Deployment - Práctica de integrar código y desplegar cambios de forma continua y automatizada
+- **TDD**: Test-Driven Development - Metodología donde se escriben las pruebas antes de desarrollar el código
+- **Frontend**: Parte de la aplicación con la que interactúa el usuario directamente
+- **Backend**: Parte de la aplicación que procesa las solicitudes y gestiona la lógica de negocio y datos
+- **CRUD**: Create, Read, Update, Delete - Operaciones básicas de manipulación de datos
+- **Sprint**: Período de tiempo fijo durante el cual se completa un trabajo específico en metodologías ágiles
+- **JWT**: JSON Web Token - Estándar para la creación de tokens de acceso basado en JSON
+- **Mock**: Objeto que simula el comportamiento de objetos reales de forma controlada
+- **Regresión**: Prueba que verifica que cambios recientes no han afectado funcionalidades existentes
+- **Responsive**: Diseño web que se adapta a diferentes tamaños de pantalla y dispositivos
+- **Docker**: Plataforma que permite crear, implementar y ejecutar aplicaciones en contenedores
+- **Contenedor**: Unidad estándar de software que empaqueta código y dependencias para que una aplicación se ejecute de manera rápida y confiable en diferentes entornos
+- **Docker Compose**: Herramienta para definir y ejecutar aplicaciones Docker multi-contenedor
+- **Imagen Docker**: Plantilla de solo lectura con instrucciones para crear un contenedor Docker
+
+# Ejecutar todas las pruebas
+npm run test
+
+# Ejecutar y documentar con el script (requiere configuración previa)
+node cliente/src/__tests__/runLYNX003Tests.js
