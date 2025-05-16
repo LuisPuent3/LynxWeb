@@ -7,6 +7,12 @@ dotenv.config();
 
 const app = express();
 
+// Logger para depuración
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
+
 // Middlewares
 app.use(cors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
@@ -31,12 +37,24 @@ app.get('/api/test', (req, res) => {
     res.json({ message: 'API funcionando correctamente' });
 });
 
-// Manejo de errores
+// Manejo de errores mejorado
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error('Error en la API:', err);
+    console.error('Stack trace:', err.stack);
+    
+    if (err.code === 'ECONNREFUSED') {
+        return res.status(500).json({ 
+            error: 'Error de conexión a la base de datos',
+            message: 'No se pudo conectar a la base de datos. Verifique que MySQL esté en ejecución.'
+        });
+    }
+    
     res.status(500).json({ 
         error: 'Error interno del servidor',
-        message: process.env.NODE_ENV === 'development' ? err.message : 'Algo salió mal'
+        message: process.env.NODE_ENV === 'production' ? 
+            'Algo salió mal' : 
+            err.message || 'Error desconocido',
+        stack: process.env.NODE_ENV === 'production' ? null : err.stack
     });
 });
 

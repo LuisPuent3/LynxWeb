@@ -16,18 +16,7 @@ CREATE TABLE Nombres (
     apellidoM varchar(70) -- apellido materno del usuario no obligatorio
 );
 
--- Crear tabla de Usuarios
-CREATE TABLE Usuarios (
-    id_usuario INT AUTO_INCREMENT PRIMARY KEY, -- Identificador único del usuario
-    id_nombre INT DEFAULT NULL,                -- Relación con Nombres
-    correo VARCHAR(100) UNIQUE DEFAULT NULL,   -- Correo único (puede ser NULL para invitados)
-    telefono VARCHAR(15) UNIQUE DEFAULT NULL,  -- Teléfono único (puede ser NULL para invitados)
-    contraseña VARBINARY(255) DEFAULT NULL,    -- Contraseña encriptada (NULL para invitados)
-    id_rol INT NOT NULL,                       -- Relación con Roles
-    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Fecha de registro
-    FOREIGN KEY (id_nombre) REFERENCES Nombres(id_nombre) ON DELETE SET NULL ON UPDATE CASCADE,
-    FOREIGN KEY (id_rol) REFERENCES Roles(id_rol) ON DELETE CASCADE ON UPDATE CASCADE
-);
+-- Crear tabla de UsuariosCREATE TABLE Usuarios (    id_usuario INT AUTO_INCREMENT PRIMARY KEY, -- Identificador único del usuario    id_nombre INT DEFAULT NULL,                -- Relación con Nombres    correo VARCHAR(100) UNIQUE DEFAULT NULL,   -- Correo único (puede ser NULL para invitados)    telefono VARCHAR(15) UNIQUE DEFAULT NULL,  -- Teléfono único (puede ser NULL para invitados)    contraseña VARCHAR(255) DEFAULT NULL,      -- Contraseña encriptada con bcrypt (NULL para invitados)    id_rol INT NOT NULL,                       -- Relación con Roles    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Fecha de registro    FOREIGN KEY (id_nombre) REFERENCES Nombres(id_nombre) ON DELETE SET NULL ON UPDATE CASCADE,    FOREIGN KEY (id_rol) REFERENCES Roles(id_rol) ON DELETE CASCADE ON UPDATE CASCADE);
 
 -- Crear tabla de Categorías
 CREATE TABLE Categorias (
@@ -97,13 +86,7 @@ VALUES
 
 
 
-INSERT INTO Usuarios (id_nombre, correo, telefono, contraseña, id_rol) 
-VALUES 
-(1, 'juan.perez@example.com', '5551234567', AES_ENCRYPT('mi_contraseña', 'clave_secreta'), 1),
-(2, 'ana.gomez@example.com', '5559876543', AES_ENCRYPT('otra_contraseña', 'clave_secreta'), 2),
-(3, 'carlos.lopez@example.com', '5557891234', AES_ENCRYPT('password', 'clave_secreta'), 1),
-(4, 'laura.mendez@example.com', '5556549870', AES_ENCRYPT('contraseña123', 'clave_secreta'), 2),
-(5, 'pedro.fernandez@example.com', '5553214569', AES_ENCRYPT('12345', 'clave_secreta'), 3);
+-- Nota: En una aplicación real, estos hashes deberían generarse con bcrypt-- La siguiente línea es solo para documentación, estamos simulando contraseñas ya hasheadasINSERT INTO Usuarios (id_nombre, correo, telefono, contraseña, id_rol) VALUES (1, 'juan.perez@example.com', '5551234567', '$2a$10$X7H1QALRRxX9Q1Y4z8P5h.fGxmAw/1xn0R9SWzw1zrg9n8cvJw8hy', 1), -- mi_contraseña(2, 'ana.gomez@example.com', '5559876543', '$2a$10$4XMM5dZ4zMVK5KJN9XZMzu3ZQdaF2TYi5xYzB0H5f8.URVKad0hFa', 2), -- otra_contraseña(3, 'carlos.lopez@example.com', '5557891234', '$2a$10$PoLSg6KfLUQBgDRYm/1B6eH3QphcV7EwkuS3lkBUU8J5zQvbNSJCa', 1), -- password(4, 'laura.mendez@example.com', '5556549870', '$2a$10$XeDqLsm6jXHPHU9UcMzCke4kcgYZnZ5BG.fFQi8i/mB.x2uWa0yxu', 2), -- contraseña123(5, 'pedro.fernandez@example.com', '5553214569', '$2a$10$CcUNzwGZE.JGz/p8.nHjReg.DmdOJoFDimqO6RE.y5fxQ2cUgHIjK', 3); -- 12345
 
 
 INSERT INTO Categorias (nombre, descripcion) 

@@ -6,6 +6,7 @@ import '../styles/Modal.css';
 import { useNavigate } from "react-router-dom";
 import { Producto } from "../types/types";
 import { AxiosError, AxiosResponse } from 'axios';
+import { useAuth } from "../contexts/AuthContext";
 
 interface ApiErrorResponse {
  error?: string;
@@ -24,6 +25,7 @@ const Home = () => {
  const [showAuthModal, setShowAuthModal] = useState(false);
  const [searchTerm, setSearchTerm] = useState("");
  const navigate = useNavigate();
+ const { isAuthenticated, user, logout } = useAuth();
 
  useEffect(() => {
    localStorage.setItem('tempCarrito', JSON.stringify(carrito));
@@ -40,6 +42,11 @@ const Home = () => {
      console.log("Modal cerrado");
    }
  }, [showAuthModal]);
+
+ const handleLogout = () => {
+   logout();
+   navigate('/');
+ };
 
  const addToCart = (producto: Producto) => {
    const existe = carrito.find((item) => item.id_producto === producto.id_producto);
@@ -192,20 +199,37 @@ const Home = () => {
              </div>
            </form>
            <div className="ms-auto mt-2 mt-lg-0">
-             <button 
-               className="btn btn-outline-light me-2" 
-               onClick={() => navigate("/login")}
-             >
-               <i className="bi bi-person me-1"></i>
-               Iniciar Sesión
-             </button>
-             <button 
-               className="btn btn-light" 
-               onClick={() => navigate("/register")}
-             >
-               <i className="bi bi-person-plus me-1"></i>
-               Registrarse
-             </button>
+             {isAuthenticated ? (
+               <>
+                 <span className="text-light me-3 d-none d-md-inline">
+                   Hola, {user?.nombre || 'Usuario'}
+                 </span>
+                 <button 
+                   className="btn btn-outline-light" 
+                   onClick={handleLogout}
+                 >
+                   <i className="bi bi-box-arrow-right me-1"></i>
+                   Cerrar sesión
+                 </button>
+               </>
+             ) : (
+               <>
+                 <button 
+                   className="btn btn-outline-light me-2" 
+                   onClick={() => navigate("/login")}
+                 >
+                   <i className="bi bi-person me-1"></i>
+                   Iniciar Sesión
+                 </button>
+                 <button 
+                   className="btn btn-light" 
+                   onClick={() => navigate("/register")}
+                 >
+                   <i className="bi bi-person-plus me-1"></i>
+                   Registrarse
+                 </button>
+               </>
+             )}
            </div>
          </div>
        </div>
