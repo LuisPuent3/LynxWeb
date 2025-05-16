@@ -155,8 +155,17 @@ const Home = () => {
    <>
      <nav className="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
        <div className="container">
-         <a className="navbar-brand d-flex align-items-center" href="/">
-           <i className="bi bi-shop me-2"></i>
+         <a className="navbar-brand d-flex align-items-center" href="/" style={{ 
+           color: "white", 
+           fontWeight: "bold",
+           textShadow: "1px 1px 2px rgba(0,0,0,0.3)",
+           fontSize: "1.25rem",
+           transition: "all 0.3s ease"
+         }}
+         onMouseEnter={(e) => e.currentTarget.style.textShadow = "1px 1px 4px rgba(0,0,0,0.5)"}
+         onMouseLeave={(e) => e.currentTarget.style.textShadow = "1px 1px 2px rgba(0,0,0,0.3)"}
+         >
+           <i className="bi bi-shop me-2" style={{ fontSize: "1.4rem" }}></i>
            LynxShop
          </a>
          <button

@@ -1,0 +1,124 @@
+**Historias de Usuario - Lynx Shop**
+**Versión:** 2.0
+**Fecha:** 15/05/2025
+
+---
+
+### HU001 – Registro de usuario
+
+**Como** nuevo usuario
+**Quiero** poder crear una cuenta ingresando mis datos personales
+**Para** poder acceder a la plataforma y realizar pedidos
+
+**Criterios de Aceptación:**
+
+* El correo debe ser único
+* La contraseña debe tener validaciones de seguridad
+* El sistema confirma el registro exitoso
+
+---
+
+### HU002 – Inicio de sesión
+
+**Como** usuario registrado
+**Quiero** iniciar sesión con mi correo y contraseña
+**Para** acceder a mis funcionalidades personalizadas
+
+**Criterios de Aceptación:**
+
+* Debe devolver token JWT
+* Mensaje de error si las credenciales son inválidas
+
+---
+
+### HU005 – Gestión de productos
+
+**Como** administrador
+**Quiero** crear, editar o eliminar productos
+**Para** mantener actualizado el inventario
+
+**Criterios de Aceptación:**
+
+* Validar datos al crear y editar
+* Confirmación al eliminar productos
+
+---
+
+### HU007 – Gestión de categorías
+
+**Como** administrador
+**Quiero** gestionar las categorías de productos
+**Para** organizar el catálogo eficientemente
+
+**Criterios de Aceptación:**
+
+* No debe haber categorías duplicadas
+* CRUD funcional completo
+
+---
+
+### HU010 – Manejo del carrito de compras
+
+**Como** cliente
+**Quiero** agregar y modificar productos en el carrito
+**Para** preparar mi pedido antes de comprar
+
+**Criterios de Aceptación:**
+
+* Permitir modificar cantidades
+* Mostrar total actualizado
+
+---
+
+### HU011 – Realizar pedido
+
+**Como** cliente
+**Quiero** confirmar mi carrito como un pedido
+**Para** registrar la compra y ver el historial
+
+**Criterios de Aceptación:**
+
+* Pedido creado correctamente
+* Carrito vaciado tras confirmación
+
+---
+
+### HU012 – Dashboard administrativo
+
+**Como** administrador
+**Quiero** ver estadísticas de ventas y pedidos
+**Para** tomar decisiones basadas en datos
+
+**Criterios de Aceptación:**
+
+* Visualización de KPIs actualizados
+* Acceso restringido por rol
+
+---
+
+### HU013 – Recomendaciones personalizadas
+
+**Como** cliente frecuente
+**Quiero** recibir sugerencias de productos basadas en mis compras anteriores
+**Para** descubrir nuevos productos relevantes
+
+**Criterios de Aceptación:**
+
+* Excluir productos ya comprados
+* Mostrar 10 productos sugeridos
+* En caso de no tener historial, ver los más vendidos
+
+---
+
+### Tabla de Trazabilidad HU ↔ CU ↔ RF ↔ TC
+
+| Historia de Usuario | Caso de Uso | Requisito Funcional | Casos de Prueba                 |
+| ------------------- | ----------- | ------------------- | ------------------------------- |
+| HU001               | CU1         | RF1                 | LYNX\_011, LYNX\_012            |
+| HU002               | CU2         | RF2                 | LYNX\_013, LYNX\_014, LYNX\_015 |
+| HU005               | CU3         | RF3                 | LYNX\_016, LYNX\_017, LYNX\_018 |
+| HU007               | CU4         | RF4                 | LYNX\_020                       |
+| HU010               | CU5         | RF5                 | LYNX\_021, LYNX\_022, LYNX\_023 |
+| HU011               | CU6         | RF6                 | LYNX\_024, LYNX\_025            |
+| HU012               | CU9         | RF7                 | LYNX\_026, LYNX\_027            |
+| HU013               | CU10        | RF8                 | LYNX\_029, LYNX\_030            |

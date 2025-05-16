@@ -1,0 +1,110 @@
+Modelo Entidad-Relación (ER):
+
+Se ha utilizado el modelo ER para representar las entidades, atributos y relaciones de la base de datos.
+Las entidades principales son: Usuarios, Roles, Nombres, Categorías, Productos, Pedidos, DetallePedido y EstadosPedidos.
+Las relaciones entre las entidades se han establecido mediante claves primarias y claves foráneas.
+
+Normalización:
+
+Se ha aplicado la normalización para evitar la redundancia de datos y garantizar la integridad y consistencia de la información.
+La base de datos se ha diseñado siguiendo las formas normales (1NF, 2NF, 3NF) para eliminar dependencias funcionales y transitividades.
+
+Tabla "Roles":
+
+Almacena los diferentes roles que pueden tener los usuarios en el sistema (Cliente, Administrador, Invitado).
+Atributos: id_rol (PK), nombre.
+
+Tabla "Nombres":
+
+Contiene los nombres de los usuarios.
+Atributos: id_nombre (PK), nombre, apellidoP, apellidoM.
+
+Tabla "Usuarios":
+
+Representa a los usuarios registrados en el sistema.
+Atributos: id_usuario (PK), id_nombre (FK), correo, telefono, contraseña, id_rol (FK), fecha_registro.
+Relaciones:
+
+Muchos a uno con la tabla "Nombres" mediante id_nombre.
+Muchos a uno con la tabla "Roles" mediante id_rol.
+
+
+
+Tabla "Categorias":
+
+Almacena las categorías de productos disponibles en el sistema.
+Atributos: id_categoria (PK), nombre, descripcion.
+
+Tabla "Productos":
+
+Contiene los detalles de los productos disponibles en el inventario.
+Atributos: id_producto (PK), nombre, precio, cantidad, id_categoria (FK), imagen.
+Relaciones:
+
+Muchos a uno con la tabla "Categorias" mediante id_categoria.
+
+
+
+Tabla "Pedidos":
+
+Representa los pedidos realizados por los usuarios.
+Atributos: id_pedido (PK), id_usuario (FK), id_estado (FK), fecha.
+Relaciones:
+
+Muchos a uno con la tabla "Usuarios" mediante id_usuario.
+Muchos a uno con la tabla "EstadosPedidos" mediante id_estado.
+
+
+
+Tabla "DetallePedido":
+
+Almacena los detalles de cada producto incluido en un pedido.
+Atributos: id_detalle (PK), id_pedido (FK), id_producto (FK), cantidad, subtotal.
+Relaciones:
+
+Muchos a uno con la tabla "Pedidos" mediante id_pedido.
+Muchos a uno con la tabla "Productos" mediante id_producto.
+
+
+
+Tabla "EstadosPedidos":
+
+Contiene los diferentes estados posibles de un pedido (Pendiente, Entregado, Cancelado).
+Atributos: id_estado (PK), nombre.
+
+Manejo del carrito de compras:
+
+El carrito de compras se almacena temporalmente en el lado del cliente utilizando el localStorage.
+Cada vez que el usuario agrega, elimina o modifica un producto en el carrito, se actualiza la información en el localStorage.
+Al confirmar el pedido, se crea un nuevo registro en la tabla "Pedidos" y se crean registros en la tabla "DetallePedido" para cada producto en el carrito.
+Se actualiza la cantidad disponible de los productos en la tabla "Productos" restando la cantidad pedida.
+
+Consultas y seguimiento de pedidos:
+
+Se utilizan consultas SQL con JOIN para obtener la información completa de un pedido, combinando las tablas "Pedidos", "DetallePedido", "Productos" y "Usuarios".
+Se pueden realizar consultas para obtener el historial de pedidos de un usuario específico o el estado actual de un pedido.
+
+Restricciones y relaciones:
+
+Se han definido restricciones de clave primaria (PRIMARY KEY) para garantizar la unicidad de los identificadores en cada tabla.
+Se han establecido restricciones de clave foránea (FOREIGN KEY) para mantener la integridad referencial entre las tablas relacionadas.
+Las relaciones se han definido mediante las claves foráneas, asegurando que los registros en las tablas relacionadas sean consistentes.
+
+Índices:
+
+Se han creado índices en las columnas frecuentemente utilizadas en las consultas para mejorar el rendimiento y la velocidad de recuperación de datos.
+
+Seguridad:
+
+Se ha implementado el cifrado de contraseñas utilizando funciones de hash seguras (como bcrypt) antes de almacenarlas en la base de datos.
+Se han aplicado medidas de validación y sanitización de datos para prevenir inyecciones SQL y otros ataques de seguridad.
+
+Backup y restauración:
+
+Se han establecido procedimientos de backup regulares para resguardar los datos y garantizar la disponibilidad en caso de fallos o pérdidas.
+Se han definido mecanismos de restauración para poder recuperar la base de datos a partir de los backups en caso de ser necesario.
+
+Escalabilidad:
+
+La estructura de la base de datos ha sido diseñada teniendo en cuenta la escalabilidad futura del sistema.
+Se han considerado posibles expansiones, como la adición de nuevas funcionalidades o el crecimiento del volumen de datos, y se ha diseñado la base de datos de manera modular y flexible para adaptarse a estos cambios.

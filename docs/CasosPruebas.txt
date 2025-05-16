@@ -347,6 +347,166 @@ Verificar que la interfaz se adapta correctamente a diferentes tamaños de panta
 **Escenario de Prueba:**
 Verificar que la API maneja correctamente los errores y devuelve respuestas apropiadas
 
+LYNX_011 – Registro de Usuario
+Descripción del Caso de Prueba: Verificar que un usuario pueda registrarse con datos válidos.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Backend funcional; formulario de registro accesible.
+Datos de prueba:
+
+Nombre: Ana López
+
+Correo: ana.lopez@example.com
+
+Contraseña: Ana123$
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ingresar al formulario de registro	Se muestra correctamente
+2	Llenar todos los campos válidos	Validación en frontend pasa
+3	Enviar formulario	Respuesta 201 con mensaje de éxito
+4	Consultar base de datos o API	Usuario se guarda correctamente
+
+LYNX_012 – Validación de duplicidad en correo
+Descripción del Caso de Prueba: Verificar que no se permita registrar un correo ya existente.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario registrado previamente.
+Datos de prueba:
+
+Correo: ana.lopez@example.com
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ingresar al registro	Formulario aparece correctamente
+2	Escribir un correo ya registrado	Validación se activa
+3	Enviar formulario	Se recibe error 409 o mensaje “correo en uso”
+
+LYNX_013 – Inicio de Sesión
+Descripción del Caso de Prueba: Validar el login con credenciales correctas.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario registrado.
+Datos de prueba:
+
+Correo: ana.lopez@example.com
+
+Contraseña: Ana123$
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir a la pantalla de login	Formulario visible
+2	Ingresar credenciales válidas	Token JWT recibido
+3	Acceso al sistema	Redireccionamiento al dashboard o home
+
+LYNX_014 – Validación de credenciales incorrectas
+Descripción del Caso de Prueba: Validar que no se permita el inicio de sesión con credenciales incorrectas.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario existente.
+Datos de prueba:
+
+Correo: ana.lopez@example.com
+
+Contraseña: incorrecta123
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir a la pantalla de login	Formulario visible
+2	Ingresar credenciales erróneas	Mensaje de error mostrado
+3	Revisar respuesta del backend	Código 401 no autorizado
+
+LYNX_015 – Persistencia de sesión
+Descripción del Caso de Prueba: Verificar que el usuario conserve sesión activa tras recarga.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario autenticado, token en localStorage.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Iniciar sesión normalmente	Usuario accede con éxito
+2	Recargar el navegador	Usuario sigue autenticado
+3	Acceder a ruta protegida	Acceso permitido sin relogin
+
+LYNX_016 – Registro de producto (admin)
+Descripción del Caso de Prueba: Validar que el administrador pueda crear un nuevo producto.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario con rol admin logueado.
+Datos de prueba:
+
+Producto: Papas Sabritas
+
+Precio: 12.50
+
+Stock: 100
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir a la sección de productos	Vista accesible solo a admin
+2	Llenar campos del formulario	Validación exitosa
+3	Enviar formulario	Producto creado en BD y listado actualizado
+
+LYNX_017 – Edición de producto
+Descripción del Caso de Prueba: Validar que el admin pueda editar productos existentes.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Producto ya registrado.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Buscar producto existente	Producto aparece listado
+2	Clic en “editar”	Formulario precargado aparece
+3	Modificar precio o nombre	Cambios guardados correctamente
+
+LYNX_018 – Eliminación de producto
+Descripción del Caso de Prueba: Verificar que el admin pueda eliminar productos.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Producto creado.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir a lista de productos	Producto aparece
+2	Clic en “eliminar”	Confirmación mostrada
+3	Confirmar acción	Producto eliminado de la BD y listado
+
+LYNX_019 – Filtrado de productos
+Descripción del Caso de Prueba: Verificar que el usuario pueda filtrar por nombre y categoría.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Lista de productos visibles.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir a catálogo de productos	Productos cargan correctamente
+2	Usar campo de búsqueda o categoría	Resultados filtrados dinámicamente
+3	Verificar que coincide con filtro	No aparecen productos fuera de criterio
+
+LYNX_020 – Gestión de categorías
+Descripción del Caso de Prueba: Validar que se puedan crear, editar y eliminar categorías.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario administrador logueado.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ingresar a gestión de categorías	Panel se muestra correctamente
+2	Crear nueva categoría	Aparece en la lista
+3	Editar nombre de categoría existente	Cambio guardado correctamente
+4	Eliminar categoría	Eliminada correctamente y desaparece de la lista
+
+
 | Paso # | Detalles del Paso | Resultados Esperados | Resultados Actuales | Estado |
 |--------|-------------------|----------------------|--------------------|--------|
 | 1 | Enviar petición GET a ruta inexistente | Código 404 con mensaje de error claro | | |
@@ -355,3 +515,133 @@ Verificar que la API maneja correctamente los errores y devuelve respuestas apro
 | 4 | Enviar petición con token inválido | Código 401 con mensaje de token inválido | | |
 | 5 | Enviar datos inválidos en POST | Código 400 con detalles de validación | | |
 | 6 | Intentar acción sin permisos | Código 403 con mensaje de autorización | | |
+
+LYNX_021 – Agregar productos al carrito
+Descripción del Caso de Prueba: Verificar que un usuario pueda agregar productos al carrito.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario autenticado, productos disponibles en inventario.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir a catálogo de productos	Productos cargan correctamente
+2	Clic en botón “Agregar al carrito”	Producto se añade al carrito
+3	Ir al carrito	Producto aparece con cantidad 1 y subtotal correcto
+
+LYNX_022 – Modificar cantidades en el carrito
+Descripción del Caso de Prueba: Verificar que el usuario pueda cambiar la cantidad de productos en el carrito.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Producto ya añadido al carrito.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir al carrito	Producto con cantidad editable
+2	Cambiar la cantidad a 3	Subtotal y total actualizados
+3	Verificar base de datos o localStorage	Cantidad reflejada correctamente
+
+LYNX_023 – Eliminar producto del carrito
+Descripción del Caso de Prueba: Verificar que un usuario pueda quitar un producto del carrito.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Producto en el carrito.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir al carrito	Lista de productos en carrito
+2	Clic en “Eliminar” o ícono de basura	Producto desaparece de la lista
+3	Total recalculado correctamente	Total actualizado sin error
+
+LYNX_024 – Confirmar pedido (checkout)
+Descripción del Caso de Prueba: Verificar que el usuario pueda realizar un pedido desde el carrito.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Carrito con productos; sesión iniciada.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir al carrito	Productos visibles
+2	Clic en botón “Realizar pedido”	Pedido guardado en base de datos
+3	Ir a historial de pedidos	Pedido reciente aparece con estado “Pendiente”
+
+LYNX_025 – Historial de pedidos del usuario
+Descripción del Caso de Prueba: Validar que el usuario pueda visualizar sus pedidos anteriores.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario logueado con pedidos existentes.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir a sección “Mis pedidos”	Lista aparece con fechas y totales
+2	Clic en un pedido	Detalle muestra productos, cantidades y estado
+3	Validar que corresponda al usuario	No se muestran pedidos ajenos
+
+LYNX_026 – Cambio de estado de pedido (admin)
+Descripción del Caso de Prueba: Verificar que el administrador pueda cambiar el estado de un pedido.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario admin, pedido en estado “Pendiente”.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ingresar al panel de pedidos	Se muestra lista de pedidos
+2	Seleccionar pedido y elegir nuevo estado	Ej. “Entregado”
+3	Confirmar cambio	Estado se actualiza correctamente en UI y BD
+
+LYNX_027 – Visualización del dashboard (admin)
+Descripción del Caso de Prueba: Validar que el admin pueda ver estadísticas básicas de pedidos e inventario.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario con rol administrador logueado.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir al dashboard	Se carga correctamente
+2	Revisar KPIs y gráficos	Se muestran ventas, pedidos activos, stock
+3	Verificar que datos sean reales	Coinciden con los registrados en BD
+
+LYNX_028 – Responsividad móvil
+Descripción del Caso de Prueba: Verificar que la interfaz sea usable desde dispositivos móviles.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Navegador con herramientas de inspección o dispositivo móvil.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Simular pantalla de 375x667 (iPhone)	La UI se adapta sin romperse
+2	Navegar por catálogo y carrito	Todo se visualiza correctamente
+3	Validar formularios	Campos no se salen de pantalla
+
+LYNX_029 – Recomendaciones personalizadas (IA)
+Descripción del Caso de Prueba: Validar que un usuario con historial reciba sugerencias personalizadas.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario con historial de pedidos; microservicio IA operativo.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Ir a pantalla principal	Sección “Recomendado para ti” visible
+2	Ver productos sugeridos	Coinciden con categoría/historial del usuario
+3	Revisar red/API	Llamada a /api/recommendations/:id exitosa
+
+LYNX_030 – Fallback por popularidad (IA)
+Descripción del Caso de Prueba: Validar que usuarios sin historial reciban recomendaciones por productos más vendidos.
+Creado por: Luis Ángel Puente Quevedo
+Versión: 1.0
+Prerrequisitos: Usuario nuevo o invitado; microservicio IA operativo.
+
+Escenario de Prueba:
+
+Paso	Acción	Resultado Esperado
+1	Crear usuario sin historial	Usuario registrado sin pedidos
+2	Acceder a recomendación	Se muestran productos populares globales
+3	Confirmar por ranking de ventas	Coincide con top productos vendidos en la BD

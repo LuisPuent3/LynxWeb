@@ -1,0 +1,245 @@
+Casos de Uso - Lynx Shop
+Versión: 2.0
+Fecha: 15/05/2025
+
+Introducción
+
+Este documento describe los casos de uso del sistema Lynx Shop. Cada caso de uso representa una interacción significativa entre un actor y el sistema, permitiendo validar los requerimientos funcionales del proyecto.
+
+Lista de Casos de Uso
+
+ID
+
+Nombre del Caso de Uso
+
+Actor Principal
+
+Requisito Asociado
+
+CU1
+
+Registrar usuario
+
+Cliente / Invitado
+
+RF1
+
+CU2
+
+Iniciar sesión
+
+Cliente / Admin
+
+RF2
+
+CU3
+
+Gestionar productos
+
+Administrador
+
+RF3
+
+CU4
+
+Gestionar categorías
+
+Administrador
+
+RF4
+
+CU5
+
+Gestionar carrito de compras
+
+Cliente
+
+RF5
+
+CU6
+
+Confirmar pedido
+
+Cliente
+
+RF6
+
+CU7
+
+Ver historial de pedidos
+
+Cliente
+
+RF6
+
+CU8
+
+Cambiar estado de pedido
+
+Administrador
+
+RF7
+
+CU9
+
+Ver dashboard
+
+Administrador
+
+RF7
+
+CU10
+
+Visualizar recomendaciones
+
+Cliente
+
+RF8
+
+CU1 – Registrar usuario
+
+Actor: Cliente o invitadoPrecondiciones: El usuario no debe estar registradoPostcondiciones: Se crea una cuenta y se redirige al login
+
+Flujo principal:
+
+Usuario accede al formulario de registro
+
+Ingresa nombre, correo y contraseña
+
+El sistema valida los datos
+
+El sistema almacena al nuevo usuario
+
+Escenarios alternos:
+
+1a. El correo ya existe → mensaje de error "Correo ya registrado"
+
+CU2 – Iniciar sesión
+
+Actor: Cliente / AdministradorPrecondiciones: Usuario registrado con correo y contraseñaPostcondiciones: Acceso al sistema con sesión activa
+
+Flujo principal:
+
+Usuario accede al login
+
+Ingresa sus credenciales
+
+El sistema verifica autenticidad y devuelve token
+
+Se redirige según el rol
+
+Escenarios alternos:
+
+2a. Credenciales incorrectas → mensaje de error "Credenciales inválidas"
+
+CU3 – Gestionar productos
+
+Actor: AdministradorPrecondiciones: Usuario con rol administrador autenticado
+
+Flujos posibles:
+
+Crear nuevo producto
+
+Editar información de un producto
+
+Eliminar producto
+
+Ver lista de productos
+
+Escenario alterno:
+
+Validar que el nombre del producto sea único
+
+CU4 – Gestionar categorías
+
+Actor: Administrador
+
+Flujos posibles:
+
+Crear categoría
+
+Editar categoría
+
+Eliminar categoría
+
+Regla de negocio:
+
+No se permiten nombres duplicados
+
+CU5 – Gestionar carrito de compras
+
+Actor: ClientePrecondiciones: Usuario logueado
+
+Flujos posibles:
+
+Agregar productos al carrito
+
+Modificar cantidades
+
+Eliminar productos del carrito
+
+Escenario alterno:
+
+Validar existencia en inventario antes de confirmar
+
+CU6 – Confirmar pedido
+
+Actor: ClientePrecondiciones: Carrito con productos
+
+Flujo principal:
+
+Usuario revisa carrito
+
+Confirma la compra
+
+El sistema genera un pedido con estado "pendiente"
+
+Postcondiciones: Se almacena el pedido y se vacía el carrito
+
+CU7 – Ver historial de pedidos
+
+Actor: ClientePrecondiciones: Usuario con pedidos previos
+
+Flujo principal:
+
+Usuario accede a "Mis pedidos"
+
+El sistema muestra los pedidos anteriores con sus detalles
+
+CU8 – Cambiar estado de pedido
+
+Actor: Administrador
+
+Flujo principal:
+
+Admin accede a gestión de pedidos
+
+Selecciona un pedido y elige un nuevo estado (ej. entregado)
+
+Se guarda el nuevo estado
+
+CU9 – Ver dashboard
+
+Actor: Administrador
+
+Flujo principal:
+
+Accede a panel administrativo
+
+El sistema carga datos de ventas, pedidos y stock en gráficos o KPIs
+
+CU10 – Visualizar recomendaciones personalizadas
+
+Actor: ClientePrecondiciones: Usuario logueado, microservicio de IA activo
+
+Flujo principal:
+
+Usuario accede al home
+
+El sistema llama al endpoint /api/recommendations/:id
+
+Se muestran 10 productos sugeridos excluyendo los ya comprados
+
+Escenario alterno:
+
+Si el usuario no tiene historial, se muestran productos populares

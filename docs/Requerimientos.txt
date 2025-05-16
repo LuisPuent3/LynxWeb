@@ -1,0 +1,151 @@
+**Especificación de Requisitos del Software (SRS)**
+**Proyecto: Lynx Shop**
+**Versión:** 2.0
+**Fecha:** 15/05/2025
+
+---
+
+### 1. Introducción
+
+#### 1.1 Propósito del documento
+
+Este documento define los requisitos funcionales y no funcionales del sistema Lynx Shop, una plataforma de gestión de inventarios, pedidos y recomendaciones personalizadas para entornos escolares.
+
+#### 1.2 Alcance del sistema
+
+Lynx Shop es una aplicación web que permite:
+
+* Registro y autenticación de usuarios
+* Gestión de productos y categorías
+* Carrito de compras y pedidos
+* Dashboard para administradores
+* Motor de recomendaciones personalizado (IA)
+
+#### 1.3 Definiciones
+
+* RF: Requisito Funcional
+* RNF: Requisito No Funcional
+* IA: Inteligencia Artificial
+* TF-IDF: Term Frequency - Inverse Document Frequency
+
+---
+
+### 2. Descripción general
+
+#### 2.1 Perspectiva del producto
+
+El sistema sigue una arquitectura cliente-servidor con microservicios. El motor de recomendaciones es independiente y expone una API REST desarrollada en FastAPI.
+
+#### 2.2 Funciones del sistema
+
+* Registro e inicio de sesión de usuarios
+* Gestión de inventario por administradores
+* Compras por clientes y generación de pedidos
+* Visualización de historial de pedidos
+* Cambio de estado de pedidos (admin)
+* Recomendación de productos personalizados (IA)
+
+#### 2.3 Características de los usuarios
+
+* Administradores
+* Clientes registrados
+* Invitados
+
+---
+
+### 3. Requisitos Específicos
+
+#### 3.1 Requisitos funcionales
+
+**RF1. Registro de usuarios**
+El sistema permitirá registrar usuarios nuevos mediante un formulario con validaciones.
+
+**RF2. Inicio de sesión**
+El sistema permitirá a los usuarios autenticarse con correo y contraseña.
+
+**RF3. Gestión de productos**
+El administrador podrá crear, editar, eliminar y listar productos.
+
+**RF4. Gestión de categorías**
+El administrador podrá gestionar categorías de productos.
+
+**RF5. Carrito de compras**
+Los usuarios podrán agregar, modificar o eliminar productos del carrito.
+
+**RF6. Realizar pedidos**
+Los usuarios podrán confirmar su carrito como un pedido y visualizar el historial.
+
+**RF7. Dashboard administrativo**
+El administrador visualizará estadísticas de ventas, pedidos y productos.
+
+**RF8. Recomendaciones personalizadas**
+El sistema obtendrá productos recomendados desde un microservicio IA (TF-IDF). El microservicio expone un endpoint `/predict/{user_id}` que:
+
+* Devuelve productos relacionados al historial
+* Si no hay historial, devuelve los más vendidos globalmente
+* El sistema debe excluir productos ya comprados
+
+#### 3.2 Requisitos no funcionales
+
+**RNF1. Seguridad**
+
+* Cifrado de contraseñas con AES o bcrypt
+* Tokens JWT con expira en 30 minutos
+
+**RNF2. Rendimiento**
+
+* Tiempo de respuesta de APIs CRUD < 300 ms
+* Latencia del endpoint de IA < 150 ms (p95)
+
+**RNF3. Usabilidad**
+
+* Interfaz adaptativa móvil / escritorio
+* Navegación fluida con menos de 3 clics
+
+**RNF4. Escalabilidad**
+
+* Soporte para 10,000 usuarios y 100,000 pedidos/mes
+* Motor de IA entrenado offline cada noche
+
+**RNF5. Mantenibilidad**
+
+* Separación en microservicios independientes (Node.js, FastAPI)
+* Dockerizado para facilitar despliegue
+
+**RNF6. Medición de calidad**
+
+* Precision\@10 del recomendador: ≥ 0.25
+* Cobertura de pruebas críticas: ≥ 80%
+* Puntaje de Lighthouse en rendimiento: ≥ 90
+
+#### 3.3 Reglas de negocio
+
+* Los puntos de fidelidad caducan a los 180 días
+* Los productos recomendados no deben ser repetidos si ya fueron comprados
+* Las categorías deben ser únicas por nombre
+* Un pedido puede tener máximo 15 productos
+
+---
+
+### 4. Anexos
+
+#### 4.1 Trazabilidad Requisitos ↔ Casos de uso ↔ Casos de prueba
+
+| Requisito | Caso de uso             | Historia de usuario | Casos de prueba                 |
+| --------- | ----------------------- | ------------------- | ------------------------------- |
+| RF1       | CU1 Registro            | HU001               | LYNX\_011, LYNX\_012            |
+| RF2       | CU2 Login               | HU002               | LYNX\_013, LYNX\_014, LYNX\_015 |
+| RF3       | CU3 Gestionar productos | HU005               | LYNX\_016, LYNX\_017, LYNX\_018 |
+| RF4       | CU4 Categorías          | HU007               | LYNX\_020                       |
+| RF5       | CU5 Carrito             | HU010               | LYNX\_021, LYNX\_022, LYNX\_023 |
+| RF6       | CU6 Pedido              | HU011               | LYNX\_024, LYNX\_025            |
+| RF7       | CU7 Dashboard admin     | HU012               | LYNX\_026, LYNX\_027            |
+| RF8       | CU13 Recomendaciones    | HU013               | LYNX\_029, LYNX\_030            |
+
+---
+
+### 5. Aprobaciones
+
+* **Luis Ángel Puente Quevedo** – Líder de pruebas
+* **Julieta Santander Castillo** – Supervisora académica
+* **Óscar Pérez Luna** – Líder de proyecto

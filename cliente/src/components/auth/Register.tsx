@@ -1,273 +1,290 @@
 // Register.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import api from "../../utils/api";
-import { useNavigate } from "react-router-dom";
-import { signUpWithEmail, signInWithGoogle, getGoogleRedirectResult } from "../../utils/firebase";
 
 const Register = () => {
-  const [nombre, setNombre] = useState<string>("");
-  const [correo, setCorreo] = useState<string>("");
-  const [telefono, setTelefono] = useState<string>("");
-  const [contraseña, setContraseña] = useState<string>("");
-  const [mensaje, setMensaje] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setMensaje("");
-    setIsLoading(true);
-
-    try {
-      // Primero intentar registro con Firebase
-      const firebaseResult = await signUpWithEmail(correo, contraseña);
-      
-      if (firebaseResult.user) {
-        // Si el registro en Firebase es exitoso, obtén el token
-        const idToken = await firebaseResult.user.getIdToken();
-        
-        try {
-          // Enviar los datos del usuario al backend junto con el token de Firebase
-          const response = await api.post("/auth/firebase-register", { 
-            nombre, 
-            correo, 
-            telefono,
-            idToken
-          });
-
-          // Guardar el token JWT del backend
-          if (response.data.token) {
-            localStorage.setItem("token", response.data.token);
-          }
-
-          setMensaje("Registro exitoso. Redirigiendo...");
-          
-          // Esperar un momento antes de redirigir
-          setTimeout(() => {
-            navigate("/");
-          }, 2000);
-          
-        } catch (backendErr) {
-          // Si el backend falla, intentar el método tradicional
-          fallbackRegister();
-        }
-      } else if (firebaseResult.error) {
-        // Si Firebase reporta un error, intentar el método tradicional
-        fallbackRegister();
-      }
-    } catch (err) {
-      fallbackRegister();
-    }
-  };
-
-  const fallbackRegister = async () => {
-    try {
-      // Método de registro tradicional como respaldo
-      const response = await api.post("/auth/register", { 
-        nombre, 
-        correo, 
-        telefono, 
-        contraseña 
-      });
-
-      // Guardar el token si el backend lo proporciona
-      if (response.data.token) {
-        localStorage.setItem("token", response.data.token);
-      }
-
-      setMensaje("Registro exitoso. Redirigiendo...");
-      
-      setTimeout(() => {
-        navigate("/");
-      }, 2000);
-      
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Error al registrar. Intenta nuevamente.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Añadir un useEffect para manejar el resultado de la redirección
-  useEffect(() => {
-    const handleRedirectResult = async () => {
+  const formik = useFormik({
+    initialValues: {
+      nombre: "",
+      apellidoP: "",
+      apellidoM: "",
+      correo: "",
+      telefono: "",
+      contraseña: "",
+      confirmarContraseña: ""
+    },
+    validationSchema: Yup.object({
+      nombre: Yup.string()
+        .required("El nombre es requerido")
+        .min(2, "El nombre debe tener al menos 2 caracteres"),
+      apellidoP: Yup.string()
+        .required("El apellido paterno es requerido")
+        .min(2, "El apellido debe tener al menos 2 caracteres"),
+      apellidoM: Yup.string()
+        .required("El apellido materno es requerido")
+        .min(2, "El apellido debe tener al menos 2 caracteres"),
+      correo: Yup.string()
+        .email("Correo electrónico inválido")
+        .required("El correo es requerido"),
+      telefono: Yup.string()
+        .matches(/^[0-9]{10}$/, "El teléfono debe tener 10 dígitos")
+        .required("El teléfono es requerido"),
+      contraseña: Yup.string()
+        .min(8, "La contraseña debe tener al menos 8 caracteres")
+        .matches(/[A-Z]/, "Debe contener al menos una mayúscula")
+        .matches(/[a-z]/, "Debe contener al menos una minúscula")
+        .matches(/[0-9]/, "Debe contener al menos un número")
+        .required("La contraseña es requerida"),
+      confirmarContraseña: Yup.string()
+        .oneOf([Yup.ref("contraseña")], "Las contraseñas no coinciden")
+        .required("Confirma tu contraseña")
+    }),
+    onSubmit: async (values) => {
       setIsLoading(true);
-      setError("");
-      setMensaje("");
+      setError(null);
+      setSuccessMessage(null);
       
       try {
-        const googleResult = await getGoogleRedirectResult();
+        // Usar la ruta correcta del backend
+        const response = await api.post("/auth/register", {
+          nombre: values.nombre,
+          apellidoP: values.apellidoP,
+          apellidoM: values.apellidoM,
+          correo: values.correo,
+          telefono: values.telefono,
+          contraseña: values.contraseña
+        });
         
-        if (googleResult.user) {
-          const idToken = await googleResult.user.getIdToken();
-          const userInfo = googleResult.user;
-          
-          try {
-            // Enviar los datos del usuario obtenidos de Google al backend
-            const response = await api.post("/auth/firebase-register", { 
-              nombre: userInfo.displayName || "Usuario de Google", 
-              correo: userInfo.email, 
-              telefono: telefono || "No disponible",
-              idToken
-            });
-
-            if (response.data.token) {
-              localStorage.setItem("token", response.data.token);
+        setSuccessMessage("¡Registro exitoso! Redirigiendo al inicio de sesión...");
+        
+        // Limpiar el formulario
+        formik.resetForm();
+        
+        // Esperar 2 segundos y redirigir al login
+        setTimeout(() => {
+          navigate("/login", { 
+            state: { 
+              message: "Cuenta creada exitosamente. Por favor inicia sesión." 
             }
-
-            setMensaje("Registro con Google exitoso. Redirigiendo...");
-            
-            setTimeout(() => {
-              navigate("/");
-            }, 2000);
-            
-          } catch (backendErr) {
-            setError("Error al procesar el registro con Google en el servidor.");
-          }
-        }
-      } catch (err) {
-        // No mostrar error si no hay resultado de redirección
+          });
+        }, 2000);
+        
+      } catch (err: any) {
+        console.error("Error de registro:", err);
+        setError(
+          err.response?.data?.error || 
+          "No se pudo completar el registro. Intenta nuevamente."
+        );
       } finally {
         setIsLoading(false);
       }
-    };
-    
-    handleRedirectResult();
-  }, []);
-
-  const handleGoogleRegister = async () => {
-    setError("");
-    setMensaje("");
-    setIsLoading(true);
-    
-    try {
-      await signInWithGoogle();
-      // La redirección ocurrirá, no es necesario hacer nada más aquí
-    } catch (err) {
-      setError("Error al conectar con el servicio de autenticación");
-      setIsLoading(false);
     }
-  };
+  });
 
   return (
-    <div className="min-vh-100 d-flex align-items-center bg-light">
-      <div className="container py-5">
+    <div className="min-vh-100 d-flex align-items-center bg-light py-5">
+      <div className="container">
         <div className="row justify-content-center">
-          <div className="col-md-6 col-lg-5">
-            <div className="card shadow-sm">
-              <div className="card-body p-4">
+          <div className="col-md-10 col-lg-8">
+            <div className="card border-0 shadow-lg">
+              <div className="card-body p-4 p-md-5">
+                {/* Header */}
                 <div className="text-center mb-4">
-                  <i className="bi bi-person-plus display-1 text-primary"></i>
-                  <h2 className="mt-3 mb-1">Crear cuenta</h2>
-                  <p className="text-muted">Regístrate para comenzar</p>
+                  <div className="bg-primary bg-opacity-10 rounded-circle p-3 mx-auto mb-3" style={{width: 'fit-content'}}>
+                    <i className="bi bi-person-plus-fill text-primary display-6"></i>
+                  </div>
+                  <h2 className="fw-bold text-primary mb-2">Crear cuenta</h2>
+                  <p className="text-muted">Únete a LynxShop y comienza a comprar</p>
                 </div>
 
-                {mensaje && (
-                  <div className="alert alert-success">
-                    <i className="bi bi-check-circle me-2"></i>
-                    {mensaje}
-                  </div>
-                )}
-
+                {/* Mensajes de error/éxito */}
                 {error && (
-                  <div className="alert alert-danger">
-                    <i className="bi bi-exclamation-circle me-2"></i>
+                  <div className="alert alert-danger d-flex align-items-center mb-4 fade-in">
+                    <i className="bi bi-exclamation-circle-fill me-2"></i>
                     {error}
                   </div>
                 )}
+                
+                {successMessage && (
+                  <div className="alert alert-success d-flex align-items-center mb-4 fade-in">
+                    <i className="bi bi-check-circle-fill me-2"></i>
+                    {successMessage}
+                  </div>
+                )}
 
-                <form onSubmit={handleRegister}>
-                  <div className="mb-3">
-                    <label className="form-label">Nombre</label>
-                    <div className="input-group">
-                      <span className="input-group-text">
-                        <i className="bi bi-person"></i>
-                      </span>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={nombre}
-                        onChange={(e) => setNombre(e.target.value)}
-                        required
-                      />
+                {/* Formulario */}
+                <form onSubmit={formik.handleSubmit} className="needs-validation" noValidate>
+                  <div className="row g-3">
+                    {/* Nombre */}
+                    <div className="col-md-4">
+                      <div className="form-floating">
+                        <input
+                          type="text"
+                          className={`form-control ${formik.touched.nombre && formik.errors.nombre ? 'is-invalid' : formik.touched.nombre ? 'is-valid' : ''}`}
+                          id="nombre"
+                          placeholder="Nombre"
+                          {...formik.getFieldProps("nombre")}
+                        />
+                        <label htmlFor="nombre">Nombre</label>
+                        {formik.touched.nombre && formik.errors.nombre && (
+                          <div className="invalid-feedback">{formik.errors.nombre}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Apellido Paterno */}
+                    <div className="col-md-4">
+                      <div className="form-floating">
+                        <input
+                          type="text"
+                          className={`form-control ${formik.touched.apellidoP && formik.errors.apellidoP ? 'is-invalid' : formik.touched.apellidoP ? 'is-valid' : ''}`}
+                          id="apellidoP"
+                          placeholder="Apellido Paterno"
+                          {...formik.getFieldProps("apellidoP")}
+                        />
+                        <label htmlFor="apellidoP">Apellido Paterno</label>
+                        {formik.touched.apellidoP && formik.errors.apellidoP && (
+                          <div className="invalid-feedback">{formik.errors.apellidoP}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Apellido Materno */}
+                    <div className="col-md-4">
+                      <div className="form-floating">
+                        <input
+                          type="text"
+                          className={`form-control ${formik.touched.apellidoM && formik.errors.apellidoM ? 'is-invalid' : formik.touched.apellidoM ? 'is-valid' : ''}`}
+                          id="apellidoM"
+                          placeholder="Apellido Materno"
+                          {...formik.getFieldProps("apellidoM")}
+                        />
+                        <label htmlFor="apellidoM">Apellido Materno</label>
+                        {formik.touched.apellidoM && formik.errors.apellidoM && (
+                          <div className="invalid-feedback">{formik.errors.apellidoM}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Correo */}
+                    <div className="col-md-6">
+                      <div className="form-floating">
+                        <input
+                          type="email"
+                          className={`form-control ${formik.touched.correo && formik.errors.correo ? 'is-invalid' : formik.touched.correo ? 'is-valid' : ''}`}
+                          id="correo"
+                          placeholder="correo@ejemplo.com"
+                          {...formik.getFieldProps("correo")}
+                        />
+                        <label htmlFor="correo">Correo electrónico</label>
+                        {formik.touched.correo && formik.errors.correo && (
+                          <div className="invalid-feedback">{formik.errors.correo}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Teléfono */}
+                    <div className="col-md-6">
+                      <div className="form-floating">
+                        <input
+                          type="tel"
+                          className={`form-control ${formik.touched.telefono && formik.errors.telefono ? 'is-invalid' : formik.touched.telefono ? 'is-valid' : ''}`}
+                          id="telefono"
+                          placeholder="1234567890"
+                          {...formik.getFieldProps("telefono")}
+                        />
+                        <label htmlFor="telefono">Teléfono</label>
+                        {formik.touched.telefono && formik.errors.telefono && (
+                          <div className="invalid-feedback">{formik.errors.telefono}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Contraseña */}
+                    <div className="col-md-6">
+                      <div className="form-floating">
+                        <input
+                          type="password"
+                          className={`form-control ${formik.touched.contraseña && formik.errors.contraseña ? 'is-invalid' : formik.touched.contraseña ? 'is-valid' : ''}`}
+                          id="contraseña"
+                          placeholder="Contraseña"
+                          {...formik.getFieldProps("contraseña")}
+                        />
+                        <label htmlFor="contraseña">Contraseña</label>
+                        {formik.touched.contraseña && formik.errors.contraseña && (
+                          <div className="invalid-feedback">{formik.errors.contraseña}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Confirmar Contraseña */}
+                    <div className="col-md-6">
+                      <div className="form-floating">
+                        <input
+                          type="password"
+                          className={`form-control ${formik.touched.confirmarContraseña && formik.errors.confirmarContraseña ? 'is-invalid' : formik.touched.confirmarContraseña ? 'is-valid' : ''}`}
+                          id="confirmarContraseña"
+                          placeholder="Confirmar contraseña"
+                          {...formik.getFieldProps("confirmarContraseña")}
+                        />
+                        <label htmlFor="confirmarContraseña">Confirmar contraseña</label>
+                        {formik.touched.confirmarContraseña && formik.errors.confirmarContraseña && (
+                          <div className="invalid-feedback">{formik.errors.confirmarContraseña}</div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="mb-3">
-                    <label className="form-label">Correo electrónico</label>
-                    <div className="input-group">
-                      <span className="input-group-text">
-                        <i className="bi bi-envelope"></i>
-                      </span>
-                      <input
-                        type="email"
-                        className="form-control"
-                        value={correo}
-                        onChange={(e) => setCorreo(e.target.value)}
-                        required
-                      />
-                    </div>
+                  {/* Información de seguridad de la contraseña */}
+                  <div className="mt-3 mb-4 small text-muted">
+                    <p className="mb-1"><i className="bi bi-shield-lock me-1"></i> La contraseña debe tener:</p>
+                    <ul className="ps-4">
+                      <li>Al menos 8 caracteres</li>
+                      <li>Al menos una letra mayúscula</li>
+                      <li>Al menos una letra minúscula</li>
+                      <li>Al menos un número</li>
+                    </ul>
                   </div>
 
-                  <div className="mb-3">
-                    <label className="form-label">Teléfono</label>
-                    <div className="input-group">
-                      <span className="input-group-text">
-                        <i className="bi bi-phone"></i>
-                      </span>
-                      <input
-                        type="tel"
-                        className="form-control"
-                        value={telefono}
-                        onChange={(e) => setTelefono(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label">Contraseña</label>
-                    <div className="input-group">
-                      <span className="input-group-text">
-                        <i className="bi bi-lock"></i>
-                      </span>
-                      <input
-                        type="password"
-                        className="form-control"
-                        value={contraseña}
-                        onChange={(e) => setContraseña(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="d-grid gap-2">
+                  {/* Botón de registro */}
+                  <div className="d-grid gap-2 mt-4">
                     <button 
                       type="submit" 
-                      className="btn btn-primary"
+                      className="btn btn-primary btn-lg py-3"
                       disabled={isLoading}
                     >
                       {isLoading ? (
-                        <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Procesando...</>
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          Procesando...
+                        </>
                       ) : (
-                        <><i className="bi bi-person-plus-fill me-2"></i> Registrarse</>
+                        <>
+                          <i className="bi bi-person-plus-fill me-2"></i>
+                          Crear cuenta
+                        </>
                       )}
-                    </button>
-                    
-                    <div className="text-center my-2"><span className="text-muted">o</span></div>
-                    
-                    <button 
-                      type="button" 
-                      className="btn btn-outline-danger"
-                      onClick={handleGoogleRegister}
-                      disabled={isLoading}
-                    >
-                      <i className="bi bi-google me-2"></i> Registrarse con Google
                     </button>
                   </div>
                 </form>
+
+                {/* Enlace a login */}
+                <div className="text-center mt-4">
+                  <p className="mb-0">
+                    ¿Ya tienes una cuenta?{" "}
+                    <Link to="/login" className="text-primary text-decoration-none fw-semibold">
+                      Inicia sesión
+                    </Link>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
