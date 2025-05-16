@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Login from './Login';
+import api from '../../utils/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -7,17 +10,62 @@ interface AuthModalProps {
   onLogin: () => void;
   onGuestCheckout: () => void;
   vaciarCarrito: () => void;
- }
- 
- const AuthModal: React.FC<AuthModalProps> = ({
+}
+
+const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   onLogin,
   onGuestCheckout,
   vaciarCarrito
- }) => {
+}) => {
   const [showLoginForm, setShowLoginForm] = useState(false);
- 
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  // Manejador especial para el modo invitado
+  const handleGuestLogin = async () => {
+    setIsLoading(true);
+    try {
+      const guestData = {
+        nombre: `Guest_${Date.now()}`,
+        correo: `guest_${Date.now()}@lynxshop.com`,
+        telefono: `000${Date.now().toString().slice(-7)}`,
+        contraseña: `guest${Date.now()}`
+      };
+
+      const response = await api.post('/auth/register', guestData);
+      
+      if (response.data && response.data.token) {
+        // Guardar datos en localStorage
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('guestMode', 'true');
+        
+        // Guardar información del usuario
+        if (response.data.usuario) {
+          localStorage.setItem('usuario', JSON.stringify(response.data.usuario));
+          
+          // Iniciar sesión con los datos de invitado
+          await login(response.data.token, response.data.usuario);
+        }
+        
+        // Cerrar el modal
+        onClose();
+        
+        // Llamar al callback para procesar el pedido como invitado
+        onGuestCheckout();
+      } else {
+        throw new Error('No se pudo crear usuario invitado');
+      }
+    } catch (error) {
+      console.error('Error al procesar como invitado:', error);
+      alert('Error al procesar como invitado. Por favor intente nuevamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   return (
     <>
       <div className="modal-header border-0 bg-primary text-white py-4">
@@ -31,7 +79,7 @@ interface AuthModalProps {
           onClick={onClose}
         />
       </div>
- 
+
       <div className="modal-body p-4 bg-light">
         {showLoginForm ? (
           <Login
@@ -47,7 +95,7 @@ interface AuthModalProps {
               <h4 className="text-primary fw-bold mb-3">Accede a tu cuenta</h4>
               <p className="text-muted">Para una mejor experiencia de compra</p>
             </div>
- 
+
             {/* Opción principal - Login */}
             <div className="card border-0 shadow-sm mb-4">
               <div className="card-body text-center p-5">
@@ -64,7 +112,7 @@ interface AuthModalProps {
                 </button>
               </div>
             </div>
- 
+
             {/* Opciones secundarias */}
             <div className="row g-3">
               <div className="col-md-6">
@@ -83,7 +131,7 @@ interface AuthModalProps {
                   </div>
                 </div>
               </div>
- 
+
               <div className="col-md-6">
                 <div className="card h-100 border-0 hover-shadow transition" style={{backgroundColor: '#fff3cd'}}>
                   <div className="card-body text-center p-3">
@@ -93,9 +141,17 @@ interface AuthModalProps {
                     <h6 className="card-title mb-2">Compra rápida</h6>
                     <button 
                       className="btn btn-warning btn-sm text-dark"
-                      onClick={onGuestCheckout}
+                      onClick={handleGuestLogin}
+                      disabled={isLoading}
                     >
-                      Continuar como invitado
+                      {isLoading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                          Procesando...
+                        </>
+                      ) : (
+                        'Continuar como invitado'
+                      )}
                     </button>
                   </div>
                 </div>
@@ -106,6 +162,6 @@ interface AuthModalProps {
       </div>
     </>
   );
- };
- 
- export default AuthModal;
+};
+
+export default AuthModal;

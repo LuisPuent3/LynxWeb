@@ -23,18 +23,73 @@ app.use(express.json());
 // Importar rutas
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
-const orderRoutes = require('./routes/orderRoutes');
+const pedidosRoutes = require('./routes/pedidosRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
+
+// Logger avanzado para depuración
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - Body:`, 
+        req.method === 'POST' || req.method === 'PUT' ? JSON.stringify(req.body).substring(0, 200) : '');
+    next();
+});
 
 // Usar rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/productos', productRoutes);
-app.use('/api/pedidos', orderRoutes);
+app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/categorias', categoryRoutes);
 
-// Ruta de prueba
+// Ruta de prueba para verificar que la API está en funcionamiento
 app.get('/api/test', (req, res) => {
-    res.json({ message: 'API funcionando correctamente' });
+    res.json({ message: 'API funcionando correctamente', timestamp: new Date().toISOString() });
+});
+
+// Ruta de depuración específica para pedidos
+app.get('/api/debug/rutas', (req, res) => {
+    // Recopilar información sobre las rutas registradas
+    const routes = [];
+    
+    // Recopilar información sobre pedidosRoutes
+    try {
+        const pedidosRouter = express.Router();
+        pedidosRoutes.stack.forEach(layer => {
+            if (layer.route) {
+                routes.push({
+                    path: '/api/pedidos' + layer.route.path,
+                    methods: Object.keys(layer.route.methods).join(', ').toUpperCase()
+                });
+            }
+        });
+    } catch (err) {
+        console.error('Error al analizar rutas de pedidos:', err);
+    }
+    
+    res.json({
+        message: 'Rutas disponibles en la API',
+        timestamp: new Date().toISOString(),
+        routes: routes
+    });
+});
+
+// Manejo de rutas no encontradas
+app.use((req, res, next) => {
+    if (!res.headersSent) {
+        console.log(`Ruta no encontrada: ${req.method} ${req.originalUrl}`);
+        res.status(404).json({
+            error: 'Ruta no encontrada',
+            path: req.originalUrl,
+            method: req.method,
+            available_api_routes: [
+                '/api/auth',
+                '/api/productos',
+                '/api/pedidos',
+                '/api/categorias',
+                '/api/test',
+                '/api/debug/rutas'
+            ]
+        });
+    }
+    next();
 });
 
 // Manejo de errores mejorado

@@ -4,27 +4,57 @@ const jwt = require('jsonwebtoken');
 
 exports.registerUser = async (req, res) => {
   const { nombre, apellidoP, apellidoM, correo, telefono, contraseña } = req.body;
+  const isGuestUser = correo && correo.includes('guest');
 
   try {
     // Hash de la contraseña
     const hashedPassword = await bcrypt.hash(contraseña, 10);
-
-    // Crear entrada en tabla Nombres
+    
+    // ID de rol: 1 = Cliente, 3 = Invitado
+    const rolId = isGuestUser ? 3 : 1;
+    
+    // Para todos los usuarios, crear entrada en Nombres primero
+    // El nombre será el correo para invitados si no se proporciona
+    const nombreToUse = isGuestUser ? correo.split('@')[0] : nombre;
+    
     const [nombreResult] = await pool.query(
       'INSERT INTO Nombres (nombre, apellidoP, apellidoM) VALUES (?, ?, ?)',
-      [nombre, apellidoP, apellidoM]
+      [nombreToUse, apellidoP || '', apellidoM || '']
     );
-
+    
     const id_nombre = nombreResult.insertId;
-
-    // Crear entrada en tabla Usuarios - almacenar como texto para bcrypt
-    await pool.query(
+    
+    // Crear entrada en tabla Usuarios
+    const [userResult] = await pool.query(
       'INSERT INTO Usuarios (id_nombre, correo, telefono, contraseña, id_rol) VALUES (?, ?, ?, ?, ?)',
-      [id_nombre, correo, telefono, hashedPassword, 1] // 1 = Cliente
+      [id_nombre, correo, telefono, hashedPassword, rolId]
     );
-
-    res.status(201).json({ mensaje: 'Usuario registrado exitosamente' });
+    
+    const id_usuario = userResult.insertId;
+    
+    // Generar token para usuario recién registrado
+    const token = jwt.sign({ 
+      id: id_usuario, 
+      rol: rolId,
+      nombre: nombreToUse
+    }, process.env.JWT_SECRET || 'secreto_temporal', { 
+      expiresIn: '1h' 
+    });
+    
+    // Devolver token e información del usuario
+    res.status(201).json({ 
+      mensaje: 'Usuario registrado exitosamente',
+      token,
+      userId: id_usuario,
+      usuario: {
+        id_usuario,
+        nombre: nombreToUse,
+        correo,
+        rol: isGuestUser ? 'Invitado' : 'Cliente'
+      }
+    });
   } catch (error) {
+    console.error('Error al registrar usuario:', error);
     res.status(500).json({ error: 'Error al registrar usuario', detalles: error.message });
   }
 };
@@ -87,7 +117,7 @@ exports.loginUser = async (req, res) => {
     const [rows] = await pool.query(`
       SELECT u.*, n.nombre, r.nombre as rol_nombre
       FROM Usuarios u
-      JOIN Nombres n ON u.id_nombre = n.id_nombre
+      LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
       JOIN Roles r ON u.id_rol = r.id_rol
       WHERE u.correo = ?
     `, [correo]);
@@ -168,7 +198,7 @@ exports.loginUser = async (req, res) => {
         token, 
         usuario: {
           id_usuario: usuario.id_usuario,
-          nombre: usuario.nombre,
+          nombre: usuario.nombre || 'Usuario',
           correo: usuario.correo,
           rol: usuario.rol_nombre
         } 
@@ -194,7 +224,7 @@ exports.verifyToken = async (req, res) => {
     const [rows] = await pool.query(`
       SELECT u.id_usuario, u.correo, n.nombre, r.nombre as rol_nombre
       FROM Usuarios u
-      JOIN Nombres n ON u.id_nombre = n.id_nombre
+      LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
       JOIN Roles r ON u.id_rol = r.id_rol
       WHERE u.id_usuario = ?
     `, [req.userId]);

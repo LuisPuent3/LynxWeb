@@ -25,7 +25,7 @@ const Home = () => {
  const [showAuthModal, setShowAuthModal] = useState(false);
  const [searchTerm, setSearchTerm] = useState("");
  const navigate = useNavigate();
- const { isAuthenticated, user, logout } = useAuth();
+ const { isAuthenticated, user, logout, login } = useAuth();
 
  useEffect(() => {
    localStorage.setItem('tempCarrito', JSON.stringify(carrito));
@@ -77,7 +77,13 @@ const Home = () => {
      alert("El carrito está vacío");
      return;
    }
-   setShowAuthModal(true);
+   
+   // Always go to cart page first for all users
+   if (isAuthenticated) {
+     navigate('/cart');
+   } else {
+     setShowAuthModal(true);
+   }
  };
 
  const procesarPedido = async () => {
@@ -88,22 +94,40 @@ const Home = () => {
        return;
      }
  
+     // Get user ID from context instead of using hardcoded values
+     if (!user || !user.id_usuario) {
+       alert("Error: No se pudo identificar al usuario. Inicie sesión nuevamente.");
+       return;
+     }
+
+     // Ensure user ID is a number
+     const userId = typeof user.id_usuario === 'string' 
+       ? parseInt(user.id_usuario as string, 10) 
+       : user.id_usuario;
+
      const pedidoData = {
        carrito: carrito.map(item => ({
          id_producto: Number(item.id_producto),
          cantidad: Number(item.cantidad),
          precio: Number(item.precio)
        })),
-       id_usuario: localStorage.getItem("guestMode") ? 'guest' : 10
+       id_usuario: userId // Use numeric user ID
      };
  
      console.log('Datos a enviar:', pedidoData);
      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
  
-     const response = await api.post<ApiErrorResponse>("/pedidos", pedidoData);
+     const response = await api.post("/pedidos", pedidoData);
        
      if (response.data.mensaje) {
-       alert(response.data.mensaje);
+       navigate('/order/confirmation', { 
+         state: { 
+           cartItems: carrito,
+           orderId: response.data.id_pedido || null,
+           total: calculateTotal(),
+           discount: 0
+         } 
+       });
        vaciarCarrito();
      }
    } catch (error) {
@@ -111,7 +135,20 @@ const Home = () => {
      console.error("Error completo:", apiError);
      console.error("Detalles del error:", apiError.response?.data);
 
-     if (apiError.response?.status === 401) {
+     // More detailed error handling
+     if (apiError.response?.status === 500) {
+       const errorMsg = apiError.response.data?.error || "Error interno del servidor";
+       
+       // Check for foreign key error
+       if (errorMsg.includes("foreign key")) {
+         alert("Error: El ID de usuario no es válido. Por favor, inicie sesión nuevamente.");
+         localStorage.removeItem("token");
+         logout();
+         setShowAuthModal(true);
+       } else {
+         alert(`Error del servidor: ${errorMsg}`);
+       }
+     } else if (apiError.response?.status === 401) {
        localStorage.removeItem("token");
        setShowAuthModal(true);
      } else if (apiError.response?.data?.error) {
@@ -131,23 +168,50 @@ const Home = () => {
       contraseña: `guest${Date.now()}`
     };
 
+    console.log('Registrando usuario invitado:', guestData);
     const response = await api.post("/auth/register", guestData);
     
-    if (response.data.token) {
+    console.log('Respuesta de registro de invitado:', response.data);
+    
+    if (response.data.token && response.data.usuario) {
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("guestMode", "true");
+      
+      console.log('Usuario invitado creado:', response.data.usuario);
+      
+      // Store the user data from the response
+      await login(response.data.token, response.data.usuario);
       setShowAuthModal(false);
-      await procesarPedido();
+      
+      // Navigate to cart page for review instead of processing directly
+      navigate('/cart');
+    } else {
+      throw new Error("El registro como invitado falló: no se recibieron datos de usuario");
     }
   } catch (error) {
+    console.error("Error al procesar como invitado:", error);
     alert("Error al procesar como invitado. Por favor intente nuevamente.");
   }
 };
 
  const handleLoginSuccess = () => {
    setShowAuthModal(false);
-   procesarPedido();
+   navigate('/cart');
  };
+
+ // Add event listener for login success
+ useEffect(() => {
+   const handleLoginSuccessEvent = () => {
+     console.log("Login success event received");
+     handleLoginSuccess();
+   };
+   
+   document.addEventListener('loginSuccess', handleLoginSuccessEvent);
+   
+   return () => {
+     document.removeEventListener('loginSuccess', handleLoginSuccessEvent);
+   };
+ }, [handleLoginSuccess]);
 
  const calculateTotal = (): number => {
    const total = carrito.reduce((total, item) => {
@@ -198,12 +262,51 @@ const Home = () => {
                </button>
              </div>
            </form>
-           <div className="ms-auto mt-2 mt-lg-0">
+           <div className="ms-auto mt-2 mt-lg-0 d-flex align-items-center">
              {isAuthenticated ? (
                <>
-                 <span className="text-light me-3 d-none d-md-inline">
-                   Hola, {user?.nombre || 'Usuario'}
-                 </span>
+                 <div className="dropdown me-3">
+                   <button 
+                     className="btn btn-primary dropdown-toggle d-flex align-items-center" 
+                     type="button" 
+                     id="userMenuDropdown" 
+                     data-bs-toggle="dropdown" 
+                     aria-expanded="false"
+                   >
+                     <i className="bi bi-person-circle me-1"></i>
+                     <span className="d-none d-md-inline">
+                       {user?.nombre || 'Usuario'}
+                       {localStorage.getItem("guestMode") === "true" && (
+                         <span className="badge bg-warning text-dark ms-1" style={{ fontSize: '0.65rem' }}>Invitado</span>
+                       )}
+                     </span>
+                   </button>
+                   <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                     <li>
+                       <button 
+                         className="dropdown-item d-flex align-items-center" 
+                         onClick={() => navigate('/pedidos')}
+                         disabled={localStorage.getItem("guestMode") === "true"}
+                       >
+                         <i className="bi bi-bag me-2"></i>
+                         Mis Pedidos
+                         {localStorage.getItem("guestMode") === "true" && (
+                           <span className="badge bg-secondary ms-2" style={{ fontSize: '0.65rem' }}>No disponible</span>
+                         )}
+                       </button>
+                     </li>
+                     <li><hr className="dropdown-divider" /></li>
+                     <li>
+                       <button 
+                         className="dropdown-item d-flex align-items-center text-danger" 
+                         onClick={handleLogout}
+                       >
+                         <i className="bi bi-box-arrow-right me-2"></i>
+                         Cerrar sesión
+                       </button>
+                     </li>
+                   </ul>
+                 </div>
                  <button 
                    className="btn btn-outline-light" 
                    onClick={handleLogout}

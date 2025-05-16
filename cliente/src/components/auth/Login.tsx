@@ -12,7 +12,12 @@ interface LocationState {
   returnToCart?: boolean;
 }
 
-const Login = () => {
+interface LoginProps {
+  onLoginSuccess?: () => void;
+  isModal?: boolean;
+}
+
+const Login: React.FC<LoginProps> = ({ onLoginSuccess, isModal = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const locationState = location.state as LocationState || {};
@@ -64,6 +69,15 @@ const Login = () => {
         // Guardar el token y actualizar el contexto de autenticación
         await login(token, usuario);
 
+        // For modal use, call onLoginSuccess and return
+        if (isModal && onLoginSuccess) {
+          setSuccessMessage("Inicio de sesión exitoso");
+          setTimeout(() => {
+            onLoginSuccess();
+          }, 500);
+          return;
+        }
+
         // Decidir dónde redirigir al usuario basado en diferentes factores
         if (usuario.rol === "Administrador") {
           // Los administradores siempre van al dashboard
@@ -72,12 +86,9 @@ const Login = () => {
           // Si venimos del proceso de compra o hay carrito pendiente
           setSuccessMessage("Inicio de sesión exitoso. Continuando con tu compra...");
           
-          // Redirigir al usuario a completar su compra
+          // Always redirect to cart page for review before checkout
           setTimeout(() => {
-            // Simular el procesamiento de pedido
-            const event = new CustomEvent('loginSuccess');
-            document.dispatchEvent(event);
-            navigate("/");
+            navigate("/cart");
           }, 1000);
         } else if (locationState.from) {
           // Si hay una URL de redirección específica

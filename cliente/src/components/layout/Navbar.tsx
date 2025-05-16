@@ -5,6 +5,11 @@ import { useAuth } from '../../contexts/AuthContext';
 const Navbar: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
+  
+  // Verificar si es un usuario invitado
+  const isGuestUser = () => {
+    return localStorage.getItem('guestMode') === 'true';
+  };
 
   const handleLogout = () => {
     logout();
@@ -31,6 +36,14 @@ const Navbar: React.FC = () => {
             <li className="nav-item">
               <Link className="nav-link" to="/">Inicio</Link>
             </li>
+            {isAuthenticated && !isGuestUser() && (
+              <li className="nav-item">
+                <Link className="nav-link" to="/pedidos">
+                  <i className="bi bi-receipt me-1"></i>
+                  Mis Pedidos
+                </Link>
+              </li>
+            )}
             {isAuthenticated && user?.rol === 'Administrador' && (
               <li className="nav-item">
                 <Link className="nav-link" to="/admin/dashboard">Panel Admin</Link>
@@ -41,16 +54,40 @@ const Navbar: React.FC = () => {
           <div className="ms-auto d-flex align-items-center">
             {isAuthenticated ? (
               <>
-                <span className="text-light me-3 d-none d-md-inline">
-                  Hola, {user?.nombre || 'Usuario'}
-                </span>
-                <button 
-                  className="btn btn-outline-light" 
-                  onClick={handleLogout}
-                >
-                  <i className="bi bi-box-arrow-right me-1"></i>
-                  Cerrar sesión
-                </button>
+                <Link to="/cart" className="btn btn-outline-light me-3 position-relative">
+                  <i className="bi bi-cart3"></i>
+                </Link>
+                <div className="btn-group">
+                  <button 
+                    type="button" 
+                    className="btn btn-outline-light dropdown-toggle" 
+                    data-bs-toggle="dropdown" 
+                    aria-expanded="false"
+                  >
+                    <i className="bi bi-person-circle me-1"></i>
+                    {user?.nombre || 'Usuario'}
+                  </button>
+                  <ul className="dropdown-menu dropdown-menu-end">
+                    {!isGuestUser() && (
+                      <li>
+                        <Link className="dropdown-item" to="/pedidos">
+                          <i className="bi bi-receipt me-2"></i>
+                          Mis pedidos
+                        </Link>
+                      </li>
+                    )}
+                    {!isGuestUser() && <li><hr className="dropdown-divider"/></li>}
+                    <li>
+                      <button 
+                        className="dropdown-item text-danger" 
+                        onClick={handleLogout}
+                      >
+                        <i className="bi bi-box-arrow-right me-2"></i>
+                        Cerrar sesión
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </>
             ) : (
               <>
@@ -71,4 +108,4 @@ const Navbar: React.FC = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

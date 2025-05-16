@@ -159,6 +159,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Añadir una función de log para depurar información del usuario
+  useEffect(() => {
+    if (user) {
+      console.log('Información del usuario autenticado:', {
+        id: user.id_usuario,
+        nombre: user.nombre,
+        correo: user.correo,
+        rol: user.rol
+      });
+    }
+  }, [user]);
+
   const value = {
     user,
     token,
