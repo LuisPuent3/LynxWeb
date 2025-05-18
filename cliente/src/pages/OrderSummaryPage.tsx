@@ -27,8 +27,12 @@ const OrderSummaryPage: React.FC = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [total, setTotal] = useState(0);
   const [discount, setDiscount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethod, setPaymentMethod] = useState('efectivo');
   const [isLoading, setIsLoading] = useState(true);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [processingOrder, setProcessingOrder] = useState(false);
+  const [shippingAddress, setShippingAddress] = useState('');
 
   // Obtener estado de localización
   const locationState = location.state as LocationState;
@@ -39,7 +43,7 @@ const OrderSummaryPage: React.FC = () => {
       setCartItems(locationState.cartItems);
       setTotal(locationState.total);
       setDiscount(locationState.discount || 0);
-      setPaymentMethod(locationState.paymentMethod || 'cash');
+      setPaymentMethod(locationState.paymentMethod || 'efectivo');
       setIsLoading(false);
     } else {
       // Si no hay datos en el estado de navegación, intentar obtenerlos del localStorage
@@ -318,7 +322,7 @@ const OrderSummaryPage: React.FC = () => {
               <div className="d-flex justify-content-between mb-3 border-bottom pb-3">
                 <span className="text-muted">Método de Pago</span>
                 <span className="fw-bold">
-                  {paymentMethod === 'cash' ? (
+                  {paymentMethod === 'efectivo' ? (
                     <span><i className="bi bi-cash me-1"></i> Efectivo</span>
                   ) : (
                     <span><i className="bi bi-credit-card me-1"></i> Tarjeta</span>

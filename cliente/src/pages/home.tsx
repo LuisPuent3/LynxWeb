@@ -319,18 +319,22 @@ const Home = () => {
                  </div>
                  <button 
                    className="btn btn-outline-light" 
-                   onClick={handleLogout}
+                   onClick={() => navigate('/pedidos')}
                    onMouseEnter={(e) => {
                      e.currentTarget.classList.remove('btn-outline-light');
-                     e.currentTarget.classList.add('btn-danger');
+                     e.currentTarget.classList.add('btn-white');
+                     e.currentTarget.style.backgroundColor = "#ffffff";
+                     e.currentTarget.style.color = "#0d6efd";
                    }}
                    onMouseLeave={(e) => {
-                     e.currentTarget.classList.remove('btn-danger');
+                     e.currentTarget.classList.remove('btn-white');
                      e.currentTarget.classList.add('btn-outline-light');
+                     e.currentTarget.style.backgroundColor = "";
+                     e.currentTarget.style.color = "";
                    }}
                  >
-                   <i className="bi bi-box-arrow-right me-1"></i>
-                   Cerrar sesión
+                   <i className="bi bi-bag me-1"></i>
+                   Pedidos
                  </button>
                </>
              ) : (

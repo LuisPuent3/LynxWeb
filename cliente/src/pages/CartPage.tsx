@@ -19,7 +19,7 @@ const CartPage: React.FC = () => {
   const [carrito, setCarrito] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingOrder, setProcessingOrder] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethod, setPaymentMethod] = useState('efectivo');
   const [couponCode, setCouponCode] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
   const [discount, setDiscount] = useState(0);
@@ -413,8 +413,8 @@ const CartPage: React.FC = () => {
                       <small>Transferencia</small>
                     </div>
                     <div 
-                      className={`p-2 border rounded text-center flex-grow-1 cursor-pointer ${paymentMethod === 'cash' ? 'border-primary bg-primary bg-opacity-10' : ''}`}
-                      onClick={() => setPaymentMethod('cash')}
+                      className={`p-2 border rounded text-center flex-grow-1 cursor-pointer ${paymentMethod === 'efectivo' ? 'border-primary bg-primary bg-opacity-10' : ''}`}
+                      onClick={() => setPaymentMethod('efectivo')}
                       style={{ cursor: 'pointer' }}
                     >
                       <div className="position-absolute top-0 end-0 badge bg-success m-1" style={{ fontSize: '0.6rem' }}>
@@ -433,7 +433,7 @@ const CartPage: React.FC = () => {
                 <button 
                   className="btn btn-primary w-100 py-3 rounded-pill fw-bold"
                   onClick={handleCheckout}
-                  disabled={processingOrder || carrito.length === 0 || paymentMethod !== 'cash'}
+                  disabled={processingOrder || carrito.length === 0 || paymentMethod !== 'efectivo'}
                 >
                   {processingOrder ? (
                     <>

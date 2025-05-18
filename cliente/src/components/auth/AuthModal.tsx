@@ -67,12 +67,12 @@ const AuthModal: React.FC<AuthModalProps> = ({
         // Utilizar setTimeout para dar tiempo al estado de React a actualizarse
         setTimeout(() => {
           // Navigate guests to the order summary page with cart data
-          navigate('/order/summary', {
+          const cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
+          navigate('/checkout', {
             state: {
-              cartItems: cartItems,
-              total: total,
-              discount: 0,
-              paymentMethod: 'cash'
+              items: cartItems,
+              total: cartItems.reduce((sum, item) => sum + (item.precio * item.cantidad), 0),
+              paymentMethod: 'efectivo'
             }
           });
         }, 50); // Un pequeño retraso es suficiente

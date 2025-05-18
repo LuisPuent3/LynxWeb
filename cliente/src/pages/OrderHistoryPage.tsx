@@ -212,7 +212,16 @@ const OrderHistoryPage: React.FC = () => {
     <div className="container py-5">
       <div className="row mb-4">
         <div className="col-12">
-          <h1 className="display-6 fw-bold text-primary mb-4">Mi Historial de Pedidos</h1>
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h1 className="display-6 fw-bold text-primary mb-0">Mi Historial de Pedidos</h1>
+            <button 
+              className="btn btn-outline-primary" 
+              onClick={() => navigate('/')}
+            >
+              <i className="bi bi-house-door me-1"></i>
+              Regresar a Inicio
+            </button>
+          </div>
           <p className="text-muted mb-4">
             Consulta el estado y detalles de todos tus pedidos realizados en LynxShop
           </p>
@@ -265,10 +274,10 @@ const OrderHistoryPage: React.FC = () => {
             </button>
             <button 
               type="button" 
-              className={`btn ${activeFilter === 'aceptado' ? 'btn-primary' : 'btn-outline-primary'}`}
-              onClick={() => setActiveFilter('aceptado')}
+              className={`btn ${activeFilter === 'cancelado' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => setActiveFilter('cancelado')}
             >
-              Aceptados
+              Cancelados
             </button>
             <button 
               type="button" 
@@ -380,7 +389,7 @@ const OrderHistoryPage: React.FC = () => {
                       <span className="fw-bold text-primary fs-5">${Number(order.total).toFixed(2)}</span>
                       <div className="small text-muted">
                         <i className="bi bi-credit-card me-1"></i>
-                        {order.metodo_pago === 'cash' ? 'Efectivo' : order.metodo_pago}
+                        {order.metodo_pago === 'efectivo' ? 'Efectivo' : order.metodo_pago}
                       </div>
                     </div>
                     <div className="col-md-1 text-end">
