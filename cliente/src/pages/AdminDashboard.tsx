@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
@@ -24,8 +24,21 @@ interface Pedido {
   id_usuario: number;
   fecha: string;
   estado: string;
+  estado_nombre?: string;
   total?: number;
+  nombre_completo?: string;
   nombre_cliente?: string;
+  usuario?: string;
+  telefono_contacto?: string;
+  informacion_adicional?: string;
+  metodo_pago?: string;
+  productos?: Array<{
+    id_producto: number;
+    nombre: string;
+    cantidad: number;
+    precio: number | string;
+    subtotal?: number;
+  }>;
 }
 
 interface User {
@@ -37,11 +50,194 @@ interface User {
   fecha_registro: string;
 }
 
+// Componente separado para el modal de detalles del pedido
+const OrderDetailModal: React.FC<{
+  selectedOrder: Pedido | null;
+  isLoading: boolean;
+  onClose: () => void;
+  onStatusChange: (id: number, status: string) => void;
+}> = ({ selectedOrder, isLoading, onClose, onStatusChange }) => {
+  if (!selectedOrder) return null;
+
+  // Definir estilo CSS para la animación del modal
+  const fadeInAnimation = {
+    animation: 'fadeIn 0.3s',
+    WebkitAnimation: 'fadeIn 0.3s'
+  };
+
+  return (
+    <>
+      {/* Reglas CSS para la animación */}
+      <style>
+        {`
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          
+          @-webkit-keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}
+      </style>
+      
+      <div className="modal-backdrop show" style={{ 
+        display: 'block', 
+        zIndex: 1050, 
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        opacity: 1,
+        transition: 'opacity 0.3s ease-in-out'
+      }}>
+        <div className="modal show" style={{ 
+          display: 'block', 
+          zIndex: 1051, 
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          overflow: 'auto'
+        }} id="orderDetailModal">
+          <div className="modal-dialog modal-lg" style={{ 
+            margin: '1.75rem auto',
+            transform: 'translateY(0)',
+            transition: 'transform 0.3s ease-out',
+            ...fadeInAnimation
+          }}>
+            <div className="modal-content" style={{ 
+              backgroundColor: 'white', 
+              opacity: 1,
+              boxShadow: '0 0.5rem 1rem rgba(0, 0, 0, 0.15)'
+            }}>
+              <div className="modal-header">
+                <h5 className="modal-title">Detalles del Pedido #{selectedOrder.id_pedido}</h5>
+                <button type="button" className="btn-close" onClick={onClose}></button>
+              </div>
+              <div className="modal-body" style={{ opacity: 1, backgroundColor: 'white' }}>
+                {isLoading ? (
+                  <div className="text-center py-5">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Cargando...</span>
+                    </div>
+                    <p className="mt-2">Cargando detalles del pedido...</p>
+                  </div>
+                ) : (
+                  <div className="order-details-container">
+                    <div className="row mb-3">
+                      <div className="col-md-6">
+                        <p><strong>Cliente:</strong> {selectedOrder.usuario || selectedOrder.nombre_completo || 'Usuario'}</p>
+                        <p><strong>Fecha:</strong> {new Date(selectedOrder.fecha).toLocaleDateString()}</p>
+                        <p><strong>Método de Pago:</strong> {selectedOrder.metodo_pago || 'Efectivo'}</p>
+                      </div>
+                      <div className="col-md-6">
+                        <p>
+                          <strong>Estado:</strong> 
+                          <span className={`badge ms-2 ${
+                            selectedOrder.estado === 'pendiente' ? 'bg-warning' :
+                            selectedOrder.estado === 'entregado' ? 'bg-success' :
+                            selectedOrder.estado === 'cancelado' ? 'bg-danger' : 'bg-secondary'
+                          }`}>
+                            {selectedOrder.estado_nombre || selectedOrder.estado}
+                          </span>
+                        </p>
+                        <p><strong>Teléfono:</strong> {selectedOrder.telefono_contacto || 'No proporcionado'}</p>
+                        <p><strong>Información adicional:</strong> {selectedOrder.informacion_adicional || 'N/A'}</p>
+                      </div>
+                    </div>
+                    
+                    <h6 className="border-bottom pb-2 mb-3">Productos</h6>
+                    <div className="table-responsive">
+                      <table className="table table-sm">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th>Precio</th>
+                            <th>Subtotal</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {!selectedOrder.productos ? (
+                            <tr>
+                              <td colSpan={4} className="text-center py-3">
+                                <div className="d-flex justify-content-center align-items-center">
+                                  <div className="spinner-border spinner-border-sm text-primary me-2" role="status">
+                                    <span className="visually-hidden">Cargando...</span>
+                                  </div>
+                                  <span>Cargando detalles de productos...</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : selectedOrder.productos.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="text-center py-3">
+                                No hay productos en este pedido
+                              </td>
+                            </tr>
+                          ) : (
+                            selectedOrder.productos.map((producto, index) => (
+                              <tr key={index}>
+                                <td>{producto.nombre}</td>
+                                <td>{producto.cantidad}</td>
+                                <td>${typeof producto.precio === 'number' ? producto.precio.toFixed(2) : producto.precio}</td>
+                                <td>${(producto.cantidad * (typeof producto.precio === 'number' ? producto.precio : parseFloat(String(producto.precio)))).toFixed(2)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                        <tfoot className="table-light">
+                          <tr>
+                            <th colSpan={3} className="text-end">Total:</th>
+                            <th>${typeof selectedOrder.total === 'number' ? selectedOrder.total.toFixed(2) : selectedOrder.total || '(calculando)'}</th>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer" style={{ borderTop: '1px solid #dee2e6', backgroundColor: '#f8f9fa' }}>
+                <button type="button" className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+                {selectedOrder.estado === 'pendiente' && !isLoading && (
+                  <>
+                    <button 
+                      type="button"
+                      className="btn btn-success"
+                      onClick={() => onStatusChange(selectedOrder.id_pedido, 'entregado')}
+                    >
+                      <i className="bi bi-check-circle me-1"></i>
+                      Marcar como Entregado
+                    </button>
+                    <button 
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={() => onStatusChange(selectedOrder.id_pedido, 'cancelado')}
+                    >
+                      <i className="bi bi-x-circle me-1"></i>
+                      Cancelar Pedido
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [pedidosFiltrados, setPedidosFiltrados] = useState<Pedido[]>([]);
+  const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+  const [loadingOrderDetails, setLoadingOrderDetails] = useState<boolean>(false);
+  const [orderDetailsCache, setOrderDetailsCache] = useState<{[key: number]: boolean}>({});
+  const [selectedOrder, setSelectedOrder] = useState<Pedido | null>(null);
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +266,30 @@ const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
+  // Referencia para acceder a modales desde useEffect 
+  const modalRefs = useRef<{[key: number]: HTMLElement | null}>({});
+
+  // Efecto para evitar conflictos entre React y Bootstrap en modales
+  useEffect(() => {
+    // Este efecto se ejecuta una vez cuando la página se carga
+    const handleHideModal = (e: Event) => {
+      // Evitar re-renders innecesarios que pueden causar parpadeo
+      e.stopPropagation();
+    };
+
+    // Añadir el evento a cada modal cuando se inicializa
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('hidden.bs.modal', handleHideModal);
+    });
+
+    // Limpiar eventos cuando el componente se desmonte
+    return () => {
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.removeEventListener('hidden.bs.modal', handleHideModal);
+      });
+    };
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -84,7 +304,9 @@ const AdminDashboard: React.FC = () => {
         
         // Cargar pedidos
         const pedidosRes = await api.get('/pedidos');
+        console.log('Pedidos cargados:', pedidosRes.data);
         setPedidos(pedidosRes.data);
+        setPedidosFiltrados(pedidosRes.data);
         
         // Cargar usuarios
         try {
@@ -177,15 +399,51 @@ const AdminDashboard: React.FC = () => {
   // Cambiar estado de pedido
   const handleOrderStatus = async (id: number, newStatus: string) => {
     try {
-      await api.put(`/pedidos/${id}`, { estado: newStatus });
-      setPedidos(pedidos.map(p => 
-        p.id_pedido === id ? {...p, estado: newStatus} : p
-      ));
+      // Determinar el id_estado basado en el newStatus
+      const id_estado = 
+        newStatus === 'entregado' ? 2 : 
+        newStatus === 'cancelado' ? 3 : 1; // Por defecto 1 (pendiente)
+      
+      await api.put(`/pedidos/${id}`, { estado: newStatus, id_estado });
+      
+      // Actualizar el estado en la lista de pedidos
+      const updatedPedidos = pedidos.map(p => 
+        p.id_pedido === id ? {...p, estado: newStatus, estado_nombre: newStatus} : p
+      );
+      
+      setPedidos(updatedPedidos);
+      // También actualizar los pedidos filtrados
+      setPedidosFiltrados(
+        filtroEstado === 'todos'
+          ? updatedPedidos
+          : updatedPedidos.filter(p => p.estado === filtroEstado)
+      );
+      
+      // Mostrar mensaje de éxito
+      setError(null);
     } catch (err) {
       console.error('Error al actualizar pedido:', err);
       setError('Error al actualizar el estado del pedido.');
     }
   };
+
+  // Función para manejar el filtro de pedidos
+  const handleOrderFilter = useCallback((filtro: string) => {
+    setFiltroEstado(filtro);
+    if (filtro === 'todos') {
+      setPedidosFiltrados(pedidos);
+    } else {
+      setPedidosFiltrados(pedidos.filter(p => 
+        p.estado?.toLowerCase() === filtro || 
+        p.estado_nombre?.toLowerCase() === filtro
+      ));
+    }
+  }, [pedidos]);
+
+  // Actualizar los pedidos filtrados cuando cambian los pedidos
+  useEffect(() => {
+    handleOrderFilter(filtroEstado);
+  }, [pedidos, filtroEstado, handleOrderFilter]);
 
   // Manejadores para el CRUD de categorías
   const handleCategoriaInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -253,6 +511,103 @@ const AdminDashboard: React.FC = () => {
         setError('Error al eliminar la categoría. Por favor, intenta de nuevo.');
       }
     }
+  };
+
+  // Función para cerrar el modal
+  const closeDetailModal = () => {
+    setSelectedOrder(null);
+  };
+
+  // Función simplificada para cargar los detalles de un pedido
+  const handleViewOrderDetails = async (id: number) => {
+    try {
+      // Buscar el pedido en la lista
+      const order = pedidos.find(p => p.id_pedido === id);
+      if (!order) {
+        console.error(`No se encontró el pedido con ID: ${id}`);
+        setError(`No se encontró información para el pedido #${id}`);
+        return;
+      }
+      
+      console.log('Pedido seleccionado:', order);
+      
+      // Siempre mostrar el modal, incluso mientras se cargan los detalles
+      setSelectedOrder({...order});
+      
+      // Si ya tenemos los productos, no es necesario cargarlos de nuevo
+      if (order.productos && order.productos.length > 0) {
+        console.log('El pedido ya tiene productos:', order.productos);
+        return;
+      }
+      
+      if (orderDetailsCache[id]) {
+        console.log('Usando caché para el pedido:', id);
+        return;
+      }
+      
+      // Cargar los detalles completos del pedido
+      console.log('Cargando detalles para el pedido:', id);
+      setLoadingOrderDetails(true);
+      
+      try {
+        // Hacer la petición al endpoint específico para detalles
+        const response = await api.get(`/pedidos/detalle/${id}`);
+        const orderDetails = response.data;
+        console.log('Detalles recibidos del servidor:', orderDetails);
+        
+        if (orderDetails) {
+          // Verificar si tiene productos
+          if (!orderDetails.productos || orderDetails.productos.length === 0) {
+            console.warn('El pedido no tiene productos en la respuesta de la API');
+            setError('Este pedido no tiene productos asociados.');
+          } else {
+            console.log('Productos recibidos:', orderDetails.productos);
+          }
+          
+          // Crear una nueva copia del objeto completo combinando datos
+          const completeOrderDetails = {
+            ...order,
+            ...orderDetails,
+            productos: orderDetails.productos || []
+          };
+          
+          // Actualizar el pedido en la lista
+          const updatedPedidos = pedidos.map(p => 
+            p.id_pedido === id ? completeOrderDetails : p
+          );
+          
+          setPedidos(updatedPedidos);
+          setPedidosFiltrados(
+            filtroEstado === 'todos'
+              ? updatedPedidos
+              : updatedPedidos.filter(p => 
+                  p.estado?.toLowerCase() === filtroEstado || 
+                  p.estado_nombre?.toLowerCase() === filtroEstado
+                )
+          );
+          
+          // Actualizar también el pedido seleccionado (con los productos)
+          setSelectedOrder(completeOrderDetails);
+          
+          // Marcar como cargado en caché
+          setOrderDetailsCache(prev => ({...prev, [id]: true}));
+        }
+      } catch (error) {
+        console.error('Error al cargar detalles del pedido:', error);
+        setError('No se pudieron cargar los detalles del pedido');
+      } finally {
+        setLoadingOrderDetails(false);
+      }
+    } catch (error) {
+      console.error('Error general:', error);
+      setError('Ocurrió un error al procesar la solicitud');
+    }
+  };
+
+  // Wrapper para manejar el estado del pedido desde el modal
+  const handleOrderStatusFromModal = async (id: number, newStatus: string) => {
+    await handleOrderStatus(id, newStatus);
+    closeDetailModal();
   };
 
   return (
@@ -592,7 +947,7 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                               </div>
                             </td>
-                            <td>${typeof producto.precio === 'string' ? parseFloat(producto.precio).toFixed(2) : producto.precio.toFixed(2)}</td>
+                            <td>${typeof producto.precio === 'number' ? producto.precio.toFixed(2) : parseFloat(String(producto.precio)).toFixed(2)}</td>
                             <td>
                               <span className={`badge ${
                                 producto.cantidad > 10 ? 'bg-success' :
@@ -863,10 +1218,10 @@ const AdminDashboard: React.FC = () => {
                 <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                   <h5 className="card-title mb-0">Gestión de Pedidos</h5>
                   <div>
-                    <select className="form-select form-select-sm" onChange={(e) => {
-                      const filtro = e.target.value;
-                      // Filtro por estado
-                    }}>
+                    <select className="form-select form-select-sm" 
+                      value={filtroEstado}
+                      onChange={(e) => handleOrderFilter(e.target.value)}
+                    >
                       <option value="todos">Todos los estados</option>
                       <option value="pendiente">Pendiente</option>
                       <option value="entregado">Entregado</option>
@@ -875,10 +1230,14 @@ const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className="card-body">
-                  {pedidos.length === 0 ? (
+                  {pedidosFiltrados.length === 0 ? (
                     <div className="text-center py-4">
                       <i className="bi bi-inbox display-4 text-muted"></i>
-                      <p className="text-muted mt-2">No hay pedidos registrados</p>
+                      <p className="text-muted mt-2">
+                        {filtroEstado !== 'todos' 
+                          ? `No hay pedidos con estado "${filtroEstado}"` 
+                          : "No hay pedidos registrados"}
+                      </p>
                     </div>
                   ) : (
                     <div className="table-responsive">
@@ -894,7 +1253,7 @@ const AdminDashboard: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {pedidos.map((pedido) => (
+                          {pedidosFiltrados.map((pedido) => (
                             <tr key={pedido.id_pedido}>
                               <td>#{pedido.id_pedido}</td>
                               <td>{pedido.usuario || pedido.nombre_completo || 'Usuario'}</td>
@@ -908,13 +1267,13 @@ const AdminDashboard: React.FC = () => {
                                   {pedido.estado_nombre || pedido.estado}
                                 </span>
                               </td>
-                              <td>${pedido.total || '(calculando)'}</td>
+                              <td>${typeof pedido.total === 'number' ? pedido.total.toFixed(2) : pedido.total || '(calculando)'}</td>
                               <td>
                                 <div className="btn-group">
+                                  {/* Botón Ver Detalles */}
                                   <button 
                                     className="btn btn-sm btn-outline-primary" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target={`#detallesPedido${pedido.id_pedido}`}
+                                    onClick={() => handleViewOrderDetails(pedido.id_pedido)}
                                   >
                                     <i className="bi bi-eye me-1"></i>
                                     Ver
@@ -935,101 +1294,6 @@ const AdminDashboard: React.FC = () => {
                                     <i className="bi bi-x-circle me-1"></i>
                                     Cancelar
                                   </button>
-                                </div>
-                                
-                                {/* Modal para detalles del pedido */}
-                                <div className="modal fade" id={`detallesPedido${pedido.id_pedido}`} tabIndex={-1} aria-hidden="true">
-                                  <div className="modal-dialog modal-lg">
-                                    <div className="modal-content">
-                                      <div className="modal-header">
-                                        <h5 className="modal-title">Detalles del Pedido #{pedido.id_pedido}</h5>
-                                        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                      </div>
-                                      <div className="modal-body">
-                                        <div className="row mb-3">
-                                          <div className="col-md-6">
-                                            <p><strong>Cliente:</strong> {pedido.usuario || pedido.nombre_completo || 'Usuario'}</p>
-                                            <p><strong>Fecha:</strong> {new Date(pedido.fecha).toLocaleString()}</p>
-                                            <p><strong>Método de Pago:</strong> {pedido.metodo_pago || 'Efectivo'}</p>
-                                          </div>
-                                          <div className="col-md-6">
-                                            <p><strong>Estado:</strong> {pedido.estado_nombre || pedido.estado}</p>
-                                            <p><strong>Teléfono:</strong> {pedido.telefono_contacto || 'No proporcionado'}</p>
-                                            <p><strong>Información adicional:</strong> {pedido.informacion_adicional || 'N/A'}</p>
-                                          </div>
-                                        </div>
-                                        
-                                        <h6 className="border-bottom pb-2 mb-3">Productos</h6>
-                                        <div className="table-responsive">
-                                          <table className="table table-sm">
-                                            <thead className="table-light">
-                                              <tr>
-                                                <th>Producto</th>
-                                                <th>Cantidad</th>
-                                                <th>Precio</th>
-                                                <th>Subtotal</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {pedido.productos ? (
-                                                pedido.productos.map((producto, index) => (
-                                                  <tr key={index}>
-                                                    <td>{producto.nombre}</td>
-                                                    <td>{producto.cantidad}</td>
-                                                    <td>${producto.precio}</td>
-                                                    <td>${(producto.cantidad * producto.precio).toFixed(2)}</td>
-                                                  </tr>
-                                                ))
-                                              ) : (
-                                                <tr>
-                                                  <td colSpan={4} className="text-center">
-                                                    Detalles no disponibles
-                                                  </td>
-                                                </tr>
-                                              )}
-                                            </tbody>
-                                            <tfoot className="table-light">
-                                              <tr>
-                                                <th colSpan={3} className="text-end">Total:</th>
-                                                <th>${pedido.total || '(calculando)'}</th>
-                                              </tr>
-                                            </tfoot>
-                                          </table>
-                                        </div>
-                                      </div>
-                                      <div className="modal-footer">
-                                        <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                        {pedido.estado === 'pendiente' && (
-                                          <>
-                                            <button 
-                                              className="btn btn-success"
-                                              onClick={() => {
-                                                handleOrderStatus(pedido.id_pedido, 'entregado');
-                                                document.getElementById(`detallesPedido${pedido.id_pedido}`)?.classList.remove('show');
-                                                document.body.classList.remove('modal-open');
-                                                document.querySelector('.modal-backdrop')?.remove();
-                                              }}
-                                            >
-                                              <i className="bi bi-check-circle me-1"></i>
-                                              Marcar como Entregado
-                                            </button>
-                                            <button 
-                                              className="btn btn-danger"
-                                              onClick={() => {
-                                                handleOrderStatus(pedido.id_pedido, 'cancelado');
-                                                document.getElementById(`detallesPedido${pedido.id_pedido}`)?.classList.remove('show');
-                                                document.body.classList.remove('modal-open');
-                                                document.querySelector('.modal-backdrop')?.remove();
-                                              }}
-                                            >
-                                              <i className="bi bi-x-circle me-1"></i>
-                                              Cancelar Pedido
-                                            </button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
                                 </div>
                               </td>
                             </tr>
@@ -1195,6 +1459,16 @@ const AdminDashboard: React.FC = () => {
           </>
         )}
       </div>
+      
+      {/* Modal de detalles del pedido - Renderizado fuera del ciclo principal */}
+      {selectedOrder && (
+        <OrderDetailModal
+          selectedOrder={selectedOrder}
+          isLoading={loadingOrderDetails}
+          onClose={closeDetailModal}
+          onStatusChange={handleOrderStatusFromModal}
+        />
+      )}
     </div>
   );
 };

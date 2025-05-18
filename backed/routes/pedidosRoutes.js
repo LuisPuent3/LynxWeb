@@ -4,7 +4,8 @@ const {
     createOrder,
     getOrdersByUser,
     getAllOrders,
-    updateOrderStatus
+    updateOrderStatus,
+    getOrderById
 } = require('../controllers/pedidoController');
 
 // Agregar middleware para registro de solicitudes
@@ -17,6 +18,12 @@ router.use((req, res, next) => {
 // Prueba simple para verificar si la ruta está funcionando
 router.get('/test', (req, res) => {
     res.json({ message: 'La ruta de pedidos está funcionando correctamente' });
+});
+
+// Ruta para obtener un pedido específico por su ID
+router.get('/detalle/:id', (req, res, next) => {
+    console.log(`[pedidosRoutes.js] Petición a /detalle/:id con ID: ${req.params.id}`);
+    getOrderById(req, res, next);
 });
 
 // Ruta para obtener pedidos de un usuario específico

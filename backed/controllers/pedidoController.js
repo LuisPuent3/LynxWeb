@@ -252,4 +252,81 @@ const updateOrderStatus = async (req, res) => {
     }
 };
 
-module.exports = { createOrder, getOrdersByUser, getAllOrders, updateOrderStatus };
+// Obtener un pedido específico con sus detalles
+const getOrderById = async (req, res) => {
+    let { id } = req.params;
+    
+    console.log(`[pedidoController.js] Recibido ID: ${id}, tipo: ${typeof id}`);
+    
+    // Asegurar que id sea un número
+    id = parseInt(id, 10);
+    
+    if (isNaN(id) || id <= 0) {
+        console.error(`[pedidoController.js] Error: ID de pedido inválido: ${id}`);
+        return res.status(400).json({ error: 'ID de pedido inválido' });
+    }
+    
+    console.log(`[pedidoController.js] Buscando detalles del pedido con ID: ${id}`);
+
+    try {
+        // Obtener información básica del pedido
+        console.log('[pedidoController.js] Ejecutando consulta para obtener datos básicos del pedido');
+        const [orderData] = await db.query(
+            `SELECT p.id_pedido, p.id_usuario, p.fecha, p.estado, ep.nombre AS estado_nombre, 
+                   p.nombre_completo, p.telefono_contacto, p.informacion_adicional, p.metodo_pago, p.total,
+                   u.correo AS usuario
+             FROM Pedidos p
+             LEFT JOIN Usuarios u ON p.id_usuario = u.id_usuario
+             LEFT JOIN EstadosPedidos ep ON p.id_estado = ep.id_estado
+             WHERE p.id_pedido = ?`,
+            [id]
+        );
+        console.log(`[pedidoController.js] Resultado de consulta básica:`, orderData.length > 0 ? 'Pedido encontrado' : 'Pedido no encontrado');
+
+        if (orderData.length === 0) {
+            console.error(`[pedidoController.js] Error: Pedido ${id} no encontrado en la base de datos`);
+            return res.status(404).json({ error: 'Pedido no encontrado' });
+        }
+
+        const order = orderData[0];
+        console.log(`[pedidoController.js] Datos básicos del pedido:`, { 
+            id_pedido: order.id_pedido,
+            id_usuario: order.id_usuario,
+            estado: order.estado,
+            total: order.total
+        });
+
+        // Obtener detalles de productos
+        console.log('[pedidoController.js] Obteniendo detalles de productos del pedido');
+        const [products] = await db.query(
+            `SELECT dp.id_producto, dp.cantidad, dp.subtotal, 
+                    p.nombre, p.precio
+             FROM DetallePedido dp
+             JOIN Productos p ON dp.id_producto = p.id_producto
+             WHERE dp.id_pedido = ?`,
+            [id]
+        );
+        console.log(`[pedidoController.js] Productos encontrados: ${products.length}`);
+
+        // Añadir productos al pedido
+        const orderWithDetails = {
+            ...order,
+            estado: order.estado.toLowerCase(), // Normalizar estado
+            productos: products.map(p => ({
+                id_producto: p.id_producto,
+                nombre: p.nombre,
+                cantidad: p.cantidad,
+                precio: p.precio,
+                subtotal: p.subtotal
+            }))
+        };
+
+        console.log(`[pedidoController.js] Enviando respuesta completa para pedido ${id} con ${products.length} productos`);
+        res.status(200).json(orderWithDetails);
+    } catch (error) {
+        console.error(`[pedidoController.js] Error al obtener pedido ${id}:`, error);
+        res.status(500).json({ error: error.message, controllerError: 'getOrderById' });
+    }
+};
+
+module.exports = { createOrder, getOrdersByUser, getAllOrders, updateOrderStatus, getOrderById };
