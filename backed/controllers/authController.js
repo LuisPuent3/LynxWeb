@@ -252,3 +252,40 @@ exports.verifyToken = async (req, res) => {
     res.status(500).json({ error: 'Error al verificar token', detalles: error.message });
   }
 };
+
+// Ruta para obtener todos los usuarios (solo para administradores)
+exports.getAllUsers = async (req, res) => {
+  try {
+    // Verificar si el usuario tiene rol administrativo
+    if (req.userRole !== 'Administrador' && req.userRole !== 2) {
+      return res.status(403).json({ 
+        error: 'No tiene permisos para realizar esta acción',
+        details: 'Se requiere rol de Administrador'
+      });
+    }
+    
+    const [users] = await pool.query(`
+      SELECT u.id_usuario, u.correo, u.telefono, u.fecha_registro, 
+             n.nombre, r.nombre as rol
+      FROM Usuarios u
+      LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
+      JOIN Roles r ON u.id_rol = r.id_rol
+      ORDER BY u.fecha_registro DESC
+    `);
+    
+    // No enviar contraseñas ni datos sensibles
+    const usersData = users.map(user => ({
+      id_usuario: user.id_usuario,
+      nombre: user.nombre,
+      correo: user.correo,
+      telefono: user.telefono,
+      rol: user.rol,
+      fecha_registro: user.fecha_registro
+    }));
+    
+    res.status(200).json(usersData);
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    res.status(500).json({ error: 'Error al obtener usuarios', detalles: error.message });
+  }
+};
