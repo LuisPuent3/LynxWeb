@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 
 // Carga las variables de entorno
 dotenv.config();
@@ -20,12 +21,22 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Configuración para servir archivos estáticos desde el directorio uploads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+  maxAge: '1d', // Caché por 1 día
+  setHeaders: function (res, path, stat) {
+    res.set('Cache-Control', 'public, max-age=86400'); // 1 día en segundos
+    res.set('Expires', new Date(Date.now() + 86400000).toUTCString()); // 1 día en milisegundos
+  }
+}));
+
 // Importar rutas
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const pedidosRoutes = require('./routes/pedidosRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const recommendationRoutes = require('./routes/recommendations');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 // Logger avanzado para depuración
 app.use((req, res, next) => {
@@ -40,6 +51,7 @@ app.use('/api/productos', productRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/categorias', categoryRoutes);
 app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // Ruta de prueba para verificar que la API está en funcionamiento
 app.get('/api/test', (req, res) => {

@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import AdminProductList from '../components/products/AdminProductList';
 import api from '../utils/api';
 import { Producto } from '../types/types';
+import ImageUploader from '../components/products/ImageUploader';
+import SimpleImageUploader from '../components/products/SimpleImageUploader';
 
 interface FormData {
   id_producto: number;
@@ -283,17 +285,17 @@ const AdminProductsPage: React.FC = () => {
                   </div>
                   
                   <div className="col-md-6">
-                    <label className="form-label">Imagen</label>
-                    <input 
-                      type="text" 
-                      className="form-control" 
-                      name="imagen"
-                      value={formData.imagen}
-                      onChange={handleInputChange}
-                      placeholder="default.jpg"
-                    />
-                    <div className="form-text">
-                      Nombre del archivo de imagen (la funcionalidad de carga estará disponible próximamente).
+                    <label className="form-label">Imagen del producto</label>
+                    <div className="bg-light p-3 rounded">
+                      <SimpleImageUploader
+                        initialFilename={formData.imagen}
+                        onImageSelected={(filename) => {
+                          setFormData({
+                            ...formData,
+                            imagen: filename
+                          });
+                        }}
+                      />
                     </div>
                   </div>
                   

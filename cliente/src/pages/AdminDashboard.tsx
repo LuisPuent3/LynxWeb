@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import Dashboard from '../components/admin/Dashboard';
+import SimpleImageUploader from '../components/products/SimpleImageUploader';
 
 interface Producto {
   id_producto: number;
@@ -1023,17 +1024,15 @@ const AdminDashboard: React.FC = () => {
                     
                     <div className="mb-3">
                       <label className="form-label">Imagen</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
-                        name="imagen" 
-                        value={formData.imagen}
-                        onChange={handleInputChange}
-                        placeholder="default.jpg"
+                      <SimpleImageUploader
+                        initialFilename={formData.imagen}
+                        onImageSelected={(filename) => {
+                          setFormData({
+                            ...formData,
+                            imagen: filename
+                          });
+                        }}
                       />
-                      <small className="text-muted">
-                        Nota: La carga de imágenes estará disponible próximamente.
-                      </small>
                     </div>
                     
                     <div className="d-flex gap-2">
