@@ -37,6 +37,9 @@ router.post('/', createOrder);
 // Ruta para obtener todos los pedidos (solo para administradores)
 router.get('/admin', getAllOrders);
 
+// Ruta para obtener todos los pedidos (endpoint raíz)
+router.get('/', getAllOrders);
+
 // Ruta para actualizar el estado de un pedido
 router.put('/:id', updateOrderStatus);
 
