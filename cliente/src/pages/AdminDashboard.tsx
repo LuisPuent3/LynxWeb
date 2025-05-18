@@ -238,7 +238,7 @@ const AdminDashboard: React.FC = () => {
   const [loadingOrderDetails, setLoadingOrderDetails] = useState<boolean>(false);
   const [orderDetailsCache, setOrderDetailsCache] = useState<{[key: number]: boolean}>({});
   const [selectedOrder, setSelectedOrder] = useState<Pedido | null>(null);
-  const [usuarios, setUsuarios] = useState<User[]>([]);
+  // Eliminada la gestión de usuarios  // const [usuarios, setUsuarios] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -308,14 +308,7 @@ const AdminDashboard: React.FC = () => {
         setPedidos(pedidosRes.data);
         setPedidosFiltrados(pedidosRes.data);
         
-        // Cargar usuarios
-        try {
-          const usuariosRes = await api.get('/auth/users');
-          setUsuarios(usuariosRes.data);
-        } catch (userErr) {
-          console.error("Error al cargar usuarios:", userErr);
-          // No impedir la carga del resto de datos si falla usuarios
-        }
+                // Eliminada la carga de usuarios
         
         setLoading(false);
       } catch (err) {
@@ -672,18 +665,6 @@ const AdminDashboard: React.FC = () => {
                   Pedidos
                 </a>
               </li>
-              <li className="nav-item">
-                <a 
-                  className={`nav-link ${activeTab === 'users' ? 'active' : ''}`} 
-                  href="#" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveTab('users');
-                  }}
-                >
-                  Clientes
-                </a>
-              </li>
             </ul>
             <div className="d-flex">
               <button className="btn btn-outline-light me-2" onClick={() => navigate('/')}>
@@ -754,22 +735,7 @@ const AdminDashboard: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="col-md-3">
-                    <div className="card border-0 shadow-sm h-100">
-                      <div className="card-body">
-                        <div className="d-flex align-items-center mb-3">
-                          <div className="icon-circle bg-warning bg-opacity-10 text-warning me-3">
-                            <i className="bi bi-people fs-4"></i>
-                          </div>
-                          <h6 className="card-title mb-0">Clientes</h6>
-                        </div>
-                        <h2 className="display-6 fw-bold text-warning mb-0">{usuarios.filter(u => u.rol === 'Cliente').length}</h2>
-                        <p className="text-muted small mt-2">
-                          {usuarios.filter(u => u.rol === 'Invitado').length} invitados
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                                    {/* Sección de Clientes eliminada */}
                   <div className="col-md-3">
                     <div className="card border-0 shadow-sm h-100">
                       <div className="card-body">
@@ -1298,157 +1264,6 @@ const AdminDashboard: React.FC = () => {
                               </td>
                             </tr>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {/* Usuarios/Clientes */}
-            {activeTab === 'users' && (
-              <div className="card shadow-sm">
-                <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                  <h5 className="card-title mb-0">Gestión de Clientes</h5>
-                  <div>
-                    <select className="form-select form-select-sm" onChange={(e) => {
-                      // Filtrar por rol
-                    }}>
-                      <option value="todos">Todos los roles</option>
-                      <option value="Cliente">Clientes</option>
-                      <option value="Administrador">Administradores</option>
-                      <option value="Invitado">Invitados</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="card-body">
-                  {usuarios.length === 0 ? (
-                    <div className="text-center py-4">
-                      <i className="bi bi-people display-4 text-muted"></i>
-                      <p className="text-muted mt-2">No hay usuarios registrados</p>
-                    </div>
-                  ) : (
-                    <div className="table-responsive">
-                      <table className="table table-hover align-middle">
-                        <thead className="table-light">
-                          <tr>
-                            <th>ID</th>
-                            <th>Nombre</th>
-                            <th>Correo</th>
-                            <th>Teléfono</th>
-                            <th>Rol</th>
-                            <th>Registro</th>
-                            <th>Pedidos</th>
-                            <th>Acciones</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {usuarios.map((usuario) => {
-                            const pedidosUsuario = pedidos.filter(p => p.id_usuario === usuario.id_usuario).length;
-                            return (
-                              <tr key={usuario.id_usuario}>
-                                <td>{usuario.id_usuario}</td>
-                                <td>{usuario.nombre || 'Sin nombre'}</td>
-                                <td>{usuario.correo}</td>
-                                <td>{usuario.telefono || 'No registrado'}</td>
-                                <td>
-                                  <span className={`badge ${
-                                    usuario.rol === 'Administrador' ? 'bg-primary' :
-                                    usuario.rol === 'Cliente' ? 'bg-success' :
-                                    'bg-secondary'
-                                  }`}>
-                                    {usuario.rol}
-                                  </span>
-                                </td>
-                                <td>{new Date(usuario.fecha_registro).toLocaleDateString()}</td>
-                                <td>
-                                  <span className="badge bg-info">{pedidosUsuario}</span>
-                                </td>
-                                <td>
-                                  <div className="btn-group">
-                                    <button 
-                                      className="btn btn-sm btn-outline-primary"
-                                      onClick={() => {
-                                        // Ver historial de pedidos del usuario
-                                        // Esta funcionalidad se puede implementar más adelante
-                                      }}
-                                    >
-                                      <i className="bi bi-bag me-1"></i>
-                                      Pedidos
-                                    </button>
-                                    <button 
-                                      className="btn btn-sm btn-outline-secondary"
-                                      data-bs-toggle="modal"
-                                      data-bs-target={`#detalleUsuario${usuario.id_usuario}`}
-                                    >
-                                      <i className="bi bi-eye me-1"></i>
-                                      Ver
-                                    </button>
-                                  </div>
-                                  
-                                  {/* Modal para detalles del usuario */}
-                                  <div className="modal fade" id={`detalleUsuario${usuario.id_usuario}`} tabIndex={-1} aria-hidden="true">
-                                    <div className="modal-dialog">
-                                      <div className="modal-content">
-                                        <div className="modal-header">
-                                          <h5 className="modal-title">Detalles del Cliente</h5>
-                                          <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div className="modal-body">
-                                          <div className="mb-3 text-center">
-                                            <div className="avatar mb-3">
-                                              <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style={{width: '80px', height: '80px', fontSize: '2rem'}}>
-                                                {usuario.nombre ? usuario.nombre.charAt(0).toUpperCase() : 'U'}
-                                              </div>
-                                            </div>
-                                            <h4>{usuario.nombre || 'Usuario sin nombre'}</h4>
-                                            <p className="text-muted">{usuario.correo}</p>
-                                            <span className={`badge ${
-                                              usuario.rol === 'Administrador' ? 'bg-primary' :
-                                              usuario.rol === 'Cliente' ? 'bg-success' :
-                                              'bg-secondary'
-                                            }`}>
-                                              {usuario.rol}
-                                            </span>
-                                          </div>
-                                          
-                                          <hr/>
-                                          
-                                          <div className="mb-3">
-                                            <h6 className="fw-bold">Información de contacto</h6>
-                                            <p><strong>Teléfono:</strong> {usuario.telefono || 'No registrado'}</p>
-                                            <p><strong>Correo:</strong> {usuario.correo}</p>
-                                          </div>
-                                          
-                                          <div className="mb-3">
-                                            <h6 className="fw-bold">Información de cuenta</h6>
-                                            <p><strong>ID:</strong> {usuario.id_usuario}</p>
-                                            <p><strong>Fecha de registro:</strong> {new Date(usuario.fecha_registro).toLocaleString()}</p>
-                                            <p><strong>Total pedidos:</strong> {pedidosUsuario}</p>
-                                          </div>
-                                        </div>
-                                        <div className="modal-footer">
-                                          <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                          <button 
-                                            type="button" 
-                                            className="btn btn-primary"
-                                            onClick={() => {
-                                              // Ir al historial de pedidos del usuario
-                                              // Esta funcionalidad se puede implementar más adelante
-                                            }}
-                                          >
-                                            <i className="bi bi-bag me-1"></i>
-                                            Ver Pedidos
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
                         </tbody>
                       </table>
                     </div>

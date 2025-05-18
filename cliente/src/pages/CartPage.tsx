@@ -31,6 +31,27 @@ const CartPage: React.FC = () => {
   const locationState = location.state as LocationState;
 
   useEffect(() => {
+    // Añadir refresh forzado para resolver problemas de congelamiento con invitados
+    const forceRefresh = () => {
+      // Verificar si estamos en una recarga mediante un parámetro de URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasReloaded = urlParams.get('reloaded') === 'true';
+      
+      // Si ya estamos en una recarga o no es usuario invitado, no recargar
+      if (hasReloaded || localStorage.getItem("guestMode") !== "true") {
+        return false;
+      }
+      
+      // Solo refrescar una vez agregando un parámetro a la URL
+      console.log("Forzando recarga para invitado en CartPage");
+      const newUrl = window.location.pathname + '?reloaded=true' + window.location.hash;
+      window.location.href = newUrl;
+      return true; // Indicar que se hizo refresh
+    };
+    
+    // Si se hizo refresh, no continuar con la carga normal
+    if (forceRefresh()) return;
+
     // Primero verificar si hay items en location state (viniendo de handleLoginSuccess)
     if (locationState?.cartItems && locationState.cartItems.length > 0) {
       console.log("Received cart items from navigation state:", locationState.cartItems);
