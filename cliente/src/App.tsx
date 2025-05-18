@@ -5,6 +5,8 @@ import Register from './components/auth/Register';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminProductsPage from './pages/AdminProductsPage';
+import AdminHome from './pages/AdminHome';
+import AdminCategoriesPage from './pages/AdminCategoriesPage';
 import Home from './pages/home';
 import CartPage from './pages/CartPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
@@ -59,12 +61,22 @@ const App = () => {
             <AdminProductsPage />
           </ProtectedRoute>
         } />
+        <Route path="/admin/home" element={
+          <ProtectedRoute allowedRoles={['Administrador']}>
+            <AdminHome />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/categories" element={
+          <ProtectedRoute allowedRoles={['Administrador']}>
+            <AdminCategoriesPage />
+          </ProtectedRoute>
+        } />
         
         {/* Redireccion a panel de administrador o a home según el rol */}
         <Route path="/admin" element={
           isAuthenticated ? (
             isAdmin ? 
-              <Navigate to="/admin/dashboard" replace /> : 
+              <Navigate to="/admin/home" replace /> : 
               <Navigate to="/" replace />
           ) : (
             <Navigate to="/login" replace state={{ from: '/admin' }} />

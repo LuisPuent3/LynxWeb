@@ -2,24 +2,18 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Instalar dependencias del sistema
-RUN apt-get update && apt-get install -y \
-    default-libmysqlclient-dev \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copiar requirements primero para aprovechar la caché de Docker
+# Copiar archivos de requisitos e instalar dependencias
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el código de la aplicación
+# Copiar el código fuente
 COPY . .
 
-# Crear directorio para el modelo
-RUN mkdir -p /app/data/model
+# Crear directorio para datos y modelo
+RUN mkdir -p /app/data
 
-# Exponer el puerto
+# Exponer el puerto para FastAPI
 EXPOSE 8000
 
-# Comando para ejecutar la aplicación
+# Ejecución por defecto: iniciar el servicio FastAPI
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
