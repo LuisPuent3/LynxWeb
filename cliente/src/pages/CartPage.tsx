@@ -268,9 +268,30 @@ const CartPage: React.FC = () => {
                   <div key={item.id_producto} className={`p-4 ${index !== carrito.length - 1 ? 'border-bottom' : ''}`}>
                     <div className="row align-items-center">
                       <div className="col-md-2">
-                        <div className="bg-light rounded p-2 text-center">
-                          <i className="bi bi-box text-primary fs-1"></i>
-                        </div>
+                        {item.imagen ? (
+                          <img 
+                            src={`http://localhost:5000/uploads/${item.imagen}?v=${item.id_producto}`}
+                            alt={item.nombre}
+                            className="img-fluid rounded shadow-sm"
+                            style={{ 
+                              width: '100%', 
+                              height: 'auto',
+                              maxWidth: '80px',
+                              aspectRatio: '1/1',
+                              objectFit: 'cover',
+                              objectPosition: 'center'
+                            }}
+                            onError={(e) => {
+                              // Si hay error al cargar la imagen, mostrar el icono
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('d-none');
+                            }}
+                          />
+                        ) : (
+                          <div className="bg-light rounded p-2 text-center">
+                            <i className="bi bi-box text-primary fs-1"></i>
+                          </div>
+                        )}
                       </div>
                       <div className="col-md-3 d-flex align-items-center">
                         <div>
@@ -279,7 +300,7 @@ const CartPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="col-md-3 d-flex align-items-center">
-                        <div className="d-flex">
+                        <div className="d-flex align-items-center">
                           <button 
                             className="btn btn-sm btn-outline-secondary rounded-pill"
                             onClick={() => updateQuantity(item.id_producto, item.cantidad - 1)}
@@ -288,8 +309,17 @@ const CartPage: React.FC = () => {
                           </button>
                           <input 
                             type="number" 
-                            className="form-control form-control-sm mx-2 text-center border-0 bg-light rounded" 
-                            style={{ width: '50px' }}
+                            className="form-control form-control-sm mx-2 text-center" 
+                            style={{ 
+                              width: '50px',
+                              minWidth: '50px',
+                              height: '38px',
+                              padding: '2px 4px',
+                              border: '1px solid #ced4da',
+                              fontSize: '16px',
+                              fontWeight: 'bold',
+                              zIndex: 1 // Ensure it's above any potential overlapping elements
+                            }}
                             value={item.cantidad} 
                             min="1"
                             onChange={(e) => updateQuantity(item.id_producto, parseInt(e.target.value) || 1)}

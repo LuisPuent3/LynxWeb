@@ -213,7 +213,31 @@ const OrderSummaryPage: React.FC = () => {
                 <div key={item.id_producto} className={`p-4 ${index !== cartItems.length - 1 ? 'border-bottom' : ''}`}>
                   <div className="row align-items-center">
                     <div className="col-md-2">
-                      <div className="bg-light rounded p-2 text-center">
+                      {item.imagen ? (
+                        <img 
+                          src={`http://localhost:5000/uploads/${item.imagen}?v=${item.id_producto}`}
+                          alt={item.nombre}
+                          className="img-fluid rounded shadow-sm"
+                          style={{ 
+                            width: '100%', 
+                            height: 'auto',
+                            maxWidth: '70px',
+                            aspectRatio: '1/1',
+                            objectFit: 'cover',
+                            objectPosition: 'center'
+                          }}
+                          onError={(e) => {
+                            // Si hay error al cargar la imagen, mostrar el icono
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('d-none');
+                          }}
+                        />
+                      ) : (
+                        <div className="bg-light rounded p-2 text-center">
+                          <i className="bi bi-box text-primary fs-3"></i>
+                        </div>
+                      )}
+                      <div className="fallback-icon d-none bg-light rounded p-2 text-center">
                         <i className="bi bi-box text-primary fs-3"></i>
                       </div>
                     </div>

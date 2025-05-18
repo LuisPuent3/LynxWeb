@@ -130,7 +130,31 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
                           <tr key={item.id_producto}>
                             <td>
                               <div className="d-flex align-items-center">
-                                <div className="bg-light rounded p-2 me-3">
+                                {item.imagen ? (
+                                  <img 
+                                    src={`http://localhost:5000/uploads/${item.imagen}?v=${item.id_producto}`}
+                                    alt={item.nombre}
+                                    className="img-fluid rounded shadow-sm me-3"
+                                    style={{ 
+                                      width: '100%', 
+                                      height: 'auto',
+                                      maxWidth: '50px',
+                                      aspectRatio: '1/1',
+                                      objectFit: 'cover',
+                                      objectPosition: 'center'
+                                    }}
+                                    onError={(e) => {
+                                      // Si hay error al cargar la imagen, mostrar el icono
+                                      e.currentTarget.style.display = 'none';
+                                      e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('d-none');
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="bg-light rounded p-2 me-3">
+                                    <i className="bi bi-box text-primary"></i>
+                                  </div>
+                                )}
+                                <div className="fallback-icon d-none bg-light rounded p-2 me-3">
                                   <i className="bi bi-box text-primary"></i>
                                 </div>
                                 <div>

@@ -50,4 +50,11 @@ router.get('/', getAllOrders);
 // Ruta para actualizar el estado de un pedido
 router.put('/:id', updateOrderStatus);
 
+// Ruta para actualizar el estado de un pedido específico (para cancelaciones)
+router.put('/:id/estado', (req, res, next) => {
+    console.log(`[pedidosRoutes.js] Petición a PUT /:id/estado con ID: ${req.params.id}`);
+    console.log('Estado solicitado:', req.body.estado);
+    updateOrderStatus(req, res, next);
+});
+
 module.exports = router;

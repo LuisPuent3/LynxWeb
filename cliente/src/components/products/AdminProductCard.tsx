@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Producto } from "../../types/types";
+import { useCategorias } from "../../hooks/useCategorias";
 
 interface AdminProductCardProps {
   producto: Producto;
@@ -20,9 +21,19 @@ const AdminProductCard: React.FC<AdminProductCardProps> = ({
   // Estado para controlar errores de carga de imagen
   const [imgError, setImgError] = useState(false);
 
-  // Construir URL una sola vez con parámetro para evitar caché
+  // Obtener las categorías
+  const { categorias, loading: loadingCategorias } = useCategorias();
+
+  // Obtener el nombre de la categoría
+  const getNombreCategoria = () => {
+    if (loadingCategorias) return "Cargando...";
+    const categoria = categorias.find(cat => cat.id_categoria === producto.id_categoria);
+    return categoria ? categoria.nombre : `Categoría ${producto.id_categoria}`;
+  };
+
+  // URL directa a la imagen en el servidor
   const imageUrl = producto.imagen 
-    ? `http://localhost:5000/uploads/${producto.imagen}?v=${producto.id_producto}` 
+    ? `http://localhost:5000/uploads/${producto.imagen}` 
     : '';
 
   return (
@@ -67,18 +78,26 @@ const AdminProductCard: React.FC<AdminProductCardProps> = ({
 
       {/* Imagen y badge */}
       <div className="position-relative">
-        <div className="admin-product-img-placeholder d-flex align-items-center justify-content-center" style={{ height: '180px', backgroundColor: '#f8f9fa' }}>
+        <div className="admin-product-img-placeholder d-flex align-items-center justify-content-center bg-light" style={{ height: '180px', overflow: 'hidden' }}>
           {!imgError && producto.imagen ? (
             <img
               src={imageUrl}
               className="card-img-top"
               alt={producto.nombre}
-              style={{ height: '180px', objectFit: 'cover', width: '100%' }}
+              style={{ 
+                height: '180px', 
+                objectFit: 'cover', 
+                objectPosition: 'center',
+                width: '100%'
+              }}
               loading="lazy"
               onError={() => setImgError(true)}
             />
           ) : (
-            <i className="bi bi-box text-secondary" style={{ fontSize: '3rem' }}></i>
+            <div className="text-center">
+              <i className="bi bi-box text-secondary" style={{ fontSize: '3rem' }}></i>
+              <p className="mt-2 text-muted small">No hay imagen</p>
+            </div>
           )}
         </div>
         {producto.cantidad <= 5 && (
@@ -98,7 +117,7 @@ const AdminProductCard: React.FC<AdminProductCardProps> = ({
         <div className="mb-2">
           <span className="d-block text-muted small">
             <i className="bi bi-tag me-1"></i>
-            Categoría: {producto.id_categoria}
+            Categoría: {getNombreCategoria()}
           </span>
           <span className="d-block text-muted small">
             <i className="bi bi-boxes me-1"></i>

@@ -33,6 +33,11 @@ interface Pedido {
   telefono_contacto?: string;
   informacion_adicional?: string;
   metodo_pago?: string;
+  correo?: string;
+  esClienteRegistrado?: boolean;
+  nombre_usuario?: string;
+  telefono_usuario?: string;
+  correo_usuario?: string;
   productos?: Array<{
     id_producto: number;
     nombre: string;
@@ -66,6 +71,14 @@ const OrderDetailModal: React.FC<{
     WebkitAnimation: 'fadeIn 0.3s'
   };
 
+  // Verificar si es un cliente registrado basado en id_usuario
+  const esClienteRegistrado = selectedOrder.esClienteRegistrado === true;
+  
+  // Determinar qué información mostrar
+  const nombreCliente = selectedOrder.nombre_completo || selectedOrder.usuario || (esClienteRegistrado ? "Cliente registrado" : "Cliente invitado");
+  const telefonoCliente = selectedOrder.telefono_contacto || "No disponible";
+  const correoCliente = selectedOrder.usuario || "";
+  
   return (
     <>
       {/* Reglas CSS para la animación */}
@@ -127,7 +140,15 @@ const OrderDetailModal: React.FC<{
                   <div className="order-details-container">
                     <div className="row mb-3">
                       <div className="col-md-6">
-                        <p><strong>Cliente:</strong> {selectedOrder.usuario || selectedOrder.nombre_completo || 'Usuario'}</p>
+                        <p>
+                          <strong>Cliente:</strong> {nombreCliente}
+                          <span className={`badge ms-2 small ${esClienteRegistrado ? 'bg-info' : 'bg-secondary'}`}>
+                            {esClienteRegistrado ? 'Cliente registrado' : 'Cliente invitado'}
+                          </span>
+                        </p>
+                        {correoCliente && (
+                          <p><strong>Correo:</strong> {correoCliente}</p>
+                        )}
                         <p><strong>Fecha:</strong> {new Date(selectedOrder.fecha).toLocaleDateString()}</p>
                         <p><strong>Método de Pago:</strong> {selectedOrder.metodo_pago || 'Efectivo'}</p>
                       </div>
@@ -142,7 +163,9 @@ const OrderDetailModal: React.FC<{
                             {selectedOrder.estado_nombre || selectedOrder.estado}
                           </span>
                         </p>
-                        <p><strong>Teléfono:</strong> {selectedOrder.telefono_contacto || 'No proporcionado'}</p>
+                        <p>
+                          <strong>Teléfono:</strong> {telefonoCliente}
+                        </p>
                         <p><strong>Información adicional:</strong> {selectedOrder.informacion_adicional || 'N/A'}</p>
                       </div>
                     </div>
@@ -555,7 +578,7 @@ const AdminDashboard: React.FC = () => {
     setSelectedOrder(null);
   };
 
-  // Función simplificada para cargar los detalles de un pedido
+  // Función para cargar los detalles de un pedido
   const handleViewOrderDetails = async (id: number) => {
     try {
       // Buscar el pedido en la lista
@@ -568,67 +591,52 @@ const AdminDashboard: React.FC = () => {
       
       console.log('Pedido seleccionado:', order);
       
-      // Siempre mostrar el modal, incluso mientras se cargan los detalles
-      setSelectedOrder({...order});
+      // Determinar si es un cliente registrado basado en id_usuario
+      const esClienteRegistrado = order.id_usuario && order.id_usuario > 0;
       
-      // Si ya tenemos los productos, no es necesario cargarlos de nuevo
-      if (order.productos && order.productos.length > 0) {
-        console.log('El pedido ya tiene productos:', order.productos);
-        return;
-      }
+      // Preparar el pedido con la información que tenemos
+      let orderDetails = {
+        ...order,
+        esClienteRegistrado: esClienteRegistrado
+      };
       
-      if (orderDetailsCache[id]) {
-        console.log('Usando caché para el pedido:', id);
-        return;
-      }
-      
-      // Cargar los detalles completos del pedido
-      console.log('Cargando detalles para el pedido:', id);
+      // Mostrar el pedido con la información disponible
+      setSelectedOrder(orderDetails);
       setLoadingOrderDetails(true);
       
       try {
-        // Hacer la petición al endpoint específico para detalles
+        // Hacer la petición al endpoint específico para detalles de productos
         const response = await api.get(`/pedidos/detalle/${id}`);
-        const orderDetails = response.data;
-        console.log('Detalles recibidos del servidor:', orderDetails);
+        const productosData = response.data;
+        console.log('Detalles recibidos del servidor:', productosData);
         
-        if (orderDetails) {
-          // Verificar si tiene productos
-          if (!orderDetails.productos || orderDetails.productos.length === 0) {
-            console.warn('El pedido no tiene productos en la respuesta de la API');
-            setError('Este pedido no tiene productos asociados.');
-          } else {
-            console.log('Productos recibidos:', orderDetails.productos);
-          }
-          
-          // Crear una nueva copia del objeto completo combinando datos
-          const completeOrderDetails = {
-            ...order,
-            ...orderDetails,
-            productos: orderDetails.productos || []
-          };
-          
-          // Actualizar el pedido en la lista
-          const updatedPedidos = pedidos.map(p => 
-            p.id_pedido === id ? completeOrderDetails : p
-          );
-          
-          setPedidos(updatedPedidos);
-          setPedidosFiltrados(
-            filtroEstado === 'todos'
-              ? updatedPedidos
-              : updatedPedidos.filter(p => 
-                  p.estado?.toLowerCase() === filtroEstado || 
-                  p.estado_nombre?.toLowerCase() === filtroEstado
-                )
-          );
-          
-          // Actualizar también el pedido seleccionado (con los productos)
-          setSelectedOrder(completeOrderDetails);
-          
-          // Marcar como cargado en caché
-          setOrderDetailsCache(prev => ({...prev, [id]: true}));
-        }
+        // Actualizar con los productos
+        const completeOrderDetails = {
+          ...orderDetails,
+          ...productosData,
+          productos: productosData.productos || []
+        };
+        
+        // Actualizar el pedido en la lista
+        const updatedPedidos = pedidos.map(p => 
+          p.id_pedido === id ? completeOrderDetails : p
+        );
+        
+        setPedidos(updatedPedidos);
+        setPedidosFiltrados(
+          filtroEstado === 'todos'
+            ? updatedPedidos
+            : updatedPedidos.filter(p => 
+                p.estado?.toLowerCase() === filtroEstado || 
+                p.estado_nombre?.toLowerCase() === filtroEstado
+              )
+        );
+        
+        // Actualizar el pedido seleccionado
+        setSelectedOrder(completeOrderDetails);
+        
+        // Marcar como cargado en caché
+        setOrderDetailsCache(prev => ({...prev, [id]: true}));
       } catch (error) {
         console.error('Error al cargar detalles del pedido:', error);
         setError('No se pudieron cargar los detalles del pedido');
@@ -952,8 +960,20 @@ const AdminDashboard: React.FC = () => {
                             <td>{producto.id_producto}</td>
                             <td>
                               <div className="d-flex align-items-center">
-                                <div className="me-3 bg-light rounded p-2 text-center" style={{width: "50px", height: "50px"}}>
-                                  <i className="bi bi-box text-primary" style={{fontSize: "1.5rem"}}></i>
+                                <div className="me-3 bg-light rounded p-2 text-center" style={{width: "50px", height: "50px", overflow: "hidden"}}>
+                                  {producto.imagen && producto.imagen !== 'default.jpg' ? (
+                                    <img 
+                                      src={`http://localhost:5000/uploads/${producto.imagen}`} 
+                                      alt={producto.nombre}
+                                      style={{width: "100%", height: "100%", objectFit: "cover"}}
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                        e.currentTarget.parentElement!.innerHTML = '<i class="bi bi-box text-primary" style="font-size: 1.5rem"></i>';
+                                      }}
+                                    />
+                                  ) : (
+                                    <i className="bi bi-box text-primary" style={{fontSize: "1.5rem"}}></i>
+                                  )}
                                 </div>
                                 <div>
                                   <h6 className="mb-0">{producto.nombre}</h6>

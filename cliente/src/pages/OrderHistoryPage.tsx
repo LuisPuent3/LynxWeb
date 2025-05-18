@@ -11,6 +11,7 @@ interface OrderItem {
   nombre: string;
   cantidad: number;
   precio: number;
+  imagen?: string;
 }
 
 interface Order {
@@ -196,6 +197,111 @@ const OrderHistoryPage: React.FC = () => {
   };
 
   const filteredOrders = filterOrders();
+
+  const cancelOrder = async (orderId: number) => {
+    if (!window.confirm('¿Estás seguro de que deseas cancelar este pedido?')) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token available');
+      
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      const response = await api.put(`/pedidos/${orderId}/estado`, {
+        estado: 'cancelado'
+      });
+      
+      if (response.status === 200) {
+        // Update the order in the state
+        setOrders(prevOrders => 
+          prevOrders.map(order => 
+            order.id_pedido === orderId 
+              ? { ...order, estado: 'cancelado' } 
+              : order
+          )
+        );
+        
+        alert('Pedido cancelado con éxito');
+      }
+    } catch (error) {
+      console.error('Error al cancelar el pedido:', error);
+      alert('No se pudo cancelar el pedido. Inténtalo nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const repeatOrder = async (order: Order) => {
+    try {
+      // Add the products to the cart
+      const cartItems = order.productos.map(item => ({
+        ...item,
+        id_producto: item.id_producto,
+        precio: item.precio,
+        cantidad: item.cantidad
+      }));
+      
+      // Store the cart items in localStorage
+      localStorage.setItem('tempCarrito', JSON.stringify(cartItems));
+      
+      // Navigate to the cart page
+      navigate('/cart');
+    } catch (error) {
+      console.error('Error al repetir el pedido:', error);
+      alert('No se pudo repetir el pedido. Inténtalo nuevamente.');
+    }
+  };
+
+  const downloadInvoice = (order: Order) => {
+    // Since we don't have a real PDF generator, we'll create a simple text version for demo
+    const fileName = `factura-pedido-${order.id_pedido}.txt`;
+    
+    let invoiceContent = `
+===============================================
+            FACTURA - LYNX SHOP
+===============================================
+
+Fecha: ${formatDate(order.fecha)}
+No. Pedido: ${order.id_pedido}
+Estado: ${mapOrderStatus(order.estado)}
+Método de pago: ${order.metodo_pago}
+
+-----------------------------------------------
+PRODUCTOS:
+`;
+    
+    order.productos.forEach(product => {
+      invoiceContent += `
+${product.nombre}
+Cantidad: ${product.cantidad} x $${product.precio.toFixed(2)}
+Subtotal: $${(product.cantidad * product.precio).toFixed(2)}
+-----------------------------------------------`;
+    });
+    
+    invoiceContent += `
+TOTAL: $${order.total.toFixed(2)}
+===============================================
+Gracias por tu compra!
+`;
+    
+    // Create a blob and download link
+    const blob = new Blob([invoiceContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  };
 
   if (loading) {
     return (
@@ -421,7 +527,31 @@ const OrderHistoryPage: React.FC = () => {
                               <tr key={item.id_producto}>
                                 <td>
                                   <div className="d-flex align-items-center">
-                                    <div className="bg-light rounded p-2 me-3">
+                                    {item.imagen ? (
+                                      <img 
+                                        src={`http://localhost:5000/uploads/${item.imagen}?v=${item.id_producto}`}
+                                        alt={item.nombre}
+                                        className="img-fluid rounded shadow-sm me-3"
+                                        style={{ 
+                                          width: '100%', 
+                                          height: 'auto',
+                                          maxWidth: '40px',
+                                          aspectRatio: '1/1',
+                                          objectFit: 'cover',
+                                          objectPosition: 'center'
+                                        }}
+                                        onError={(e) => {
+                                          // Si hay error al cargar la imagen, mostrar el icono
+                                          e.currentTarget.style.display = 'none';
+                                          e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('d-none');
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className="bg-light rounded p-2 me-3">
+                                        <i className="bi bi-box text-primary"></i>
+                                      </div>
+                                    )}
+                                    <div className="fallback-icon d-none bg-light rounded p-2 me-3">
                                       <i className="bi bi-box text-primary"></i>
                                     </div>
                                     <div>
@@ -506,17 +636,24 @@ const OrderHistoryPage: React.FC = () => {
                       
                       {/* Botones de acción */}
                       <div className="d-flex justify-content-end mt-3">
-                        {order.estado === 'pendiente' && (
-                          <button className="btn btn-outline-danger me-2">
-                            <i className="bi bi-x-circle me-1"></i>
-                            Cancelar pedido
-                          </button>
-                        )}
-                        <button className="btn btn-primary me-2">
+                        <button 
+                          className="btn btn-primary me-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            repeatOrder(order);
+                          }}
+                        >
                           <i className="bi bi-arrow-repeat me-1"></i>
                           Repetir pedido
                         </button>
-                        <button className="btn btn-outline-secondary">
+                        <button 
+                          className="btn btn-outline-secondary position-relative"
+                          disabled={true}
+                          title="Proximamente"
+                        >
+                          <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark px-2" style={{ fontSize: '0.65rem' }}>
+                            Próximamente
+                          </span>
                           <i className="bi bi-download me-1"></i>
                           Descargar factura
                         </button>

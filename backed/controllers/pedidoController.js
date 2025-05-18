@@ -142,7 +142,7 @@ const getOrdersByUser = async (req, res) => {
         console.log('[pedidoController.js] IDs de pedidos para buscar detalles:', pedidoIds);
         const [detalles] = await db.query(
             `SELECT dp.id_pedido, dp.id_producto, dp.cantidad, dp.subtotal, 
-                    p.nombre, p.precio
+                    p.nombre, p.precio, p.imagen
              FROM DetallePedido dp
              JOIN Productos p ON dp.id_producto = p.id_producto
              WHERE dp.id_pedido IN (?)`,
@@ -167,7 +167,8 @@ const getOrdersByUser = async (req, res) => {
                     id_producto: p.id_producto,
                     nombre: p.nombre,
                     cantidad: p.cantidad,
-                    precio: p.precio
+                    precio: p.precio,
+                    imagen: p.imagen
                 }))
             };
         });
@@ -297,32 +298,30 @@ const getOrderById = async (req, res) => {
         });
 
         // Obtener detalles de productos
-        console.log('[pedidoController.js] Obteniendo detalles de productos del pedido');
-        const [products] = await db.query(
-            `SELECT dp.id_producto, dp.cantidad, dp.subtotal, 
-                    p.nombre, p.precio
+        console.log('[pedidoController.js] Consultando detalles de productos del pedido');
+        const [productsData] = await db.query(
+            `SELECT dp.id_detalle, dp.id_producto, dp.cantidad, dp.subtotal,
+                    p.nombre, p.precio, p.imagen
              FROM DetallePedido dp
              JOIN Productos p ON dp.id_producto = p.id_producto
              WHERE dp.id_pedido = ?`,
             [id]
         );
-        console.log(`[pedidoController.js] Productos encontrados: ${products.length}`);
+        console.log(`[pedidoController.js] Productos encontrados: ${productsData.length}`);
 
-        // Añadir productos al pedido
-        const orderWithDetails = {
-            ...order,
-            estado: order.estado.toLowerCase(), // Normalizar estado
-            productos: products.map(p => ({
-                id_producto: p.id_producto,
-                nombre: p.nombre,
-                cantidad: p.cantidad,
-                precio: p.precio,
-                subtotal: p.subtotal
-            }))
-        };
+        // Añadir productos al objeto del pedido
+        order.productos = productsData.map(product => ({
+            id_detalle: product.id_detalle,
+            id_producto: product.id_producto,
+            nombre: product.nombre,
+            cantidad: product.cantidad,
+            precio: product.precio,
+            subtotal: product.subtotal,
+            imagen: product.imagen
+        }));
 
-        console.log(`[pedidoController.js] Enviando respuesta completa para pedido ${id} con ${products.length} productos`);
-        res.status(200).json(orderWithDetails);
+        console.log(`[pedidoController.js] Enviando respuesta completa para pedido ${id} con ${productsData.length} productos`);
+        res.status(200).json(order);
     } catch (error) {
         console.error(`[pedidoController.js] Error al obtener pedido ${id}:`, error);
         res.status(500).json({ error: error.message, controllerError: 'getOrderById' });
