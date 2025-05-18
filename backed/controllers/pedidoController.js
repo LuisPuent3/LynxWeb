@@ -34,6 +34,10 @@ const createOrder = async (req, res) => {
                 await db.query('ALTER TABLE Pedidos ADD COLUMN metodo_pago VARCHAR(20) DEFAULT "efectivo"');
                 tablasActualizadas = true;
             }
+            if (!columnasExistentes.includes('total')) {
+                await db.query('ALTER TABLE Pedidos ADD COLUMN total DECIMAL(10,2)');
+                tablasActualizadas = true;
+            }
             
             if (tablasActualizadas) {
                 console.log('Se han añadido nuevas columnas a la tabla Pedidos');
@@ -43,14 +47,17 @@ const createOrder = async (req, res) => {
             // Continuar con la creación del pedido aunque falle la verificación
         }
         
+        // Calcular el total del pedido
+        const total = carrito.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+        
         // Insertar el pedido principal con la estructura actualizada
         const [pedido] = await db.query(
             `INSERT INTO Pedidos (
                 id_usuario, estado, id_estado, 
                 nombre_completo, telefono_contacto, 
-                informacion_adicional, metodo_pago
-            ) VALUES (?, 'pendiente', 1, ?, ?, ?, ?)`,
-            [id_usuario, nombre_completo || null, telefono_contacto || null, informacion_adicional || null, metodo_pago || 'efectivo']
+                informacion_adicional, metodo_pago, total
+            ) VALUES (?, 'pendiente', 1, ?, ?, ?, ?, ?)`,
+            [id_usuario, nombre_completo || null, telefono_contacto || null, informacion_adicional || null, metodo_pago || 'efectivo', total]
         );
         const id_pedido = pedido.insertId;
 
@@ -176,14 +183,52 @@ const getOrdersByUser = async (req, res) => {
 const getAllOrders = async (req, res) => {
     try {
         const [orders] = await db.query(
-            `SELECT p.id_pedido, u.correo AS usuario, p.fecha, p.estado, ep.nombre AS estado_nombre,
-                    p.nombre_completo, p.telefono_contacto, p.informacion_adicional, p.metodo_pago
+            `SELECT p.id_pedido, p.id_usuario, u.correo AS usuario, p.fecha, p.estado, ep.nombre AS estado_nombre,
+                    p.nombre_completo, p.telefono_contacto, p.informacion_adicional, p.metodo_pago, p.total
              FROM Pedidos p
              JOIN Usuarios u ON p.id_usuario = u.id_usuario
-             LEFT JOIN EstadosPedidos ep ON p.id_estado = ep.id_estado`
+             LEFT JOIN EstadosPedidos ep ON p.id_estado = ep.id_estado
+             ORDER BY p.fecha DESC`
         );
+        
+        // Si no hay totales calculados en algunos pedidos, intentar calcularlos
+        const pedidosIds = orders.filter(p => p.total === null).map(p => p.id_pedido);
+        
+        // Solo si hay pedidos sin total calculado
+        if (pedidosIds.length > 0) {
+            try {
+                // Obtener detalles y calcular totales
+                const [detalles] = await db.query(
+                    `SELECT id_pedido, SUM(subtotal) as total 
+                     FROM DetallePedido 
+                     WHERE id_pedido IN (?) 
+                     GROUP BY id_pedido`,
+                    [pedidosIds]
+                );
+                
+                // Actualizar totales en los resultados
+                for (const order of orders) {
+                    if (order.total === null) {
+                        const detalle = detalles.find(d => d.id_pedido === order.id_pedido);
+                        if (detalle) {
+                            order.total = detalle.total;
+                            // Actualizar en la base de datos también
+                            await db.query(
+                                `UPDATE Pedidos SET total = ? WHERE id_pedido = ?`,
+                                [detalle.total, order.id_pedido]
+                            );
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Error al calcular totales faltantes:', err);
+                // No interrumpir el flujo principal
+            }
+        }
+        
         res.status(200).json(orders);
     } catch (error) {
+        console.error('Error al obtener pedidos:', error);
         res.status(500).json({ error: error.message });
     }
 };
