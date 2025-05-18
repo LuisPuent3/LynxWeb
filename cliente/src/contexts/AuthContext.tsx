@@ -66,8 +66,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         // Ruta correcta a la API
         const response = await api.get('/auth/verify');
+        // Mostrar los datos recibidos
+        console.log('VERIFY TOKEN - Datos recibidos del servidor:', {
+          respuesta: response.data,
+          usuario: response.data.usuario,
+          rol: response.data.usuario?.rol
+        });
         // Actualizando el nombre del campo según la respuesta real del servidor
         setUser(response.data.usuario);
+        
+        // Redirigir a panel de administración si el usuario es admin
+        if (response.data.usuario?.rol === 'Administrador' && 
+            window.location.pathname !== '/admin/dashboard' &&
+            !window.location.pathname.startsWith('/admin/')) {
+          console.log('Redirigiendo a panel de administración...');
+          window.location.href = '/admin/dashboard';
+        }
       } catch (err) {
         console.error('Error al verificar el token:', err);
         // Si hay un error, limpiar el estado de autenticación
@@ -97,6 +111,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (newToken: string, userData: User) => {
     try {
+      // Mostrar datos recibidos para depuración
+      console.log('LOGIN - Datos de usuario recibidos:', {
+        token: newToken, 
+        userData: {...userData},
+        rol: userData?.rol
+      });
+      
       // Guardar el token en localStorage
       localStorage.setItem('token', newToken);
       setToken(newToken);

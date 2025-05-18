@@ -233,8 +233,22 @@ exports.verifyToken = async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    res.json({ usuario: rows[0] });
+    // Renombrar rol_nombre a rol para que coincida con la estructura esperada en el frontend
+    const usuario = {
+      ...rows[0],
+      rol: rows[0].rol_nombre
+    };
+    
+    // Añadir logs para diagnóstico
+    console.log("Verificación exitosa de token para usuario:", {
+      id: usuario.id_usuario,
+      nombre: usuario.nombre,
+      rol: usuario.rol
+    });
+
+    res.json({ usuario });
   } catch (error) {
+    console.error("Error al verificar token:", error);
     res.status(500).json({ error: 'Error al verificar token', detalles: error.message });
   }
 };

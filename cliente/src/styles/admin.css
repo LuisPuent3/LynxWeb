@@ -1,0 +1,146 @@
+/* Estilos para el panel de administración */
+.admin-dashboard {
+  min-height: 100vh;
+  background-color: #f5f8fa;
+}
+
+/* Barra de navegación de administrador */
+.admin-dashboard .navbar-dark {
+  background-color: #1e3a8a !important;
+}
+
+.admin-dashboard .navbar-brand {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Contenedores de tarjetas */
+.admin-dashboard .card {
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.admin-dashboard .card-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 15px 20px;
+}
+
+/* Tablas */
+.admin-dashboard .table th {
+  font-weight: 600;
+  border-top: none;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.admin-dashboard .table td {
+  vertical-align: middle;
+  border-color: rgba(0, 0, 0, 0.05);
+  padding: 12px 15px;
+}
+
+.admin-dashboard .table-hover tbody tr:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Botones y acciones */
+.admin-dashboard .btn-primary {
+  background-color: #1e3a8a;
+  border-color: #1e3a8a;
+}
+
+.admin-dashboard .btn-primary:hover {
+  background-color: #1e40af;
+  border-color: #1e40af;
+}
+
+.admin-dashboard .btn-outline-primary {
+  color: #1e3a8a;
+  border-color: #1e3a8a;
+}
+
+.admin-dashboard .btn-outline-primary:hover {
+  background-color: #1e3a8a;
+  border-color: #1e3a8a;
+}
+
+/* Tarjetas de KPI en el dashboard */
+.dashboard-card {
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-card .icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+/* Formularios */
+.admin-dashboard .form-control {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 15px;
+}
+
+.admin-dashboard .form-control:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+}
+
+.admin-dashboard .form-label {
+  font-weight: 500;
+  color: #444;
+}
+
+/* Product image placeholder */
+.product-img-container {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+/* Contador de notificaciones */
+.notification-counter {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: red;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Estilos para móviles y tablets */
+@media (max-width: 991.98px) {
+  .admin-dashboard .container-fluid {
+    padding: 15px;
+  }
+  
+  .admin-dashboard .card-body {
+    padding: 15px;
+  }
+} 

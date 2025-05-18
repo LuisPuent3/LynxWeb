@@ -265,6 +265,16 @@ const Home = () => {
            <div className="ms-auto mt-2 mt-lg-0 d-flex align-items-center">
              {isAuthenticated ? (
                <>
+                 {/* Botón de Admin Dashboard para administradores */}
+                 {user && user.rol === 'Administrador' && (
+                   <button
+                     className="btn btn-warning me-3"
+                     onClick={() => navigate('/admin/dashboard')}
+                   >
+                     <i className="bi bi-speedometer2 me-1"></i>
+                     <span className="d-none d-md-inline">Panel Admin</span>
+                   </button>
+                 )}
                  <div className="dropdown me-3">
                    <button 
                      className="btn btn-primary dropdown-toggle d-flex align-items-center" 
@@ -310,6 +320,14 @@ const Home = () => {
                  <button 
                    className="btn btn-outline-light" 
                    onClick={handleLogout}
+                   onMouseEnter={(e) => {
+                     e.currentTarget.classList.remove('btn-outline-light');
+                     e.currentTarget.classList.add('btn-danger');
+                   }}
+                   onMouseLeave={(e) => {
+                     e.currentTarget.classList.remove('btn-danger');
+                     e.currentTarget.classList.add('btn-outline-light');
+                   }}
                  >
                    <i className="bi bi-box-arrow-right me-1"></i>
                    Cerrar sesión
