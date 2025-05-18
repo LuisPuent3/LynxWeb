@@ -64,15 +64,18 @@ const AuthModal: React.FC<AuthModalProps> = ({
           total = cartItems.reduce((sum, item) => sum + (Number(item.precio) * item.cantidad), 0);
         }
         
-        // Navigate guests to the order summary page with cart data
-        navigate('/order/summary', {
-          state: {
-            cartItems: cartItems,
-            total: total,
-            discount: 0,
-            paymentMethod: 'cash'
-          }
-        });
+        // Utilizar setTimeout para dar tiempo al estado de React a actualizarse
+        setTimeout(() => {
+          // Navigate guests to the order summary page with cart data
+          navigate('/order/summary', {
+            state: {
+              cartItems: cartItems,
+              total: total,
+              discount: 0,
+              paymentMethod: 'cash'
+            }
+          });
+        }, 50); // Un pequeño retraso es suficiente
       } else {
         throw new Error('No se pudo crear usuario invitado');
       }

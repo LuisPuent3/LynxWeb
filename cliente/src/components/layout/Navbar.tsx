@@ -36,7 +36,7 @@ const Navbar: React.FC = () => {
             <li className="nav-item">
               <Link className="nav-link" to="/">Inicio</Link>
             </li>
-            {isAuthenticated && !isGuestUser() && (
+            {isAuthenticated && (
               <li className="nav-item">
                 <Link className="nav-link" to="/pedidos">
                   <i className="bi bi-receipt me-1"></i>
@@ -65,18 +65,25 @@ const Navbar: React.FC = () => {
                     aria-expanded="false"
                   >
                     <i className="bi bi-person-circle me-1"></i>
-                    {user?.nombre || 'Usuario'}
+                    {isGuestUser() ? 'Invitado' : (user?.nombre || 'Usuario')}
+                    {isGuestUser() && <span className="badge bg-warning text-dark ms-1" style={{ fontSize: '0.6rem' }}>Invitado</span>}
                   </button>
                   <ul className="dropdown-menu dropdown-menu-end">
-                    {!isGuestUser() && (
+                    <li>
+                      <Link className="dropdown-item" to="/pedidos">
+                        <i className="bi bi-receipt me-2"></i>
+                        Mis pedidos
+                      </Link>
+                    </li>
+                    {isGuestUser() && (
                       <li>
-                        <Link className="dropdown-item" to="/pedidos">
-                          <i className="bi bi-receipt me-2"></i>
-                          Mis pedidos
+                        <Link className="dropdown-item" to="/register">
+                          <i className="bi bi-person-plus me-2"></i>
+                          Crear cuenta permanente
                         </Link>
                       </li>
                     )}
-                    {!isGuestUser() && <li><hr className="dropdown-divider"/></li>}
+                    <li><hr className="dropdown-divider"/></li>
                     <li>
                       <button 
                         className="dropdown-item text-danger" 

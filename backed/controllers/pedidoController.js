@@ -2,17 +2,55 @@ const db = require('../config/db');
 
 // Crear un pedido
 const createOrder = async (req, res) => {
-    const { id_usuario, carrito } = req.body;
+    const { id_usuario, carrito, nombre_completo, telefono_contacto, informacion_adicional, metodo_pago } = req.body;
     
     if (!carrito || carrito.length === 0) {
         return res.status(400).json({ error: 'El carrito está vacío' });
     }
     
     try {
-        // Insertar el pedido principal con la estructura actual
+        // Verificar si la tabla Pedidos tiene las columnas necesarias
+        let tablasActualizadas = false;
+        
+        try {
+            // Verificar si las columnas existen
+            const [columnas] = await db.query('SHOW COLUMNS FROM Pedidos');
+            const columnasExistentes = columnas.map(col => col.Field);
+            
+            // Si no existen las columnas adicionales, añadirlas
+            if (!columnasExistentes.includes('nombre_completo')) {
+                await db.query('ALTER TABLE Pedidos ADD COLUMN nombre_completo VARCHAR(100)');
+                tablasActualizadas = true;
+            }
+            if (!columnasExistentes.includes('telefono_contacto')) {
+                await db.query('ALTER TABLE Pedidos ADD COLUMN telefono_contacto VARCHAR(20)');
+                tablasActualizadas = true;
+            }
+            if (!columnasExistentes.includes('informacion_adicional')) {
+                await db.query('ALTER TABLE Pedidos ADD COLUMN informacion_adicional TEXT');
+                tablasActualizadas = true;
+            }
+            if (!columnasExistentes.includes('metodo_pago')) {
+                await db.query('ALTER TABLE Pedidos ADD COLUMN metodo_pago VARCHAR(20) DEFAULT "efectivo"');
+                tablasActualizadas = true;
+            }
+            
+            if (tablasActualizadas) {
+                console.log('Se han añadido nuevas columnas a la tabla Pedidos');
+            }
+        } catch (error) {
+            console.error('Error al verificar/actualizar estructura de tabla:', error);
+            // Continuar con la creación del pedido aunque falle la verificación
+        }
+        
+        // Insertar el pedido principal con la estructura actualizada
         const [pedido] = await db.query(
-            `INSERT INTO Pedidos (id_usuario, estado, id_estado) VALUES (?, 'pendiente', 1)`,
-            [id_usuario]
+            `INSERT INTO Pedidos (
+                id_usuario, estado, id_estado, 
+                nombre_completo, telefono_contacto, 
+                informacion_adicional, metodo_pago
+            ) VALUES (?, 'pendiente', 1, ?, ?, ?, ?)`,
+            [id_usuario, nombre_completo || null, telefono_contacto || null, informacion_adicional || null, metodo_pago || 'efectivo']
         );
         const id_pedido = pedido.insertId;
 
@@ -27,6 +65,32 @@ const createOrder = async (req, res) => {
         });
 
         await Promise.all(detallePromises);
+        
+        // Si es un usuario invitado o nuevo, actualizar su teléfono en la BD
+        if (telefono_contacto) {
+            try {
+                // Primero verificar si el usuario existe y tiene un teléfono generado automáticamente
+                const [usuario] = await db.query(
+                    'SELECT telefono FROM Usuarios WHERE id_usuario = ?',
+                    [id_usuario]
+                );
+                
+                if (usuario.length > 0) {
+                    const telefonoActual = usuario[0].telefono;
+                    // Actualizar solo si no tiene teléfono o si el teléfono comienza con '000' (generado automáticamente)
+                    if (!telefonoActual || telefonoActual.startsWith('000')) {
+                        await db.query(
+                            'UPDATE Usuarios SET telefono = ? WHERE id_usuario = ?',
+                            [telefono_contacto, id_usuario]
+                        );
+                        console.log(`Teléfono actualizado para el usuario ${id_usuario}`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error al actualizar teléfono del usuario:', error);
+                // No interrumpir el flujo si falla la actualización del teléfono
+            }
+        }
         
         res.status(201).json({ mensaje: 'Pedido creado con éxito', id_pedido });
     } catch (error) {
@@ -51,7 +115,8 @@ const getOrdersByUser = async (req, res) => {
     try {
         // Primero obtenemos los pedidos básicos con la estructura actual
         const [orders] = await db.query(
-            `SELECT p.id_pedido, p.fecha, p.estado, ep.nombre AS estado_nombre
+            `SELECT p.id_pedido, p.fecha, p.estado, ep.nombre AS estado_nombre, 
+                   p.nombre_completo, p.telefono_contacto, p.informacion_adicional, p.metodo_pago
              FROM Pedidos p
              LEFT JOIN EstadosPedidos ep ON p.id_estado = ep.id_estado
              WHERE p.id_usuario = ?
@@ -88,7 +153,7 @@ const getOrdersByUser = async (req, res) => {
             return {
                 ...order,
                 estado: estadoFinal.toLowerCase(),
-                metodo_pago: 'efectivo', 
+                metodo_pago: order.metodo_pago || 'efectivo', 
                 tracking_code: '', 
                 total,
                 productos: productos.map(p => ({
@@ -111,7 +176,8 @@ const getOrdersByUser = async (req, res) => {
 const getAllOrders = async (req, res) => {
     try {
         const [orders] = await db.query(
-            `SELECT p.id_pedido, u.correo AS usuario, p.fecha, p.estado, ep.nombre AS estado_nombre
+            `SELECT p.id_pedido, u.correo AS usuario, p.fecha, p.estado, ep.nombre AS estado_nombre,
+                    p.nombre_completo, p.telefono_contacto, p.informacion_adicional, p.metodo_pago
              FROM Pedidos p
              JOIN Usuarios u ON p.id_usuario = u.id_usuario
              LEFT JOIN EstadosPedidos ep ON p.id_estado = ep.id_estado`

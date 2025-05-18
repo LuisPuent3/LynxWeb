@@ -39,11 +39,7 @@ const App = () => {
         <Route path="/order/confirmation" element={<OrderConfirmationPage />} />
         <Route path="/pedidos" element={
           <ProtectedRoute allowedRoles={[]}>
-            {localStorage.getItem('guestMode') !== 'true' ? (
-              <OrderHistoryPage />
-            ) : (
-              <Navigate to="/" replace />
-            )}
+            <OrderHistoryPage />
           </ProtectedRoute>
         } />
         <Route path="/admin/dashboard" element={

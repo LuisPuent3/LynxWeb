@@ -30,6 +30,7 @@ const OrderHistoryPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('todos');
   const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isGuest, setIsGuest] = useState(false);
 
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -40,11 +41,9 @@ const OrderHistoryPage: React.FC = () => {
       return;
     }
     
-    const isGuest = localStorage.getItem('guestMode') === 'true';
-    if (isGuest) {
-      navigate('/');
-      return;
-    }
+    // Comprobar si es usuario invitado
+    const guestMode = localStorage.getItem('guestMode') === 'true';
+    setIsGuest(guestMode);
     
     fetchOrders();
   }, [isAuthenticated, navigate]);
@@ -217,6 +216,32 @@ const OrderHistoryPage: React.FC = () => {
           <p className="text-muted mb-4">
             Consulta el estado y detalles de todos tus pedidos realizados en LynxShop
           </p>
+          
+          {/* Banner informativo para usuarios invitados */}
+          {isGuest && (
+            <div className="card border-warning mb-4">
+              <div className="card-body">
+                <h5 className="d-flex align-items-center">
+                  <i className="bi bi-exclamation-triangle text-warning me-2"></i>
+                  Modo Invitado
+                </h5>
+                <p className="mb-3">Tu historial solo estará disponible en este dispositivo mientras no cierres sesión.</p>
+                <div className="d-flex">
+                  <button 
+                    className="btn btn-warning me-2"
+                    onClick={() => navigate('/register')}
+                  >
+                    <i className="bi bi-person-plus me-1"></i>
+                    Crear cuenta permanente
+                  </button>
+                  <button className="btn btn-outline-secondary btn-sm">
+                    <i className="bi bi-question-circle me-1"></i>
+                    Más información
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
