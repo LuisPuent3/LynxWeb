@@ -165,15 +165,24 @@ const CartPage: React.FC = () => {
       return;
     }
 
-    // Navigate to order summary page instead of processing immediately
-    navigate('/order/summary', {
-      state: {
-        cartItems: carrito,
-        total: calculateTotal(),
-        discount: couponApplied ? discount : 0,
-        paymentMethod: paymentMethod
-      }
-    });
+    // For guest users, navigate to order summary page
+    // For authenticated regular users, process the order directly
+    if (localStorage.getItem("guestMode") === "true") {
+      // Asegurarse de pasar los datos completos del carrito al navegar
+      const calculatedTotal = calculateTotal();
+      navigate('/order/summary', {
+        state: {
+          cartItems: [...carrito], // Hacer una copia del carrito para evitar referencias
+          total: calculatedTotal,
+          discount: couponApplied ? discount : 0,
+          paymentMethod: paymentMethod
+        }
+      });
+    } else {
+      // For regular authenticated users, process order directly
+      setProcessingOrder(true);
+      await procesarPedido();
+    }
   };
 
   const handleModalLogin = async () => {

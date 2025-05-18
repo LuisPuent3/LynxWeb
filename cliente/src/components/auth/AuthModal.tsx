@@ -53,8 +53,26 @@ const AuthModal: React.FC<AuthModalProps> = ({
         // Cerrar el modal
         onClose();
         
-        // Llamar al callback para procesar el pedido como invitado
-        onGuestCheckout();
+        // Obtener el carrito actual de localStorage
+        const savedCarrito = localStorage.getItem('tempCarrito');
+        let cartItems = [];
+        let total = 0;
+        
+        if (savedCarrito) {
+          cartItems = JSON.parse(savedCarrito);
+          // Calcular el total del carrito
+          total = cartItems.reduce((sum, item) => sum + (Number(item.precio) * item.cantidad), 0);
+        }
+        
+        // Navigate guests to the order summary page with cart data
+        navigate('/order/summary', {
+          state: {
+            cartItems: cartItems,
+            total: total,
+            discount: 0,
+            paymentMethod: 'cash'
+          }
+        });
       } else {
         throw new Error('No se pudo crear usuario invitado');
       }

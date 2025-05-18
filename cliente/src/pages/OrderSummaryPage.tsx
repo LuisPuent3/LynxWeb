@@ -20,28 +20,70 @@ const OrderSummaryPage: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [address, setAddress] = useState('');
+  const [additionalInfo, setAdditionalInfo] = useState('');
   const [contactPhone, setContactPhone] = useState(user?.telefono || '');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [discount, setDiscount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const state = location.state as LocationState;
-  const { cartItems, total, discount, paymentMethod } = state || { 
-    cartItems: [], 
-    total: 0, 
-    discount: 0,
-    paymentMethod: 'cash'
-  };
+  // Obtener estado de localización
+  const locationState = location.state as LocationState;
 
   useEffect(() => {
-    // If there are no items or user is not authenticated, redirect to home
-    if (!state || cartItems.length === 0) {
-      navigate('/cart');
-      return;
+    // Primero intentar obtener datos del estado de navegación
+    if (locationState && locationState.cartItems && locationState.cartItems.length > 0) {
+      setCartItems(locationState.cartItems);
+      setTotal(locationState.total);
+      setDiscount(locationState.discount || 0);
+      setPaymentMethod(locationState.paymentMethod || 'cash');
+      setIsLoading(false);
+    } else {
+      // Si no hay datos en el estado de navegación, intentar obtenerlos del localStorage
+      const savedCarrito = localStorage.getItem('tempCarrito');
+      if (savedCarrito) {
+        const parsedCart = JSON.parse(savedCarrito);
+        if (parsedCart && parsedCart.length > 0) {
+          setCartItems(parsedCart);
+          // Calcular el total del carrito
+          const calculatedTotal = parsedCart.reduce(
+            (sum: number, item: CartItem) => sum + (Number(item.precio) * item.cantidad), 
+            0
+          );
+          setTotal(calculatedTotal);
+        } else {
+          // Si tampoco hay datos en localStorage, redirigir al carrito
+          navigate('/cart');
+        }
+      } else {
+        // Si no hay carrito guardado, redirigir al carrito
+        navigate('/cart');
+      }
+      setIsLoading(false);
     }
+  }, [locationState, navigate]);
 
-    if (!isAuthenticated) {
-      navigate('/login', { state: { returnToCart: true } });
+  useEffect(() => {
+    // Solo permitir a usuarios invitados acceder a esta página
+    if (!isLoading) {
+      if (cartItems.length === 0) {
+        navigate('/cart');
+        return;
+      }
+
+      if (isAuthenticated && localStorage.getItem("guestMode") !== "true") {
+        navigate('/cart');
+        return;
+      }
+
+      if (!isAuthenticated) {
+        navigate('/login', { state: { returnToCart: true } });
+      }
     }
-  }, [state, cartItems, isAuthenticated, navigate]);
+  }, [cartItems, isAuthenticated, navigate, isLoading]);
 
   const procesarPedido = async () => {
     try {
@@ -70,8 +112,9 @@ const OrderSummaryPage: React.FC = () => {
         metodo_pago: paymentMethod,
         descuento: discount,
         total: total,
-        direccion_entrega: address,
-        telefono_contacto: contactPhone
+        nombre_completo: `${firstName} ${lastName}`,
+        telefono_contacto: contactPhone,
+        informacion_adicional: additionalInfo
       };
 
       console.log('Datos a enviar a backend:', pedidoData);
@@ -115,13 +158,31 @@ const OrderSummaryPage: React.FC = () => {
     }
   };
 
-  const handleAddressChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setAddress(e.target.value);
+  const handleAdditionalInfoChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setAdditionalInfo(e.target.value);
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setContactPhone(e.target.value);
   };
+
+  const handleFirstNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFirstName(e.target.value);
+  };
+
+  const handleLastNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLastName(e.target.value);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container-fluid py-3 text-center">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-5">
@@ -169,38 +230,64 @@ const OrderSummaryPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Delivery Information */}
+          {/* Contact Information */}
           <div className="card border-0 shadow-sm mb-4 rounded-3">
             <div className="card-header bg-white py-3">
               <h5 className="mb-0 d-flex align-items-center">
-                <i className="bi bi-geo-alt me-2 text-primary"></i>
-                Información de Entrega
+                <i className="bi bi-person me-2 text-primary"></i>
+                Información del Cliente
               </h5>
             </div>
             <div className="card-body p-4">
-              <div className="mb-3">
-                <label htmlFor="address" className="form-label">Dirección de Entrega</label>
-                <textarea 
-                  className="form-control" 
-                  id="address" 
-                  rows={3} 
-                  placeholder="Ingresa tu dirección completa" 
-                  value={address}
-                  onChange={handleAddressChange}
-                  required
-                ></textarea>
+              <div className="row mb-3">
+                <div className="col-md-6 mb-3 mb-md-0">
+                  <label htmlFor="firstName" className="form-label">Nombre <span className="text-danger">*</span></label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    id="firstName" 
+                    placeholder="Ingresa tu nombre" 
+                    value={firstName}
+                    onChange={handleFirstNameChange}
+                    required
+                  />
+                </div>
+                <div className="col-md-6">
+                  <label htmlFor="lastName" className="form-label">Apellido <span className="text-danger">*</span></label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    id="lastName" 
+                    placeholder="Ingresa tu apellido" 
+                    value={lastName}
+                    onChange={handleLastNameChange}
+                    required
+                  />
+                </div>
               </div>
               <div className="mb-3">
-                <label htmlFor="phone" className="form-label">Teléfono de Contacto</label>
+                <label htmlFor="phone" className="form-label">Teléfono de Contacto <span className="text-danger">*</span></label>
                 <input 
                   type="tel" 
                   className="form-control" 
                   id="phone" 
-                  placeholder="Teléfono para coordinar entrega" 
+                  placeholder="Teléfono para contacto" 
                   value={contactPhone}
                   onChange={handlePhoneChange}
                   required
                 />
+                <div className="form-text">Este número es necesario para confirmar su pedido.</div>
+              </div>
+              <div className="mb-3">
+                <label htmlFor="additionalInfo" className="form-label">Información Adicional</label>
+                <textarea 
+                  className="form-control" 
+                  id="additionalInfo" 
+                  rows={3} 
+                  placeholder="Instrucciones especiales, comentarios o referencias" 
+                  value={additionalInfo}
+                  onChange={handleAdditionalInfoChange}
+                ></textarea>
               </div>
             </div>
           </div>
@@ -256,7 +343,7 @@ const OrderSummaryPage: React.FC = () => {
                 <button 
                   className="btn btn-primary py-3 fw-bold"
                   onClick={procesarPedido}
-                  disabled={isProcessing || !address.trim() || !contactPhone.trim()}
+                  disabled={isProcessing || !firstName.trim() || !lastName.trim() || !contactPhone.trim()}
                 >
                   {isProcessing ? (
                     <>
