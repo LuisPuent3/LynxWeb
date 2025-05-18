@@ -263,7 +263,7 @@ const AdminDashboard: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingCategoria, setIsEditingCategoria] = useState(false);
   
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   
   // Referencia para acceder a modales desde useEffect 
@@ -603,6 +603,12 @@ const AdminDashboard: React.FC = () => {
     closeDetailModal();
   };
 
+  // Función para manejar el cierre de sesión
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   return (
     <div className="admin-dashboard">
       {/* Barra de navegación admin */}
@@ -671,17 +677,16 @@ const AdminDashboard: React.FC = () => {
                 <i className="bi bi-shop me-1"></i>
                 Ir a Tienda
               </button>
-              <div className="dropdown">
-                <button className="btn btn-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
-                  <i className="bi bi-person-circle me-1"></i>
-                  {user?.nombre?.split(' ')[0] || 'Admin'}
-                </button>
-                <ul className="dropdown-menu dropdown-menu-end">
-                  <li><a className="dropdown-item" href="#"><i className="bi bi-person me-2"></i>Perfil</a></li>
-                  <li><a className="dropdown-item" href="#"><i className="bi bi-gear me-2"></i>Configuración</a></li>
-                  <li><hr className="dropdown-divider" /></li>
-                  <li><a className="dropdown-item" href="#"><i className="bi bi-box-arrow-right me-2"></i>Cerrar sesión</a></li>
-                </ul>
+              <div className="ms-auto">
+                <div className="dropdown">
+                  <button className="btn btn-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
+                    <i className="bi bi-person-circle me-1"></i>
+                    {user?.nombre?.split(' ')[0] || 'Admin'}
+                  </button>
+                  <ul className="dropdown-menu dropdown-menu-end">
+                    <li><a className="dropdown-item" href="#" onClick={handleLogout}><i className="bi bi-box-arrow-right me-2"></i>Cerrar sesión</a></li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
