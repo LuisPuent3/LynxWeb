@@ -240,10 +240,7 @@ const AdminDashboard: React.FC = () => {
   const [orderDetailsCache, setOrderDetailsCache] = useState<{[key: number]: boolean}>({});
   const [selectedOrder, setSelectedOrder] = useState<Pedido | null>(null);
   // Eliminada la gestión de usuarios  // const [usuarios, setUsuarios] = useState<User[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Estado para el formulario de producto
+    const [loading, setLoading] = useState<boolean>(true);  const [error, setError] = useState<string | null>(null);  const [successMessage, setSuccessMessage] = useState<string | null>(null);    // Estado para el formulario de producto
   const [formData, setFormData] = useState<Producto>({
     id_producto: 0,
     nombre: '',
@@ -263,6 +260,9 @@ const AdminDashboard: React.FC = () => {
   // Estado para edición
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingCategoria, setIsEditingCategoria] = useState(false);
+  
+  // Agregar nuevo estado para rastrear si la imagen ha sido subida
+  const [isImageUploaded, setIsImageUploaded] = useState(false);
   
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -336,6 +336,14 @@ const AdminDashboard: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setError(null);
+      
+      // Verificar que la imagen ha sido subida
+      if (!isImageUploaded && !isEditing) {
+        setError('Debes subir una imagen antes de guardar el producto');
+        return;
+      }
+      
       if (isEditing) {
         // Actualizar producto
         await api.put(`/productos/${formData.id_producto}`, formData);
@@ -343,10 +351,12 @@ const AdminDashboard: React.FC = () => {
         setProductos(productos.map(p => 
           p.id_producto === formData.id_producto ? {...formData} : p
         ));
+        setSuccessMessage('¡Producto actualizado correctamente!');
       } else {
         // Crear nuevo producto
         const response = await api.post('/productos', formData);
         setProductos([...productos, response.data]);
+        setSuccessMessage('¡Producto creado correctamente!');
       }
       
       // Resetear formulario
@@ -359,9 +369,41 @@ const AdminDashboard: React.FC = () => {
         imagen: 'default.jpg'
       });
       setIsEditing(false);
-    } catch (err) {
+      setIsImageUploaded(false);
+      
+      // Cambiar a la pestaña de productos para ver el resultado
+      setActiveTab('products');
+      
+      // Limpiar el mensaje después de 3 segundos
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (err: any) {
       console.error('Error al guardar producto:', err);
-      setError('Error al guardar el producto. Por favor, intenta de nuevo.');
+      
+      // Manejar errores específicos de la API
+      if (err.response) {
+        const statusCode = err.response.status;
+        const errorData = err.response.data;
+        
+        if (statusCode === 400) {
+          // Error de validación
+          if (errorData.code === 'DUPLICATE_NAME') {
+            setError('Ya existe un producto con este nombre. Por favor, usa un nombre diferente.');
+          } else {
+            setError(errorData.error || 'Error de validación en los datos del producto.');
+          }
+        } else {
+          // Otros errores
+          setError('Error al guardar el producto. Por favor, intenta de nuevo.');
+        }
+      } else if (err.request) {
+        // Error de conexión
+        setError('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+      } else {
+        // Error inesperado
+        setError('Error al guardar el producto. Por favor, intenta de nuevo.');
+      }
     }
   };
   
@@ -375,6 +417,7 @@ const AdminDashboard: React.FC = () => {
       imagen: producto.imagen
     });
     setIsEditing(true);
+    setIsImageUploaded(true); // Asumimos que el producto existente ya tiene imagen
     setActiveTab('products-form');
   };
   
@@ -701,9 +744,7 @@ const AdminDashboard: React.FC = () => {
               <span className="visually-hidden">Cargando...</span>
             </div>
           </div>
-        ) : error ? (
-          <div className="alert alert-danger">{error}</div>
-        ) : (
+                ) : error ? (          <div className="alert alert-danger">{error}</div>        ) : successMessage ? (          <div className="alert alert-success">{successMessage}</div>        ) : (
           <>
             {/* Dashboard */}
             {activeTab === 'dashboard' && (
@@ -884,6 +925,7 @@ const AdminDashboard: React.FC = () => {
                         imagen: 'default.jpg'
                       });
                       setIsEditing(false);
+                      setIsImageUploaded(false);
                       setActiveTab('products-form');
                     }}
                   >
@@ -1031,12 +1073,17 @@ const AdminDashboard: React.FC = () => {
                             ...formData,
                             imagen: filename
                           });
+                          setIsImageUploaded(true);
                         }}
                       />
                     </div>
                     
                     <div className="d-flex gap-2">
-                      <button type="submit" className="btn btn-primary">
+                      <button 
+                        type="submit" 
+                        className="btn btn-primary"
+                        disabled={!formData.nombre || !formData.precio || formData.cantidad < 0 || (!isEditing && !isImageUploaded)}
+                      >
                         {isEditing ? 'Actualizar Producto' : 'Crear Producto'}
                       </button>
                       <button 

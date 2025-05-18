@@ -30,6 +30,15 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   }
 }));
 
+// Configuración para servir archivos estáticos desde el directorio cliente/public
+app.use('/assets', express.static(path.join(__dirname, '../cliente/public/assets'), {
+  maxAge: '1d', // Caché por 1 día
+  setHeaders: function (res, path, stat) {
+    res.set('Cache-Control', 'public, max-age=86400'); // 1 día en segundos
+    res.set('Expires', new Date(Date.now() + 86400000).toUTCString()); // 1 día en milisegundos
+  }
+}));
+
 // Importar rutas
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');

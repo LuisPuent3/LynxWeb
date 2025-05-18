@@ -18,19 +18,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ producto, addToCart }) => {
   // Construir URL una sola vez
   const imageUrl = producto.imagen 
     ? `http://localhost:5000/uploads/${producto.imagen}?v=${producto.id_producto}` 
-    : 'https://via.placeholder.com/200?text=Producto+sin+imagen';
+    : '';
 
   return (
     <div className="card h-100 shadow-sm">
       <div className="position-relative">
-        <img
-          src={imgError ? 'https://via.placeholder.com/200?text=Imagen+no+disponible' : imageUrl}
-          className="card-img-top"
-          alt={producto.nombre}
-          style={{ height: '200px', objectFit: 'cover' }}
-          loading="lazy"
-          onError={() => setImgError(true)}
-        />
+        {!imgError && producto.imagen ? (
+          <img
+            src={imageUrl}
+            className="card-img-top"
+            alt={producto.nombre}
+            style={{ height: '200px', objectFit: 'cover' }}
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="bg-light d-flex align-items-center justify-content-center" style={{ height: '200px' }}>
+            <i className="bi bi-image text-secondary" style={{ fontSize: '3rem' }}></i>
+          </div>
+        )}
         {producto.cantidad <= 5 && (
           <span className="position-absolute top-0 end-0 badge bg-warning m-2">
             ¡Últimas unidades!

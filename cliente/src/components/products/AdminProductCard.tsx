@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Producto } from "../../types/types";
 
 interface AdminProductCardProps {
@@ -16,6 +16,14 @@ const AdminProductCard: React.FC<AdminProductCardProps> = ({
   const precioNumerico = typeof producto.precio === 'string' 
     ? parseFloat(producto.precio) 
     : producto.precio;
+  
+  // Estado para controlar errores de carga de imagen
+  const [imgError, setImgError] = useState(false);
+
+  // Construir URL una sola vez con parámetro para evitar caché
+  const imageUrl = producto.imagen 
+    ? `http://localhost:5000/uploads/${producto.imagen}?v=${producto.id_producto}` 
+    : '';
 
   return (
     <div className="card h-100 shadow-sm position-relative admin-product-card">
@@ -60,12 +68,14 @@ const AdminProductCard: React.FC<AdminProductCardProps> = ({
       {/* Imagen y badge */}
       <div className="position-relative">
         <div className="admin-product-img-placeholder d-flex align-items-center justify-content-center" style={{ height: '180px', backgroundColor: '#f8f9fa' }}>
-          {producto.imagen ? (
+          {!imgError && producto.imagen ? (
             <img
-              src={`http://localhost:5000/uploads/${producto.imagen}`}
+              src={imageUrl}
               className="card-img-top"
               alt={producto.nombre}
-              style={{ height: '180px', objectFit: 'cover' }}
+              style={{ height: '180px', objectFit: 'cover', width: '100%' }}
+              loading="lazy"
+              onError={() => setImgError(true)}
             />
           ) : (
             <i className="bi bi-box text-secondary" style={{ fontSize: '3rem' }}></i>
@@ -95,8 +105,8 @@ const AdminProductCard: React.FC<AdminProductCardProps> = ({
             Stock: {producto.cantidad}
           </span>
           <span className="d-block text-muted small">
-            <i className="bi bi-key me-1"></i>
-            ID: {producto.id_producto}
+            <i className="bi bi-image me-1"></i>
+            Imagen: {producto.imagen || 'No definida'}
           </span>
         </div>
 
