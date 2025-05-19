@@ -105,6 +105,11 @@ const OrderSummaryPage: React.FC = () => {
         ? parseInt(user.id_usuario as string, 10) 
         : user.id_usuario;
       
+      // Determinar el nombre completo o usar "Cliente invitado" si no se proporciona
+      const nombreCompleto = firstName.trim() || lastName.trim() 
+        ? `${firstName} ${lastName}`.trim() 
+        : 'Cliente invitado';
+      
       // Prepare order data according to backend expectations
       const pedidoData = {
         carrito: cartItems.map(item => ({
@@ -116,7 +121,7 @@ const OrderSummaryPage: React.FC = () => {
         metodo_pago: paymentMethod,
         descuento: discount,
         total: total,
-        nombre_completo: `${firstName} ${lastName}`,
+        nombre_completo: nombreCompleto,
         telefono_contacto: contactPhone,
         informacion_adicional: additionalInfo
       };
@@ -269,7 +274,7 @@ const OrderSummaryPage: React.FC = () => {
             <div className="card-body p-4">
               <div className="row mb-3">
                 <div className="col-md-6 mb-3 mb-md-0">
-                  <label htmlFor="firstName" className="form-label">Nombre <span className="text-danger">*</span></label>
+                  <label htmlFor="firstName" className="form-label">Nombre</label>
                   <input 
                     type="text" 
                     className="form-control" 
@@ -277,11 +282,10 @@ const OrderSummaryPage: React.FC = () => {
                     placeholder="Ingresa tu nombre" 
                     value={firstName}
                     onChange={handleFirstNameChange}
-                    required
                   />
                 </div>
                 <div className="col-md-6">
-                  <label htmlFor="lastName" className="form-label">Apellido <span className="text-danger">*</span></label>
+                  <label htmlFor="lastName" className="form-label">Apellido</label>
                   <input 
                     type="text" 
                     className="form-control" 
@@ -289,7 +293,6 @@ const OrderSummaryPage: React.FC = () => {
                     placeholder="Ingresa tu apellido" 
                     value={lastName}
                     onChange={handleLastNameChange}
-                    required
                   />
                 </div>
               </div>
@@ -371,7 +374,7 @@ const OrderSummaryPage: React.FC = () => {
                 <button 
                   className="btn btn-primary py-3 fw-bold"
                   onClick={procesarPedido}
-                  disabled={isProcessing || !firstName.trim() || !lastName.trim() || !contactPhone.trim()}
+                  disabled={isProcessing || !contactPhone.trim()}
                 >
                   {isProcessing ? (
                     <>

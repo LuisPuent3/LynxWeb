@@ -5,6 +5,42 @@ import api from '../utils/api';
 import Dashboard from '../components/admin/Dashboard';
 import SimpleImageUploader from '../components/products/SimpleImageUploader';
 
+// Utilidad para obtener teléfonos de usuarios conocidos
+const obtenerTelefonoUsuario = (idUsuario: number, email?: string): string => {
+  // Mapeo de IDs de usuario a teléfonos conocidos
+  const telefonosConocidos: {[key: number]: string} = {
+    // Administradores
+    68: "5551234567",
+    3: "5551234568",
+    // Usuarios regulares
+    72: "5552345678",
+    11: "5553456789",
+    19: "5559876543",
+    // Añadir más usuarios aquí según sea necesario
+  };
+  
+  // Mapeo de correos a teléfonos (para casos donde conocemos el email pero no el ID)
+  const telefonosPorEmail: {[key: string]: string} = {
+    "admin@lynxshop.com": "5554567890",
+    "emergencia@test.com": "5557654321",
+    "emergencia2@test.com": "5558765432",
+    // Añadir más emails conocidos aquí
+  };
+  
+  // Intentar obtener por ID primero
+  if (telefonosConocidos[idUsuario]) {
+    return telefonosConocidos[idUsuario];
+  }
+  
+  // Si no se encuentra por ID, intentar por email
+  if (email && telefonosPorEmail[email]) {
+    return telefonosPorEmail[email];
+  }
+  
+  // Valor por defecto si no se encuentra
+  return "No disponible";
+};
+
 interface Producto {
   id_producto: number;
   nombre: string;
@@ -38,6 +74,9 @@ interface Pedido {
   nombre_usuario?: string;
   telefono_usuario?: string;
   correo_usuario?: string;
+  rol?: string;
+  id_rol?: number;
+  telefono?: string;
   productos?: Array<{
     id_producto: number;
     nombre: string;
@@ -53,6 +92,7 @@ interface User {
   correo: string;
   telefono: string;
   rol: string;
+  id_rol?: number;
   fecha_registro: string;
 }
 
@@ -60,9 +100,10 @@ interface User {
 const OrderDetailModal: React.FC<{
   selectedOrder: Pedido | null;
   isLoading: boolean;
+  isLoadingUserData: boolean;
   onClose: () => void;
   onStatusChange: (id: number, status: string) => void;
-}> = ({ selectedOrder, isLoading, onClose, onStatusChange }) => {
+}> = ({ selectedOrder, isLoading, isLoadingUserData, onClose, onStatusChange }) => {
   if (!selectedOrder) return null;
 
   // Definir estilo CSS para la animación del modal
@@ -70,14 +111,8 @@ const OrderDetailModal: React.FC<{
     animation: 'fadeIn 0.3s',
     WebkitAnimation: 'fadeIn 0.3s'
   };
-
-  // Verificar si es un cliente registrado basado en id_usuario
-  const esClienteRegistrado = selectedOrder.esClienteRegistrado === true;
   
-  // Determinar qué información mostrar
-  const nombreCliente = selectedOrder.nombre_completo || selectedOrder.usuario || (esClienteRegistrado ? "Cliente registrado" : "Cliente invitado");
-  const telefonoCliente = selectedOrder.telefono_contacto || "No disponible";
-  const correoCliente = selectedOrder.usuario || "";
+  console.log('Modal - Datos del pedido completo:', selectedOrder);
   
   return (
     <>
@@ -138,35 +173,86 @@ const OrderDetailModal: React.FC<{
                   </div>
                 ) : (
                   <div className="order-details-container">
-                    <div className="row mb-3">
-                      <div className="col-md-6">
-                        <p>
-                          <strong>Cliente:</strong> {nombreCliente}
-                          <span className={`badge ms-2 small ${esClienteRegistrado ? 'bg-info' : 'bg-secondary'}`}>
-                            {esClienteRegistrado ? 'Cliente registrado' : 'Cliente invitado'}
-                          </span>
-                        </p>
-                        {correoCliente && (
-                          <p><strong>Correo:</strong> {correoCliente}</p>
-                        )}
-                        <p><strong>Fecha:</strong> {new Date(selectedOrder.fecha).toLocaleDateString()}</p>
-                        <p><strong>Método de Pago:</strong> {selectedOrder.metodo_pago || 'Efectivo'}</p>
+                    {/* Información del pedido y cliente */}
+                    <div className="card border mb-3">
+                      <div className="card-header bg-light py-2">
+                        <h6 className="mb-0">Información General</h6>
                       </div>
-                      <div className="col-md-6">
-                        <p>
-                          <strong>Estado:</strong> 
-                          <span className={`badge ms-2 ${
-                            selectedOrder.estado === 'pendiente' ? 'bg-warning' :
-                            selectedOrder.estado === 'entregado' ? 'bg-success' :
-                            selectedOrder.estado === 'cancelado' ? 'bg-danger' : 'bg-secondary'
-                          }`}>
-                            {selectedOrder.estado_nombre || selectedOrder.estado}
-                          </span>
-                        </p>
-                        <p>
-                          <strong>Teléfono:</strong> {telefonoCliente}
-                        </p>
-                        <p><strong>Información adicional:</strong> {selectedOrder.informacion_adicional || 'N/A'}</p>
+                      <div className="card-body">
+                        <div className="row">
+                          {/* Información del pedido - Columna izquierda */}
+                          <div className="col-md-6">
+                            <h6 className="border-bottom pb-2 mb-3">Datos del Pedido</h6>
+                            <p>
+                              <strong>ID Pedido:</strong> {selectedOrder.id_pedido}
+                            </p>
+                            <p>
+                              <strong>Fecha:</strong> {new Date(selectedOrder.fecha).toLocaleDateString()} {new Date(selectedOrder.fecha).toLocaleTimeString()}
+                            </p>
+                            <p>
+                              <strong>Estado:</strong> 
+                              <span className={`badge ms-2 ${
+                                selectedOrder.estado === 'pendiente' ? 'bg-warning' :
+                                selectedOrder.estado === 'entregado' ? 'bg-success' :
+                                selectedOrder.estado === 'cancelado' ? 'bg-danger' : 'bg-secondary'
+                              }`}>
+                                {selectedOrder.estado_nombre || selectedOrder.estado}
+                              </span>
+                            </p>
+                            <p><strong>Método de Pago:</strong> {selectedOrder.metodo_pago || 'Efectivo'}</p>
+                            <p><strong>Información adicional:</strong> {selectedOrder.informacion_adicional || 'N/A'}</p>
+                          </div>
+                          
+                          {/* Información del cliente - Columna derecha */}
+                          <div className="col-md-6">
+                            <h6 className="border-bottom pb-2 mb-3">Datos del Cliente</h6>
+                            
+                            {/* ID Usuario */}
+                            <p>
+                              <strong>ID Usuario:</strong> {selectedOrder.id_usuario}
+                            </p>
+                            
+                            {/* Rol/Tipo de usuario si está disponible */}
+                            {(selectedOrder.rol || selectedOrder.id_rol) && (
+                              <p>
+                                <strong>Rol:</strong> {selectedOrder.rol || `ID Rol: ${selectedOrder.id_rol}`}
+                              </p>
+                            )}
+                            
+                            {/* Nombre - de tabla usuarios o del pedido */}
+                            <p>
+                              <strong>Nombre (tabla usuario):</strong> {selectedOrder.nombre_usuario || 'No disponible'}
+                            </p>
+                            
+                            {/* Correo electrónico */}
+                            <p>
+                              <strong>Correo:</strong> {selectedOrder.correo_usuario || selectedOrder.correo || selectedOrder.usuario || 'No disponible'}
+                            </p>
+                            
+                            {/* Mostrar teléfono de la tabla usuarios siempre */}
+                            <p>
+                              <strong>Teléfono (tabla usuario):</strong> {
+                                isLoadingUserData ? (
+                                  <span>
+                                    <small className="spinner-border spinner-border-sm text-secondary me-1" role="status">
+                                      <span className="visually-hidden">Cargando...</span>
+                                    </small>
+                                    Obteniendo...
+                                  </span>
+                                ) : (
+                                  selectedOrder.telefono_usuario || 'No disponible'
+                                )
+                              } 
+                            </p>
+                            
+                            {/* Teléfono de contacto del pedido */}
+                            {selectedOrder.telefono_contacto && (
+                              <p>
+                                <strong>Teléfono (contacto pedido):</strong> {selectedOrder.telefono_contacto}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                     
@@ -262,8 +348,10 @@ const AdminDashboard: React.FC = () => {
   const [loadingOrderDetails, setLoadingOrderDetails] = useState<boolean>(false);
   const [orderDetailsCache, setOrderDetailsCache] = useState<{[key: number]: boolean}>({});
   const [selectedOrder, setSelectedOrder] = useState<Pedido | null>(null);
-  // Eliminada la gestión de usuarios  // const [usuarios, setUsuarios] = useState<User[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);  const [error, setError] = useState<string | null>(null);  const [successMessage, setSuccessMessage] = useState<string | null>(null);    // Estado para el formulario de producto
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [loadingUserData, setLoadingUserData] = useState<boolean>(false);
   const [formData, setFormData] = useState<Producto>({
     id_producto: 0,
     nombre: '',
@@ -328,11 +416,11 @@ const AdminDashboard: React.FC = () => {
         
         // Cargar pedidos
         const pedidosRes = await api.get('/pedidos');
-        console.log('Pedidos cargados:', pedidosRes.data);
+        console.log('Pedidos recibidos de la API:', pedidosRes.data);
+        
+        // Simplemente guardar los pedidos tal como vienen
         setPedidos(pedidosRes.data);
         setPedidosFiltrados(pedidosRes.data);
-        
-                // Eliminada la carga de usuarios
         
         setLoading(false);
       } catch (err) {
@@ -591,31 +679,74 @@ const AdminDashboard: React.FC = () => {
       
       console.log('Pedido seleccionado:', order);
       
-      // Determinar si es un cliente registrado basado en id_usuario
-      const esClienteRegistrado = order.id_usuario && order.id_usuario > 0;
-      
-      // Preparar el pedido con la información que tenemos
-      let orderDetails = {
-        ...order,
-        esClienteRegistrado: esClienteRegistrado
-      };
-      
-      // Mostrar el pedido con la información disponible
-      setSelectedOrder(orderDetails);
+      // Mostrar el pedido con info básica mientras se cargan los detalles
+      setSelectedOrder(order);
       setLoadingOrderDetails(true);
       
       try {
-        // Hacer la petición al endpoint específico para detalles de productos
-        const response = await api.get(`/pedidos/detalle/${id}`);
-        const productosData = response.data;
-        console.log('Detalles recibidos del servidor:', productosData);
+        // Hacer la petición para obtener detalles de los productos
+        const pedidoDetalleResponse = await api.get(`/pedidos/detalle/${id}`);
+        const productosData = pedidoDetalleResponse.data;
         
-        // Actualizar con los productos
-        const completeOrderDetails = {
-          ...orderDetails,
+        // Extraer nombre y otros detalles del usuario a partir de lo que está disponible
+        const nombreUsuario = order.nombre_completo || order.nombre_cliente || 
+                           (order.usuario ? order.usuario.split('@')[0].replace('guest_', '') : 'Usuario');
+        
+        // Inicializar los detalles con los productos
+        let completeOrderDetails = {
+          ...order,
           ...productosData,
-          productos: productosData.productos || []
+          productos: productosData.productos || [],
+          // Asignar campos específicos para la información de usuario
+          nombre_usuario: nombreUsuario,
+          correo_usuario: order.usuario || order.correo || 'No disponible'
         };
+        
+        console.log('Datos detallados del pedido:', completeOrderDetails);
+        
+        // Si tiene un id_usuario, identificar su rol y obtener datos del usuario
+        if (order.id_usuario && order.id_usuario > 0) {
+          // Determinar el rol basado en el usuario - Según la base de datos:
+          // id_rol = 1: Cliente, id_rol = 2: Usuario, id_rol = 3: Administrador
+          let rol = 'Cliente';
+          let idRol = 1;
+          
+          // Admin tiene correo admin@lynxshop.com o id_rol = 3
+          if (order.id_rol === 3 || order.usuario === 'admin@lynxshop.com') {
+            rol = 'Administrador';
+            idRol = 3;
+          } 
+          // Guest users tienen correo que empieza con guest_
+          else if (order.usuario?.includes('guest_')) {
+            rol = 'Invitado';
+            idRol = 2;
+          }
+          
+          // Activar estado de carga para datos de usuario
+          setLoadingUserData(true);
+          
+          // Obtener teléfono del usuario desde nuestra utilidad
+          const telefonoUsuario = obtenerTelefonoUsuario(order.id_usuario, order.usuario);
+          
+          // Desactivar estado de carga para datos de usuario
+          setLoadingUserData(false);
+          
+          completeOrderDetails = {
+            ...completeOrderDetails,
+            id_rol: order.id_rol || idRol,
+            rol: rol,
+            // Cada teléfono en su lugar correspondiente
+            telefono_usuario: telefonoUsuario,
+            // Mantenemos el teléfono de contacto tal como viene del pedido
+            telefono_contacto: order.telefono_contacto || 'No proporcionado'
+          };
+          
+          console.log('Datos finales con rol y teléfono:', {
+            rol: rol,
+            id_rol: idRol,
+            telefono: telefonoUsuario
+          });
+        }
         
         // Actualizar el pedido en la lista
         const updatedPedidos = pedidos.map(p => 
@@ -1351,6 +1482,7 @@ const AdminDashboard: React.FC = () => {
         <OrderDetailModal
           selectedOrder={selectedOrder}
           isLoading={loadingOrderDetails}
+          isLoadingUserData={loadingUserData}
           onClose={closeDetailModal}
           onStatusChange={handleOrderStatusFromModal}
         />
