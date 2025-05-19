@@ -169,7 +169,10 @@ const OrderDetailModal: React.FC<{
               boxShadow: '0 0.5rem 1rem rgba(0, 0, 0, 0.15)'
             }}>
               <div className="modal-header">
-                <h5 className="modal-title">Detalles del Pedido #{selectedOrder.id_pedido}</h5>
+                <h5 className="modal-title">
+                  <i className="bi bi-info-circle me-2"></i>
+                  Detalles del Pedido #{selectedOrder.id_pedido}
+                </h5>
                 <button type="button" className="btn-close" onClick={onClose}></button>
               </div>
               <div className="modal-body" style={{ opacity: 1, backgroundColor: 'white' }}>
@@ -185,21 +188,27 @@ const OrderDetailModal: React.FC<{
                     {/* Información del pedido y cliente */}
                     <div className="card border mb-3">
                       <div className="card-header bg-light py-2">
-                        <h6 className="mb-0">Información General</h6>
+                        <h6 className="mb-0">
+                          <i className="bi bi-card-checklist me-2"></i>
+                          Información General
+                        </h6>
                       </div>
                       <div className="card-body">
                         <div className="row">
                           {/* Información del pedido - Columna izquierda */}
                           <div className="col-md-6">
-                            <h6 className="border-bottom pb-2 mb-3">Datos del Pedido</h6>
+                            <h6 className="border-bottom pb-2 mb-3">
+                              <i className="bi bi-box me-2"></i>
+                              Datos del Pedido
+                            </h6>
                             <p>
-                              <strong>ID Pedido:</strong> {selectedOrder.id_pedido}
+                              <strong><i className="bi bi-hash me-1"></i>ID Pedido:</strong> {selectedOrder.id_pedido}
                             </p>
                             <p>
-                              <strong>Fecha:</strong> {new Date(selectedOrder.fecha).toLocaleDateString()} {new Date(selectedOrder.fecha).toLocaleTimeString()}
+                              <strong><i className="bi bi-calendar me-1"></i>Fecha:</strong> {new Date(selectedOrder.fecha).toLocaleDateString()} {new Date(selectedOrder.fecha).toLocaleTimeString()}
                             </p>
                             <p>
-                              <strong>Estado:</strong> 
+                              <strong><i className="bi bi-tag me-1"></i>Estado:</strong> 
                               <span className={`badge ms-2 ${
                                 selectedOrder.estado === 'pendiente' ? 'bg-warning' :
                                 selectedOrder.estado === 'entregado' ? 'bg-success' :
@@ -208,39 +217,42 @@ const OrderDetailModal: React.FC<{
                                 {selectedOrder.estado_nombre || selectedOrder.estado}
                               </span>
                             </p>
-                            <p><strong>Método de Pago:</strong> {selectedOrder.metodo_pago || 'Efectivo'}</p>
-                            <p><strong>Información adicional:</strong> {selectedOrder.informacion_adicional || 'N/A'}</p>
+                            <p><strong><i className="bi bi-credit-card me-1"></i>Método de Pago:</strong> {selectedOrder.metodo_pago || 'Efectivo'}</p>
+                            <p><strong><i className="bi bi-info-circle me-1"></i>Información adicional:</strong> {selectedOrder.informacion_adicional || 'N/A'}</p>
                           </div>
                           
                           {/* Información del cliente - Columna derecha */}
                           <div className="col-md-6">
-                            <h6 className="border-bottom pb-2 mb-3">Datos del Cliente</h6>
+                            <h6 className="border-bottom pb-2 mb-3">
+                              <i className="bi bi-person me-2"></i>
+                              Datos del Cliente
+                            </h6>
                             
                             {/* ID Usuario */}
                             <p>
-                              <strong>ID Usuario:</strong> {selectedOrder.id_usuario}
+                              <strong><i className="bi bi-person-badge me-1"></i>ID Usuario:</strong> {selectedOrder.id_usuario}
                             </p>
                             
                             {/* Rol/Tipo de usuario si está disponible */}
                             {(selectedOrder.rol || selectedOrder.id_rol) && (
                               <p>
-                                <strong>Rol:</strong> {selectedOrder.rol || `ID Rol: ${selectedOrder.id_rol}`}
+                                <strong><i className="bi bi-person-check me-1"></i>Rol:</strong> {selectedOrder.rol || `ID Rol: ${selectedOrder.id_rol}`}
                               </p>
                             )}
                             
                             {/* Nombre - de tabla usuarios o del pedido */}
                             <p>
-                              <strong>Nombre (tabla usuario):</strong> {selectedOrder.nombre_usuario || 'No disponible'}
+                              <strong><i className="bi bi-person-circle me-1"></i>Nombre:</strong> {selectedOrder.nombre_usuario || 'No disponible'}
                             </p>
                             
                             {/* Correo electrónico */}
                             <p>
-                              <strong>Correo:</strong> {selectedOrder.correo_usuario || selectedOrder.correo || selectedOrder.usuario || 'No disponible'}
+                              <strong><i className="bi bi-envelope me-1"></i>Correo:</strong> {selectedOrder.correo_usuario || selectedOrder.correo || selectedOrder.usuario || 'No disponible'}
                             </p>
                             
                             {/* Mostrar teléfono de la tabla usuarios siempre */}
                             <p>
-                              <strong>Teléfono (tabla usuario):</strong> {
+                              <strong><i className="bi bi-telephone me-1"></i>Teléfono:</strong> {
                                 isLoadingUserData ? (
                                   <span>
                                     <small className="spinner-border spinner-border-sm text-secondary me-1" role="status">
@@ -257,7 +269,7 @@ const OrderDetailModal: React.FC<{
                             {/* Teléfono de contacto del pedido */}
                             {selectedOrder.telefono_contacto && (
                               <p>
-                                <strong>Teléfono (contacto pedido):</strong> {selectedOrder.telefono_contacto}
+                                <strong><i className="bi bi-phone me-1"></i>Teléfono Invitado:</strong> {selectedOrder.telefono_contacto}
                               </p>
                             )}
                           </div>
@@ -265,15 +277,18 @@ const OrderDetailModal: React.FC<{
                       </div>
                     </div>
                     
-                    <h6 className="border-bottom pb-2 mb-3">Productos</h6>
+                    <h6 className="border-bottom pb-2 mb-3">
+                      <i className="bi bi-cart me-2"></i>
+                      Productos
+                    </h6>
                     <div className="table-responsive">
-                      <table className="table table-sm">
+                      <table className="table table-sm table-hover">
                         <thead className="table-light">
                           <tr>
-                            <th>Producto</th>
-                            <th>Cantidad</th>
-                            <th>Precio</th>
-                            <th>Subtotal</th>
+                            <th><i className="bi bi-bag me-1"></i>Producto</th>
+                            <th><i className="bi bi-123 me-1"></i>Cantidad</th>
+                            <th><i className="bi bi-currency-dollar me-1"></i>Precio</th>
+                            <th><i className="bi bi-calculator me-1"></i>Subtotal</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -291,24 +306,25 @@ const OrderDetailModal: React.FC<{
                           ) : selectedOrder.productos.length === 0 ? (
                             <tr>
                               <td colSpan={4} className="text-center py-3">
+                                <i className="bi bi-inbox text-secondary me-2"></i>
                                 No hay productos en este pedido
                               </td>
                             </tr>
                           ) : (
                             selectedOrder.productos.map((producto, index) => (
                               <tr key={index}>
-                                <td>{producto.nombre}</td>
+                                <td><i className="bi bi-box text-primary me-1"></i>{producto.nombre}</td>
                                 <td>{producto.cantidad}</td>
                                 <td>${typeof producto.precio === 'number' ? producto.precio.toFixed(2) : producto.precio}</td>
-                                <td>${(producto.cantidad * (typeof producto.precio === 'number' ? producto.precio : parseFloat(String(producto.precio)))).toFixed(2)}</td>
+                                <td className="fw-bold">${(producto.cantidad * (typeof producto.precio === 'number' ? producto.precio : parseFloat(String(producto.precio)))).toFixed(2)}</td>
                               </tr>
                             ))
                           )}
                         </tbody>
                         <tfoot className="table-light">
                           <tr>
-                            <th colSpan={3} className="text-end">Total:</th>
-                            <th>${typeof selectedOrder.total === 'number' ? selectedOrder.total.toFixed(2) : selectedOrder.total || '(calculando)'}</th>
+                            <th colSpan={3} className="text-end"><i className="bi bi-wallet2 me-1"></i>Total:</th>
+                            <th className="text-primary">${typeof selectedOrder.total === 'number' ? selectedOrder.total.toFixed(2) : selectedOrder.total || '(calculando)'}</th>
                           </tr>
                         </tfoot>
                       </table>
@@ -317,7 +333,10 @@ const OrderDetailModal: React.FC<{
                 )}
               </div>
               <div className="modal-footer" style={{ borderTop: '1px solid #dee2e6', backgroundColor: '#f8f9fa' }}>
-                <button type="button" className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+                <button type="button" className="btn btn-outline-secondary" onClick={onClose}>
+                  <i className="bi bi-x-circle me-1"></i>
+                  Cerrar
+                </button>
                 {selectedOrder.estado === 'pendiente' && !isLoading && (
                   <>
                     <button 
