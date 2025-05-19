@@ -6,7 +6,7 @@ import Dashboard from '../components/admin/Dashboard';
 import SimpleImageUploader from '../components/products/SimpleImageUploader';
 
 // Utilidad para obtener teléfonos de usuarios conocidos
-const obtenerTelefonoUsuario = (idUsuario: number, email?: string): string => {
+const obtenerTelefonoUsuario = async (idUsuario: number, email?: string): Promise<string> => {
   // Mapeo de IDs de usuario a teléfonos conocidos
   const telefonosConocidos: {[key: number]: string} = {
     // Administradores
@@ -27,18 +27,27 @@ const obtenerTelefonoUsuario = (idUsuario: number, email?: string): string => {
     // Añadir más emails conocidos aquí
   };
   
-  // Intentar obtener por ID primero
-  if (telefonosConocidos[idUsuario]) {
-    return telefonosConocidos[idUsuario];
+  try {
+    // Primero intentar obtener desde la API
+    const response = await api.get(`/auth/telefono/${idUsuario}`);
+    console.log(`Teléfono obtenido desde API para usuario ${idUsuario}:`, response.data);
+    return response.data.telefono || "No disponible";
+  } catch (error) {
+    console.error(`Error al obtener teléfono desde la API para usuario ${idUsuario}:`, error);
+    
+    // Si falla la API, intentar obtener por ID desde nuestro fallback
+    if (telefonosConocidos[idUsuario]) {
+      return telefonosConocidos[idUsuario];
+    }
+    
+    // Si no se encuentra por ID, intentar por email
+    if (email && telefonosPorEmail[email]) {
+      return telefonosPorEmail[email];
+    }
+    
+    // Valor por defecto si no se encuentra
+    return "No disponible";
   }
-  
-  // Si no se encuentra por ID, intentar por email
-  if (email && telefonosPorEmail[email]) {
-    return telefonosPorEmail[email];
-  }
-  
-  // Valor por defecto si no se encuentra
-  return "No disponible";
 };
 
 interface Producto {
@@ -348,6 +357,7 @@ const AdminDashboard: React.FC = () => {
   const [loadingOrderDetails, setLoadingOrderDetails] = useState<boolean>(false);
   const [orderDetailsCache, setOrderDetailsCache] = useState<{[key: number]: boolean}>({});
   const [selectedOrder, setSelectedOrder] = useState<Pedido | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -664,39 +674,50 @@ const AdminDashboard: React.FC = () => {
   // Función para cerrar el modal
   const closeDetailModal = () => {
     setSelectedOrder(null);
+    setShowDetailModal(false);
   };
 
   // Función para cargar los detalles de un pedido
   const handleViewOrderDetails = async (id: number) => {
     try {
-      // Buscar el pedido en la lista
-      const order = pedidos.find(p => p.id_pedido === id);
-      if (!order) {
-        console.error(`No se encontró el pedido con ID: ${id}`);
-        setError(`No se encontró información para el pedido #${id}`);
-        return;
+      // Si ya tenemos los detalles completos en caché, solo mostrarlos
+      if (orderDetailsCache[id]) {
+        const order = pedidos.find(p => p.id_pedido === id);
+        if (order) {
+          setSelectedOrder(order);
+          setShowDetailModal(true);
+          return;
+        }
       }
-      
-      console.log('Pedido seleccionado:', order);
-      
-      // Mostrar el pedido con info básica mientras se cargan los detalles
-      setSelectedOrder(order);
+
+      // Necesitamos cargar los detalles, mostrar loading
       setLoadingOrderDetails(true);
+      setShowDetailModal(true);
       
       try {
-        // Hacer la petición para obtener detalles de los productos
-        const pedidoDetalleResponse = await api.get(`/pedidos/detalle/${id}`);
-        const productosData = pedidoDetalleResponse.data;
+        // Obtener detalles del pedido
+        const { data } = await api.get(`/pedidos/detalle/${id}`);
         
-        // Extraer nombre y otros detalles del usuario a partir de lo que está disponible
-        const nombreUsuario = order.nombre_completo || order.nombre_cliente || 
-                           (order.usuario ? order.usuario.split('@')[0].replace('guest_', '') : 'Usuario');
+        if (!data) {
+          throw new Error('No se recibieron datos del pedido');
+        }
         
-        // Inicializar los detalles con los productos
+        console.log('Respuesta API - Detalles del pedido:', data);
+        
+        // Extraer datos básicos
+        const order = data;
+        
+        // Nombre completo para mostrar - Intentar usar el nombre completo del pedido primero
+        let nombreUsuario = order.nombre_completo || '';
+        
+        // Si no hay nombre en el pedido, intentar usar el nombre del usuario si existe
+        if (!nombreUsuario && order.usuario) {
+          nombreUsuario = order.usuario.split('@')[0];
+        }
+        
+        // Preparar objeto con detalles completos
         let completeOrderDetails = {
           ...order,
-          ...productosData,
-          productos: productosData.productos || [],
           // Asignar campos específicos para la información de usuario
           nombre_usuario: nombreUsuario,
           correo_usuario: order.usuario || order.correo || 'No disponible'
@@ -725,27 +746,39 @@ const AdminDashboard: React.FC = () => {
           // Activar estado de carga para datos de usuario
           setLoadingUserData(true);
           
-          // Obtener teléfono del usuario desde nuestra utilidad
-          const telefonoUsuario = obtenerTelefonoUsuario(order.id_usuario, order.usuario);
-          
-          // Desactivar estado de carga para datos de usuario
-          setLoadingUserData(false);
-          
-          completeOrderDetails = {
-            ...completeOrderDetails,
-            id_rol: order.id_rol || idRol,
-            rol: rol,
-            // Cada teléfono en su lugar correspondiente
-            telefono_usuario: telefonoUsuario,
-            // Mantenemos el teléfono de contacto tal como viene del pedido
-            telefono_contacto: order.telefono_contacto || 'No proporcionado'
-          };
-          
-          console.log('Datos finales con rol y teléfono:', {
-            rol: rol,
-            id_rol: idRol,
-            telefono: telefonoUsuario
-          });
+          try {
+            // Obtener teléfono del usuario desde nuestra utilidad
+            const telefonoUsuario = await obtenerTelefonoUsuario(order.id_usuario, order.usuario);
+            
+            completeOrderDetails = {
+              ...completeOrderDetails,
+              id_rol: order.id_rol || idRol,
+              rol: rol,
+              // Cada teléfono en su lugar correspondiente
+              telefono_usuario: telefonoUsuario,
+              // Mantenemos el teléfono de contacto tal como viene del pedido
+              telefono_contacto: order.telefono_contacto || 'No proporcionado'
+            };
+            
+            console.log('Datos finales con rol y teléfono:', {
+              rol: rol,
+              id_rol: idRol,
+              telefono: telefonoUsuario
+            });
+          } catch (phoneError) {
+            console.error('Error al obtener teléfono desde la API:', phoneError);
+            
+            completeOrderDetails = {
+              ...completeOrderDetails,
+              id_rol: order.id_rol || idRol,
+              rol: rol,
+              telefono_usuario: 'No disponible',
+              telefono_contacto: order.telefono_contacto || 'No proporcionado'
+            };
+          } finally {
+            // Desactivar estado de carga para datos de usuario
+            setLoadingUserData(false);
+          }
         }
         
         // Actualizar el pedido en la lista

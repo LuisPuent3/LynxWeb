@@ -253,39 +253,54 @@ exports.verifyToken = async (req, res) => {
   }
 };
 
-// Ruta para obtener todos los usuarios (solo para administradores)
+// Ruta para obtener todos los usuarios (solo accesible por administradores)
 exports.getAllUsers = async (req, res) => {
   try {
-    // Verificar si el usuario tiene rol administrativo
-    if (req.userRole !== 'Administrador' && req.userRole !== 2) {
-      return res.status(403).json({ 
-        error: 'No tiene permisos para realizar esta acción',
-        details: 'Se requiere rol de Administrador'
-      });
-    }
-    
-    const [users] = await pool.query(`
-      SELECT u.id_usuario, u.correo, u.telefono, u.fecha_registro, 
-             n.nombre, r.nombre as rol
+    const [rows] = await pool.query(`
+      SELECT u.id_usuario, u.correo, n.nombre, r.nombre as rol_nombre, u.fecha_registro
       FROM Usuarios u
       LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
       JOIN Roles r ON u.id_rol = r.id_rol
-      ORDER BY u.fecha_registro DESC
+      ORDER BY u.id_usuario DESC
     `);
-    
-    // No enviar contraseñas ni datos sensibles
-    const usersData = users.map(user => ({
-      id_usuario: user.id_usuario,
-      nombre: user.nombre,
-      correo: user.correo,
-      telefono: user.telefono,
-      rol: user.rol,
-      fecha_registro: user.fecha_registro
-    }));
-    
-    res.status(200).json(usersData);
+
+    res.json(rows);
   } catch (error) {
     console.error('Error al obtener usuarios:', error);
-    res.status(500).json({ error: 'Error al obtener usuarios', detalles: error.message });
+    res.status(500).json({ error: 'Error al obtener usuarios' });
+  }
+};
+
+// Función para obtener el teléfono de un usuario específico
+exports.getUserPhone = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    // Validar que el ID sea un número
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'ID de usuario no válido' });
+    }
+    
+    console.log(`Buscando teléfono para usuario ID: ${userId}`);
+    
+    // Consultar solo el teléfono del usuario por su ID
+    const [rows] = await pool.query(`
+      SELECT telefono
+      FROM Usuarios
+      WHERE id_usuario = ?
+    `, [userId]);
+
+    if (rows.length === 0) {
+      console.log(`No se encontró usuario con ID: ${userId}`);
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    console.log(`Teléfono encontrado para usuario ID ${userId}: ${rows[0].telefono}`);
+    
+    // Devolver solo el teléfono
+    res.json({ telefono: rows[0].telefono || 'No disponible' });
+  } catch (error) {
+    console.error('Error al obtener teléfono de usuario:', error);
+    res.status(500).json({ error: 'Error al obtener teléfono de usuario', detalles: error.message });
   }
 };
