@@ -373,6 +373,9 @@ const AdminDashboard: React.FC = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [pedidosFiltrados, setPedidosFiltrados] = useState<Pedido[]>([]);
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+  const [searchProductId, setSearchProductId] = useState<string>(""); // Estado para búsqueda de productos por ID
+  const [searchOrderId, setSearchOrderId] = useState<string>(""); // Estado para búsqueda de pedidos por ID
+  const [searchPhoneNumber, setSearchPhoneNumber] = useState<string>(""); // Estado para búsqueda de pedidos por teléfono
   const [loadingOrderDetails, setLoadingOrderDetails] = useState<boolean>(false);
   const [orderDetailsCache, setOrderDetailsCache] = useState<{[key: number]: boolean}>({});
   const [selectedOrder, setSelectedOrder] = useState<Pedido | null>(null);
@@ -403,6 +406,9 @@ const AdminDashboard: React.FC = () => {
   
   // Agregar nuevo estado para rastrear si la imagen ha sido subida
   const [isImageUploaded, setIsImageUploaded] = useState(false);
+  
+  // Nuevo estado para el filtro de categoría en productos
+  const [categoryFilter, setCategoryFilter] = useState<number | null>(null);
   
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -607,14 +613,16 @@ const AdminDashboard: React.FC = () => {
   // Función para manejar el filtro de pedidos
   const handleOrderFilter = useCallback((filtro: string) => {
     setFiltroEstado(filtro);
-    if (filtro === 'todos') {
-      setPedidosFiltrados(pedidos);
-    } else {
-      setPedidosFiltrados(pedidos.filter(p => 
-        p.estado?.toLowerCase() === filtro || 
-        p.estado_nombre?.toLowerCase() === filtro
-      ));
-    }
+    
+    // Filtrar por estado seleccionado
+    const pedidosFiltradosPorEstado = filtro === 'todos' 
+      ? pedidos 
+      : pedidos.filter(p => 
+          p.estado?.toLowerCase() === filtro || 
+          p.estado_nombre?.toLowerCase() === filtro
+        );
+    
+    setPedidosFiltrados(pedidosFiltradosPorEstado);
   }, [pedidos]);
 
   // Actualizar los pedidos filtrados cuando cambian los pedidos
@@ -1102,27 +1110,52 @@ const AdminDashboard: React.FC = () => {
             {/* Productos */}
             {activeTab === 'products' && (
               <div className="card">
-                <div className="card-header bg-white d-flex justify-content-between align-items-center">
+                <div className="card-header bg-white d-flex justify-content-between align-items-center py-2">
                   <h5 className="mb-0">Gestión de Productos</h5>
-                  <button 
-                    className="btn btn-primary"
-                    onClick={() => {
-                      setFormData({
-                        id_producto: 0,
-                        nombre: '',
-                        precio: '',
-                        cantidad: 0,
-                        id_categoria: 1,
-                        imagen: 'default.jpg'
-                      });
-                      setIsEditing(false);
-                      setIsImageUploaded(false);
-                      setActiveTab('products-form');
-                    }}
-                  >
-                    <i className="bi bi-plus-circle me-1"></i>
-                    Nuevo Producto
-                  </button>
+                  <div className="d-flex gap-2">
+                    <div className="input-group input-group-sm" style={{ maxWidth: '400px' }}>
+                      <input
+                        type="text"
+                        className="form-control form-control-sm"
+                        placeholder="ID..."
+                        value={searchProductId}
+                        onChange={(e) => setSearchProductId(e.target.value)}
+                        style={{ height: '31px' }}
+                      />
+                      <select 
+                        className="form-select form-select-sm"
+                        style={{ height: '31px', fontSize: '0.875rem' }}
+                        onChange={(e) => setCategoryFilter(e.target.value === "all" ? null : Number(e.target.value))}
+                        value={categoryFilter === null ? "all" : categoryFilter}
+                      >
+                        <option value="all">Todas las categorías</option>
+                        {categorias.map(cat => (
+                          <option key={cat.id_categoria} value={cat.id_categoria}>
+                            {cat.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </div>                    <button 
+                      className="btn btn-primary btn-sm"
+                      onClick={() => {
+                        setFormData({
+                          id_producto: 0,
+                          nombre: '',
+                          precio: '',
+                          cantidad: 0,
+                          id_categoria: 1,
+                          imagen: 'default.jpg'
+                        });
+                        setIsEditing(false);
+                        setIsImageUploaded(false);
+                        setActiveTab('products-form');
+                      }}
+                      style={{ fontSize: '0.85rem', padding: '0.25rem 0.6rem' }}
+                    >
+                      <i className="bi bi-plus-circle me-1"></i>
+                      Nuevo Producto
+                    </button>
+                  </div>
                 </div>
                 <div className="card-body p-0">
                   <div className="table-responsive">
@@ -1138,7 +1171,14 @@ const AdminDashboard: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {productos.map(producto => (
+                        {productos
+                          .filter(producto => 
+                            // Filtrar por ID si hay texto en la búsqueda
+                            (searchProductId === "" || producto.id_producto.toString().includes(searchProductId)) &&
+                            // Filtrar por categoría si hay una seleccionada
+                            (categoryFilter === null || producto.id_categoria === categoryFilter)
+                          )
+                          .map(producto => (
                           <tr key={producto.id_producto}>
                             <td>{producto.id_producto}</td>
                             <td>
@@ -1437,16 +1477,32 @@ const AdminDashboard: React.FC = () => {
               <div className="card shadow-sm">
                 <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                   <h5 className="card-title mb-0">Gestión de Pedidos</h5>
-                  <div>
-                    <select className="form-select form-select-sm" 
-                      value={filtroEstado}
-                      onChange={(e) => handleOrderFilter(e.target.value)}
-                    >
-                      <option value="todos">Todos los estados</option>
-                      <option value="pendiente">Pendiente</option>
-                      <option value="entregado">Entregado</option>
-                      <option value="cancelado">Cancelado</option>
-                    </select>
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="input-group input-group-sm" style={{ maxWidth: '350px' }}>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="ID..."
+                        value={searchOrderId}
+                        onChange={(e) => setSearchOrderId(e.target.value)}
+                      />
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Teléfono..."
+                        value={searchPhoneNumber}
+                        onChange={(e) => setSearchPhoneNumber(e.target.value)}
+                      />
+                      <select className="form-select" 
+                        value={filtroEstado}
+                        onChange={(e) => handleOrderFilter(e.target.value)}
+                      >
+                        <option value="todos">Todos</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="entregado">Entregado</option>
+                        <option value="cancelado">Cancelado</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
                 <div className="card-body">
@@ -1473,7 +1529,18 @@ const AdminDashboard: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {pedidosFiltrados.map((pedido) => (
+                          {pedidosFiltrados
+                            .filter(pedido => 
+                              // Filtrar por ID de pedido si hay búsqueda
+                              (searchOrderId === "" || 
+                                pedido.id_pedido.toString().includes(searchOrderId)) &&
+                              // Filtrar por número de teléfono (cualquiera de los campos que puedan contener teléfono)
+                              (searchPhoneNumber === "" || 
+                                (pedido.telefono_contacto && pedido.telefono_contacto.includes(searchPhoneNumber)) ||
+                                (pedido.telefono_usuario && pedido.telefono_usuario.includes(searchPhoneNumber)) ||
+                                (pedido.telefono && pedido.telefono.includes(searchPhoneNumber)))
+                            )
+                            .map((pedido) => (
                             <tr key={pedido.id_pedido}>
                               <td>#{pedido.id_pedido}</td>
                               <td>{pedido.usuario || pedido.nombre_completo || 'Usuario'}</td>
