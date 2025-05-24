@@ -17,5 +17,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
-  base: '/',  // Esto asegura que los assets se carguen correctamente desde la raíz
-}) 
+  base: '/',
+  build: {
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Ignorar warnings de TypeScript durante el build
+        if (warning.code === 'TYPESCRIPT_ERROR') return;
+        warn(warning);
+      }
+    }
+  }
+})

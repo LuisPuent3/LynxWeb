@@ -17,12 +17,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger('recommender-api')
 
-# Configuración de conexión a MySQL con valores fijos
-DB_HOST = 'localhost'
-DB_PORT = 3306
-DB_USER = 'root'
-DB_PASSWORD = '12345678'  # Contraseña fija según .env
-DB_NAME = 'lynxshop'
+# Configuración de conexión a MySQL usando variables de entorno
+DB_HOST = os.environ.get('DB_HOST', 'localhost')
+DB_PORT = int(os.environ.get('DB_PORT', 3306))
+DB_USER = os.environ.get('DB_USER', 'root')
+DB_PASSWORD = os.environ.get('DB_PASSWORD', '12345678')
+DB_NAME = os.environ.get('DB_NAME', 'lynxshop')
 
 # Directorio del modelo
 MODEL_DIR = os.environ.get('MODEL_DIR', './data')
@@ -237,7 +237,19 @@ async def predict(user_id: int, limit: int = 10):
 @app.get("/health")
 async def health_check():
     """Endpoint para verificar el estado del servicio"""
-    return {"status": "ok", "model_loaded": model is not None}
+    try:
+        # Verificar conexión a base de datos
+        connection = get_db_connection()
+        db_connected = True
+        connection.close()
+    except:
+        db_connected = False
+    
+    return {
+        "status": "ok", 
+        "model_loaded": model is not None,
+        "database_connected": db_connected
+    }
 
 if __name__ == "__main__":
     import uvicorn

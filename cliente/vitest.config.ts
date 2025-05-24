@@ -16,6 +16,14 @@ export default defineConfig({
       jsdom: {
         url: 'http://localhost/'
       }
+    },
+    // Configuraciones para evitar problemas de serialización
+    isolate: true,
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true
+      }
     }
   },
-}); 
+});

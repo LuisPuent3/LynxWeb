@@ -1,0 +1,146 @@
+version: '3.8'
+
+services:
+  # Base de datos MySQL
+  database:
+    image: mysql:8.0
+    container_name: lynx_database
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-lynx_root_secure_2024}
+      MYSQL_DATABASE: ${DB_NAME:-lynxshop}
+      MYSQL_USER: ${DB_USER:-lynx_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-lynx_password_secure_2024}
+    ports:
+      - "${DATABASE_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database:/docker-entrypoint-initdb.d:ro
+    networks:
+      - lynx_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 30s
+      start_period: 30s
+
+  # Backend Node.js
+  backend:
+    build:
+      context: ./backed
+      dockerfile: Dockerfile
+    container_name: lynx_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-lynxshop}
+      DB_USER: ${DB_USER:-lynx_user}
+      DB_PASSWORD: ${DB_PASSWORD:-lynx_password_secure_2024}
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key_here}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./backed/logs:/app/logs
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - lynx_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/diagnostico", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./cliente
+      dockerfile: Dockerfile
+    container_name: lynx_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      - backend
+    networks:
+      - lynx_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Servicio de Recomendaciones Python
+  recommender:
+    build:
+      context: ./services/recommender
+      dockerfile: Dockerfile
+    container_name: lynx_recommender
+    restart: unless-stopped
+    environment:
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-lynxshop}
+      DB_USER: ${DB_USER:-lynx_user}
+      DB_PASSWORD: ${DB_PASSWORD:-lynx_password_secure_2024}
+      FLASK_ENV: ${FLASK_ENV:-production}
+      MODEL_DIR: /app/data
+    ports:
+      - "${RECOMMENDER_PORT:-8000}:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - lynx_network
+    volumes:
+      - ./services/recommender/data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx Reverse Proxy (opcional para producción)
+  nginx:
+    image: nginx:alpine
+    container_name: lynx_nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_SSL_PORT:-443}:443"
+      - "${NGINX_PORT:-8080}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+      - ./uploads:/var/www/uploads:ro
+    depends_on:
+      - frontend
+      - backend
+      - recommender
+    networks:
+      - lynx_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  lynx_network:
+    driver: bridge

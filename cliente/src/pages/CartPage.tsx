@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
 import { Producto } from '../types/types';
-import { Modal } from 'react-bootstrap';
 import AuthModal from '../components/auth/AuthModal';
 
 interface CartItem extends Producto {

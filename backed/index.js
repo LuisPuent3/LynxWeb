@@ -69,6 +69,30 @@ app.get('/api/test', (req, res) => {
     res.json({ message: 'API funcionando correctamente', timestamp: new Date().toISOString() });
 });
 
+// Ruta de health check para Docker healthchecks
+app.get('/api/health', async (req, res) => {
+    try {
+        // Verificar conexión a base de datos
+        const pool = require('./config/db');
+        await pool.query('SELECT 1');
+        
+        res.json({ 
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            database: 'connected',
+            service: 'backend' 
+        });
+    } catch (error) {
+        res.status(503).json({ 
+            status: 'unhealthy',
+            timestamp: new Date().toISOString(),
+            database: 'disconnected',
+            service: 'backend',
+            error: error.message 
+        });
+    }
+});
+
 // Ruta de depuración específica para pedidos
 app.get('/api/debug/rutas', (req, res) => {
     // Recopilar información sobre las rutas registradas
