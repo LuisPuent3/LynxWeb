@@ -85,9 +85,14 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
                   <div className="bg-success bg-opacity-10 text-success p-3 rounded-circle mx-auto mb-4" style={{ width: '90px', height: '90px' }}>
                     <i className="bi bi-check-circle-fill fs-1"></i>
                   </div>
-                  <h4 className="mb-2 text-success">Pedido Realizado con Éxito</h4>
-                  <p className="text-muted mb-1">Su pedido #{orderId} ha sido confirmado</p>
-                  <p className="text-muted mb-4">Gracias por comprar en LynxShop</p>
+                  <h4 className="mb-2 text-success">Pedido Realizado con Éxito</h4>                  <p className="text-muted mb-1">Su pedido #{orderId} ha sido confirmado</p>
+                  <p className="text-muted">Gracias por comprar en LynxShop</p>
+                  <p className="text-info mb-4">
+                    <small>
+                      <i className="bi bi-info-circle me-1"></i>
+                      El inventario se actualizará cuando su pedido sea entregado
+                    </small>
+                  </p>
                   
                   <div className="d-flex justify-content-center gap-3 mt-4">
                     <button 

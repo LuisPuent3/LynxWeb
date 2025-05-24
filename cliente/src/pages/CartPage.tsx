@@ -76,13 +76,62 @@ const CartPage: React.FC = () => {
   const updateQuantity = (id: number, newQuantity: number) => {
     if (newQuantity < 1) return;
     
-    setCarrito(prevCart => 
-      prevCart.map(item => 
-        item.id_producto === id 
-          ? { ...item, cantidad: newQuantity } 
-          : item
-      )
-    );
+    // Buscar el producto en el carrito
+    const productoEnCarrito = carrito.find(item => item.id_producto === id);
+    if (!productoEnCarrito) return;
+    
+    // Verificar si hay suficiente stock disponible
+    if (newQuantity > productoEnCarrito.cantidad) {
+      // Buscar el stock actual del producto en tiempo real
+      api.get(`/productos/${id}`)
+        .then(response => {
+          const stockActual = response.data.cantidad;
+          
+          if (newQuantity > stockActual) {
+            alert(`No es posible agregar ${newQuantity} unidades. Solo hay ${stockActual} unidades disponibles.`);
+            
+            // Actualizar al máximo disponible
+            setCarrito(prevCart => 
+              prevCart.map(item => 
+                item.id_producto === id 
+                  ? { ...item, cantidad: Math.min(newQuantity, stockActual) } 
+                  : item
+              )
+            );
+          } else {
+            // Si hay suficiente stock, actualizar normalmente
+            setCarrito(prevCart => 
+              prevCart.map(item => 
+                item.id_producto === id 
+                  ? { ...item, cantidad: newQuantity } 
+                  : item
+              )
+            );
+          }
+        })
+        .catch(error => {
+          console.error('Error al verificar stock disponible:', error);
+          // En caso de error, permitir la actualización pero mostrar advertencia
+          alert('No se pudo verificar el stock disponible. La cantidad podría ser ajustada al procesar el pedido.');
+          
+          setCarrito(prevCart => 
+            prevCart.map(item => 
+              item.id_producto === id 
+                ? { ...item, cantidad: newQuantity } 
+                : item
+            )
+          );
+        });
+    } else {
+      // Si la cantidad solicitada es menor o igual a la que ya tenía en el carrito, actualizar sin verificar
+      setCarrito(prevCart => 
+        prevCart.map(item => 
+          item.id_producto === id 
+            ? { ...item, cantidad: newQuantity } 
+            : item
+        )
+      );
+    }
   };
 
   const removeItem = (id: number) => {

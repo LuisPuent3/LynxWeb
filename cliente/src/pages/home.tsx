@@ -50,10 +50,17 @@ const Home = () => {
    logout();
    navigate('/');
  };
-
  const addToCart = (producto: Producto) => {
    const existe = carrito.find((item) => item.id_producto === producto.id_producto);
+   
    if (existe) {
+     // Verificamos si la cantidad en carrito + 1 supera el stock disponible
+     if (existe.cantidad + 1 > producto.cantidad) {
+       // Mostramos una alerta
+       alert(`No es posible agregar más unidades. Solo quedan ${producto.cantidad} unidades disponibles de ${producto.nombre}.`);
+       return;
+     }
+     
      setCarrito(
        carrito.map((item) =>
          item.id_producto === producto.id_producto
@@ -62,6 +69,12 @@ const Home = () => {
        )
      );
    } else {
+     // Para productos nuevos, verificamos si hay stock disponible
+     if (producto.cantidad <= 0) {
+       alert(`${producto.nombre} no tiene unidades disponibles.`);
+       return;
+     }
+     
      setCarrito([...carrito, { ...producto, cantidad: 1 }]);
    }
  };

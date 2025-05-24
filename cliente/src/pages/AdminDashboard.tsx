@@ -331,7 +331,12 @@ const OrderDetailModal: React.FC<{
                     </div>
                   </div>
                 )}
-              </div>
+              </div>              {selectedOrder.estado === 'pendiente' && !isLoading && (
+                <div className="alert alert-info mb-0 mt-3" role="alert">
+                  <i className="bi bi-info-circle me-2"></i>
+                  <small>Al entregar se actualizará el inventario de productos. El stock se descuenta únicamente cuando el pedido se marca como entregado.</small>
+                </div>
+              )}
               <div className="modal-footer" style={{ borderTop: '1px solid #dee2e6', backgroundColor: '#f8f9fa' }}>
                 <button type="button" className="btn btn-outline-secondary" onClick={onClose}>
                   <i className="bi bi-x-circle me-1"></i>
@@ -587,7 +592,12 @@ const AdminDashboard: React.FC = () => {
         newStatus === 'entregado' ? 2 : 
         newStatus === 'cancelado' ? 3 : 1; // Por defecto 1 (pendiente)
       
-      await api.put(`/pedidos/${id}`, { estado: newStatus, id_estado });
+      // Mostrar mensaje de carga para operaciones que pueden tardar
+      if (newStatus === 'entregado') {
+        setSuccessMessage("Actualizando inventario, por favor espere...");
+      }
+      
+      const response = await api.put(`/pedidos/${id}`, { estado: newStatus, id_estado });
       
       // Actualizar el estado en la lista de pedidos
       const updatedPedidos = pedidos.map(p => 
@@ -602,11 +612,29 @@ const AdminDashboard: React.FC = () => {
           : updatedPedidos.filter(p => p.estado === filtroEstado)
       );
       
-      // Mostrar mensaje de éxito
+      // Mostrar mensaje de éxito específico
       setError(null);
-    } catch (err) {
+      const successMsg = newStatus === 'entregado' 
+        ? 'Pedido marcado como entregado y stock actualizado.' 
+        : `Pedido marcado como ${newStatus}.`;
+      
+      setSuccessMessage(successMsg);
+      
+      // Limpiar el mensaje de éxito después de 3 segundos
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (err: any) {
       console.error('Error al actualizar pedido:', err);
-      setError('Error al actualizar el estado del pedido.');
+      
+      // Mostrar mensaje de error más específico
+      if (err.code === 'ECONNABORTED') {
+        setError('La operación tardó demasiado tiempo. Intente nuevamente.');
+      } else if (err.response && err.response.data && err.response.data.error) {
+        setError(`Error: ${err.response.data.error}`);
+      } else {
+        setError('Error al actualizar el estado del pedido. Intente nuevamente.');
+      }
     }
   };
 
@@ -638,8 +666,7 @@ const AdminDashboard: React.FC = () => {
       [name]: value
     }));
   };
-  
-  const handleCategoriaSubmit = async (e: React.FormEvent) => {
+    const handleCategoriaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (isEditingCategoria) {
@@ -649,10 +676,14 @@ const AdminDashboard: React.FC = () => {
         setCategorias(categorias.map(c => 
           c.id_categoria === categoriaForm.id_categoria ? {...categoriaForm} : c
         ));
+        // Mostrar mensaje de éxito
+        setSuccessMessage(`¡La categoría "${categoriaForm.nombre}" ha sido actualizada correctamente!`);
       } else {
         // Crear nueva categoría
         const response = await api.post('/categorias', categoriaForm);
         setCategorias([...categorias, response.data]);
+        // Mostrar mensaje de éxito
+        setSuccessMessage(`¡La categoría "${categoriaForm.nombre}" ha sido creada correctamente!`);
       }
       
       // Resetear formulario
@@ -662,9 +693,22 @@ const AdminDashboard: React.FC = () => {
         descripcion: ''
       });
       setIsEditingCategoria(false);
+      
+      // Redirigir a la vista de categorías
+      setActiveTab('categories');
+      
+      // Configurar un temporizador para quitar el mensaje después de unos segundos
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
     } catch (err) {
       console.error('Error al guardar categoría:', err);
       setError('Error al guardar la categoría. Por favor, intenta de nuevo.');
+      
+      // Configurar un temporizador para quitar el mensaje de error
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
     }
   };
   
@@ -677,23 +721,44 @@ const AdminDashboard: React.FC = () => {
     setIsEditingCategoria(true);
     setActiveTab('categories-form');
   };
-  
-  const handleDeleteCategoria = async (id: number) => {
+    const handleDeleteCategoria = async (id: number) => {
     // Verificar si hay productos usando esta categoría
     const productos_en_categoria = productos.filter(p => p.id_categoria === id);
     
     if (productos_en_categoria.length > 0) {
       setError(`No se puede eliminar la categoría porque hay ${productos_en_categoria.length} productos asociados a ella.`);
+      
+      // Configurar un temporizador para quitar el mensaje de error
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
       return;
     }
     
     if (window.confirm('¿Estás seguro de eliminar esta categoría?')) {
       try {
+        // Encontrar el nombre de la categoría antes de eliminarla
+        const categoriaAEliminar = categorias.find(c => c.id_categoria === id);
+        const nombreCategoria = categoriaAEliminar?.nombre || 'La categoría';
+        
         await api.delete(`/categorias/${id}`);
         setCategorias(categorias.filter(c => c.id_categoria !== id));
+        
+        // Mostrar mensaje de éxito
+        setSuccessMessage(`${nombreCategoria} ha sido eliminada correctamente`);
+        
+        // Configurar un temporizador para quitar el mensaje
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
       } catch (err) {
         console.error('Error al eliminar categoría:', err);
         setError('Error al eliminar la categoría. Por favor, intenta de nuevo.');
+        
+        // Configurar un temporizador para quitar el mensaje de error
+        setTimeout(() => {
+          setError(null);
+        }, 3000);
       }
     }
   };
@@ -1471,12 +1536,17 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             )}
-            
-            {/* Pedidos */}
+              {/* Pedidos */}
             {activeTab === 'orders' && (
               <div className="card shadow-sm">
                 <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                  <h5 className="card-title mb-0">Gestión de Pedidos</h5>
+                  <div>
+                    <h5 className="card-title mb-1">Gestión de Pedidos</h5>
+                    <p className="text-muted small mb-0">
+                      <i className="bi bi-info-circle me-1"></i>
+                      El inventario se actualiza automáticamente cuando un pedido se marca como "entregado"
+                    </p>
+                  </div>
                   <div className="d-flex align-items-center gap-2">
                     <div className="input-group input-group-sm" style={{ maxWidth: '350px' }}>
                       <input

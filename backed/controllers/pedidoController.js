@@ -8,7 +8,55 @@ const createOrder = async (req, res) => {
         return res.status(400).json({ error: 'El carrito está vacío' });
     }
     
+    // Iniciar una conexión para la transacción
+    const connection = await db.getConnection();
+    
     try {
+        // Iniciar transacción
+        await connection.beginTransaction();
+        
+        // Verificar stock disponible antes de procesar el pedido
+        const stockChecks = await Promise.all(
+            carrito.map(async ({ id_producto, cantidad }) => {
+                const [productRows] = await connection.query(
+                    'SELECT id_producto, nombre, cantidad as stock FROM Productos WHERE id_producto = ? FOR UPDATE',
+                    [id_producto]
+                );
+                
+                if (productRows.length === 0) {
+                    return { 
+                        disponible: false, 
+                        producto: { id_producto },
+                        mensaje: 'Producto no encontrado' 
+                    };
+                }
+                
+                const producto = productRows[0];
+                return {
+                    disponible: producto.stock >= cantidad,
+                    producto,
+                    cantidadSolicitada: cantidad,
+                    mensaje: producto.stock >= cantidad 
+                        ? 'Disponible' 
+                        : `Stock insuficiente (${producto.stock} disponibles)`
+                };
+            })
+        );
+        
+        // Filtrar productos sin stock suficiente
+        const productosNoDisponibles = stockChecks.filter(check => !check.disponible);
+        
+        if (productosNoDisponibles.length > 0) {
+            // Hacemos rollback y retornamos error
+            await connection.rollback();
+            connection.release();
+            
+            return res.status(400).json({
+                error: 'Algunos productos no tienen stock suficiente',
+                detalles: productosNoDisponibles
+            });
+        }
+        
         // Verificar si la tabla Pedidos tiene las columnas necesarias
         let tablasActualizadas = false;
         
@@ -46,12 +94,11 @@ const createOrder = async (req, res) => {
             console.error('Error al verificar/actualizar estructura de tabla:', error);
             // Continuar con la creación del pedido aunque falle la verificación
         }
-        
-        // Calcular el total del pedido
+          // Calcular el total del pedido
         const total = carrito.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
         
-        // Insertar el pedido principal con la estructura actualizada
-        const [pedido] = await db.query(
+        // Insertar el pedido principal con la estructura actualizada (dentro de la misma transacción)
+        const [pedido] = await connection.query(
             `INSERT INTO Pedidos (
                 id_usuario, estado, id_estado, 
                 nombre_completo, telefono_contacto, 
@@ -61,19 +108,21 @@ const createOrder = async (req, res) => {
         );
         const id_pedido = pedido.insertId;
 
-        // Insertar cada producto en DetallePedido
-        const detallePromises = carrito.map(({ id_producto, cantidad, precio }) => {
+        // Insertar cada producto en DetallePedido (dentro de la misma transacción)
+        for (const { id_producto, cantidad, precio } of carrito) {
             const subtotal = cantidad * precio;
-            return db.query(
+            await connection.query(
                 `INSERT INTO DetallePedido (id_pedido, id_producto, cantidad, subtotal) 
                 VALUES (?, ?, ?, ?)`,
                 [id_pedido, id_producto, cantidad, subtotal]
             );
-        });
-
-        await Promise.all(detallePromises);
+        }
         
-        // Si es un usuario invitado o nuevo, actualizar su teléfono en la BD
+        // No actualizamos el stock aquí, lo haremos cuando el pedido sea entregado
+        
+        // Confirmar transacción
+        await connection.commit();
+          // Si es un usuario invitado o nuevo, actualizar su teléfono en la BD
         if (telefono_contacto) {
             try {
                 // Primero verificar si el usuario existe y tiene un teléfono generado automáticamente
@@ -98,11 +147,37 @@ const createOrder = async (req, res) => {
                 // No interrumpir el flujo si falla la actualización del teléfono
             }
         }
-        
-        res.status(201).json({ mensaje: 'Pedido creado con éxito', id_pedido });
+          
+        // Liberar la conexión después de completar la transacción
+        connection.release();
+          res.status(201).json({ 
+            mensaje: 'Pedido creado con éxito', 
+            id_pedido,
+            stockActualizado: false // Indicamos que el stock no se actualizó en este momento
+        });
     } catch (error) {
         console.error('Error al crear pedido:', error);
-        res.status(500).json({ error: error.message });
+        
+        // Si hay algún error, hacer rollback de la transacción
+        try {
+            await connection.rollback();
+        } catch (rollbackError) {
+            console.error('Error al hacer rollback:', rollbackError);
+        }
+        
+        // Liberar la conexión
+        connection.release();
+        
+        // Proporcionar mensajes más descriptivos según el tipo de error
+        if (error.name === 'ReferenceError') {
+            console.error('Error de referencia (variable no definida):', error.message);
+            res.status(500).json({ error: `Variable no definida: ${error.message}` });
+        } else if (error.code && error.sqlMessage) {
+            console.error('Error SQL:', error.sqlMessage);
+            res.status(500).json({ error: `Error en base de datos: ${error.sqlMessage}` });
+        } else {
+            res.status(500).json({ error: error.message });
+        }
     }
 };
 
@@ -238,17 +313,90 @@ const getAllOrders = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { id_estado, estado } = req.body;
+    
+    // Iniciar una conexión para posible transacción
+    const connection = await db.getConnection();
+    
     try {
+        // Iniciar transacción si el estado es "entregado" o "cancelado"
+        if (estado === 'entregado' || estado === 'cancelado') {
+            await connection.beginTransaction();
+        }
+        
         // Actualizamos ambos campos de estado para mantener consistencia
-        const [result] = await db.query(
+        const [result] = await connection.query(
             `UPDATE Pedidos SET id_estado = ?, estado = ? WHERE id_pedido = ?`,
             [id_estado, estado, id]
         );
+        
         if (result.affectedRows === 0) {
+            if (estado === 'entregado' || estado === 'cancelado') {
+                await connection.rollback();
+            }
+            connection.release();
             return res.status(404).json({ message: 'Pedido no encontrado' });
         }
-        res.status(200).json({ message: 'Estado del pedido actualizado' });
+        
+        // Si el estado es "entregado", actualizar el stock
+        if (estado === 'entregado') {
+            console.log(`[pedidoController] Actualizando stock para pedido ${id} marcado como entregado`);
+            
+            // Obtener todos los productos del pedido
+            const [detalles] = await connection.query(
+                `SELECT id_producto, cantidad FROM DetallePedido WHERE id_pedido = ?`,
+                [id]
+            );
+            
+            console.log(`[pedidoController] ${detalles.length} productos encontrados para actualizar stock`);
+            
+            // Actualizar el stock de cada producto
+            for (const { id_producto, cantidad } of detalles) {
+                console.log(`[pedidoController] Actualizando stock del producto ${id_producto}, reduciendo ${cantidad} unidades`);
+                
+                const [updateResult] = await connection.query(
+                    `UPDATE Productos SET cantidad = cantidad - ? WHERE id_producto = ? AND cantidad >= ?`,
+                    [cantidad, id_producto, cantidad]
+                );
+                
+                if (updateResult.affectedRows === 0) {
+                    // Si algún producto no tenía stock suficiente, registramos el error pero continuamos
+                    console.warn(`No se pudo actualizar el stock del producto ${id_producto}. Stock insuficiente.`);
+                }
+            }
+            
+            // Confirmar la transacción
+            await connection.commit();
+            connection.release();
+            console.log(`[pedidoController] Stock actualizado correctamente para el pedido ${id}`);
+            
+            res.status(200).json({ 
+                message: 'Estado del pedido actualizado y stock descontado', 
+                stockActualizado: true 
+            });
+        }
+        // Si el estado es "cancelado" y el pedido estaba previamente "entregado",
+        // podríamos restaurar el stock (implementación futura)
+        else {
+            // Para otros estados, simplemente devolvemos éxito
+            if (estado === 'entregado' || estado === 'cancelado') {
+                await connection.commit();
+            }
+            connection.release();
+            res.status(200).json({ message: 'Estado del pedido actualizado' });
+        }
     } catch (error) {
+        console.error(`[pedidoController] Error al actualizar estado del pedido ${id}:`, error);
+        
+        // Si hay un error y estábamos en una transacción, hacer rollback
+        if (estado === 'entregado' || estado === 'cancelado') {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error('Error al hacer rollback:', rollbackError);
+            }
+        }
+        
+        connection.release();
         res.status(500).json({ error: error.message });
     }
 };

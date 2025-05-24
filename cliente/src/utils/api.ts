@@ -4,7 +4,7 @@ import axios from 'axios';
 // Crear una instancia de axios con configuración predeterminada
 const api = axios.create({
   baseURL: 'http://localhost:5000/api', // URL base para todas las solicitudes
-  timeout: 10000, // Tiempo máximo de espera
+  timeout: 30000, // Tiempo máximo de espera ampliado a 30 segundos
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
