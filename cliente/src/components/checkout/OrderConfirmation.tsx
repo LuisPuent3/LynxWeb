@@ -201,13 +201,12 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
                 </>
               )}
             </div>
-            
-            {/* Footer con información adicional */}
+              {/* Footer con información adicional */}
             {isCompleted && (
               <div className="card-footer bg-light py-3 border-0">
                 <div className="small text-muted text-center">
                   <i className="bi bi-info-circle me-1"></i>
-                  Recibirá un correo electrónico con los detalles de su compra
+                  Recibirá un correo electrónico con los detalles de su compra (próximamente)
                 </div>
               </div>
             )}

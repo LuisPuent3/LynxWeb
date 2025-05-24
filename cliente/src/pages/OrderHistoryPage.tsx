@@ -17,7 +17,7 @@ interface OrderItem {
 interface Order {
   id_pedido: number;
   fecha: string;
-  estado: 'pendiente' | 'procesando' | 'enviado' | 'entregado' | 'cancelado';
+  estado: 'pendiente' | 'aceptado' | 'procesando' | 'enviado' | 'entregado' | 'cancelado';
   total: number;
   metodo_pago: string;
   productos: OrderItem[];
@@ -358,9 +358,7 @@ Gracias por tu compra!
             </div>
           )}
         </div>
-      </div>
-
-      {/* Filtros y búsqueda */}
+      </div>      {/* Filtros y búsqueda */}
       <div className="row mb-4">
         <div className="col-md-8">
           <div className="btn-group" role="group" aria-label="Filtros de pedidos">
@@ -380,10 +378,10 @@ Gracias por tu compra!
             </button>
             <button 
               type="button" 
-              className={`btn ${activeFilter === 'cancelado' ? 'btn-primary' : 'btn-outline-primary'}`}
-              onClick={() => setActiveFilter('cancelado')}
+              className={`btn ${activeFilter === 'aceptado' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => setActiveFilter('aceptado')}
             >
-              Cancelados
+              Aceptados
             </button>
             <button 
               type="button" 
@@ -391,6 +389,13 @@ Gracias por tu compra!
               onClick={() => setActiveFilter('entregado')}
             >
               Entregados
+            </button>
+            <button 
+              type="button" 
+              className={`btn ${activeFilter === 'cancelado' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => setActiveFilter('cancelado')}
+            >
+              Cancelados
             </button>
           </div>
         </div>

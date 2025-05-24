@@ -272,31 +272,8 @@ const OrderSummaryPage: React.FC = () => {
               </h5>
             </div>
             <div className="card-body p-4">
-              <div className="row mb-3">
-                <div className="col-md-6 mb-3 mb-md-0">
-                  <label htmlFor="firstName" className="form-label">Nombre</label>
-                  <input 
-                    type="text" 
-                    className="form-control" 
-                    id="firstName" 
-                    placeholder="Ingresa tu nombre" 
-                    value={firstName}
-                    onChange={handleFirstNameChange}
-                  />
-                </div>
-                <div className="col-md-6">
-                  <label htmlFor="lastName" className="form-label">Apellido</label>
-                  <input 
-                    type="text" 
-                    className="form-control" 
-                    id="lastName" 
-                    placeholder="Ingresa tu apellido" 
-                    value={lastName}
-                    onChange={handleLastNameChange}
-                  />
-                </div>
-              </div>
-              <div className="mb-3">
+              {/* Teléfono primero */}
+              <div className="mb-4">
                 <label htmlFor="phone" className="form-label">Teléfono de Contacto <span className="text-danger">*</span></label>
                 <input 
                   type="tel" 
@@ -309,8 +286,33 @@ const OrderSummaryPage: React.FC = () => {
                 />
                 <div className="form-text">Este número es necesario para confirmar su pedido.</div>
               </div>
+              
+              <div className="row mb-3">
+                <div className="col-md-6 mb-3 mb-md-0">
+                  <label htmlFor="firstName" className="form-label">Nombre (Opcional)</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    id="firstName" 
+                    placeholder="Ingresa tu nombre" 
+                    value={firstName}
+                    onChange={handleFirstNameChange}
+                  />
+                </div>
+                <div className="col-md-6">
+                  <label htmlFor="lastName" className="form-label">Apellido (Opcional)</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    id="lastName" 
+                    placeholder="Ingresa tu apellido" 
+                    value={lastName}
+                    onChange={handleLastNameChange}
+                  />
+                </div>
+              </div>
               <div className="mb-3">
-                <label htmlFor="additionalInfo" className="form-label">Información Adicional</label>
+                <label htmlFor="additionalInfo" className="form-label">Información Adicional (Opcional)</label>
                 <textarea 
                   className="form-control" 
                   id="additionalInfo" 

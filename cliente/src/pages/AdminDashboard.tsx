@@ -206,11 +206,11 @@ const OrderDetailModal: React.FC<{
                             </p>
                             <p>
                               <strong><i className="bi bi-calendar me-1"></i>Fecha:</strong> {new Date(selectedOrder.fecha).toLocaleDateString()} {new Date(selectedOrder.fecha).toLocaleTimeString()}
-                            </p>
-                            <p>
+                            </p>                            <p>
                               <strong><i className="bi bi-tag me-1"></i>Estado:</strong> 
                               <span className={`badge ms-2 ${
                                 selectedOrder.estado === 'pendiente' ? 'bg-warning' :
+                                selectedOrder.estado === 'aceptado' ? 'bg-info' :
                                 selectedOrder.estado === 'entregado' ? 'bg-success' :
                                 selectedOrder.estado === 'cancelado' ? 'bg-danger' : 'bg-secondary'
                               }`}>
@@ -336,14 +336,21 @@ const OrderDetailModal: React.FC<{
                   <i className="bi bi-info-circle me-2"></i>
                   <small>Al entregar se actualizará el inventario de productos. El stock se descuenta únicamente cuando el pedido se marca como entregado.</small>
                 </div>
-              )}
-              <div className="modal-footer" style={{ borderTop: '1px solid #dee2e6', backgroundColor: '#f8f9fa' }}>
+              )}              <div className="modal-footer" style={{ borderTop: '1px solid #dee2e6', backgroundColor: '#f8f9fa' }}>
                 <button type="button" className="btn btn-outline-secondary" onClick={onClose}>
                   <i className="bi bi-x-circle me-1"></i>
                   Cerrar
                 </button>
                 {selectedOrder.estado === 'pendiente' && !isLoading && (
                   <>
+                    <button 
+                      type="button"
+                      className="btn btn-info"
+                      onClick={() => onStatusChange(selectedOrder.id_pedido, 'aceptado')}
+                    >
+                      <i className="bi bi-check2-circle me-1"></i>
+                      Aceptar Pedido
+                    </button>
                     <button 
                       type="button"
                       className="btn btn-success"
@@ -581,27 +588,29 @@ const AdminDashboard: React.FC = () => {
         console.error('Error al eliminar producto:', err);
         setError('Error al eliminar el producto. Por favor, intenta de nuevo.');
       }
-    }
-  };
+    }  };
   
   // Cambiar estado de pedido
-  const handleOrderStatus = async (id: number, newStatus: string) => {
+  const handleOrderStatus = async (id: number, status: string) => {
     try {
-      // Determinar el id_estado basado en el newStatus
+      // Determinar el id_estado basado en el status
       const id_estado = 
-        newStatus === 'entregado' ? 2 : 
-        newStatus === 'cancelado' ? 3 : 1; // Por defecto 1 (pendiente)
+        status === 'entregado' ? 2 : 
+        status === 'cancelado' ? 3 : 
+        status === 'aceptado' ? 4 : 1; // 1 = pendiente, 2 = entregado, 3 = cancelado, 4 = aceptado
       
       // Mostrar mensaje de carga para operaciones que pueden tardar
-      if (newStatus === 'entregado') {
+      if (status === 'entregado') {
         setSuccessMessage("Actualizando inventario, por favor espere...");
+      } else if (status === 'aceptado') {
+        setSuccessMessage("Aceptando pedido, por favor espere...");
       }
       
-      const response = await api.put(`/pedidos/${id}`, { estado: newStatus, id_estado });
+      const response = await api.put(`/pedidos/${id}`, { estado: status, id_estado });
       
       // Actualizar el estado en la lista de pedidos
       const updatedPedidos = pedidos.map(p => 
-        p.id_pedido === id ? {...p, estado: newStatus, estado_nombre: newStatus} : p
+        p.id_pedido === id ? {...p, estado: status, estado_nombre: status} : p
       );
       
       setPedidos(updatedPedidos);
@@ -611,12 +620,13 @@ const AdminDashboard: React.FC = () => {
           ? updatedPedidos
           : updatedPedidos.filter(p => p.estado === filtroEstado)
       );
-      
-      // Mostrar mensaje de éxito específico
+        // Mostrar mensaje de éxito específico
       setError(null);
-      const successMsg = newStatus === 'entregado' 
+      const successMsg = status === 'entregado' 
         ? 'Pedido marcado como entregado y stock actualizado.' 
-        : `Pedido marcado como ${newStatus}.`;
+        : status === 'aceptado'
+        ? 'Pedido aceptado correctamente.'
+        : `Pedido marcado como ${status}.`;
       
       setSuccessMessage(successMsg);
       
@@ -1086,14 +1096,14 @@ const AdminDashboard: React.FC = () => {
                               </tr>
                             </thead>
                             <tbody>
-                              {pedidos.slice(0, 5).map((pedido) => (
-                                <tr key={pedido.id_pedido}>
+                              {pedidos.slice(0, 5).map((pedido) => (                                <tr key={pedido.id_pedido}>
                                   <td>#{pedido.id_pedido}</td>
                                   <td>{pedido.usuario || pedido.nombre_completo || 'Usuario'}</td>
                                   <td>{new Date(pedido.fecha).toLocaleDateString()}</td>
                                   <td>
                                     <span className={`badge ${
                                       pedido.estado === 'pendiente' ? 'bg-warning' :
+                                      pedido.estado === 'aceptado' ? 'bg-info' :
                                       pedido.estado === 'entregado' ? 'bg-success' :
                                       pedido.estado === 'cancelado' ? 'bg-danger' : 'bg-secondary'
                                     }`}>
@@ -1562,13 +1572,13 @@ const AdminDashboard: React.FC = () => {
                         placeholder="Teléfono..."
                         value={searchPhoneNumber}
                         onChange={(e) => setSearchPhoneNumber(e.target.value)}
-                      />
-                      <select className="form-select" 
+                      />                      <select className="form-select" 
                         value={filtroEstado}
                         onChange={(e) => handleOrderFilter(e.target.value)}
                       >
                         <option value="todos">Todos</option>
                         <option value="pendiente">Pendiente</option>
+                        <option value="aceptado">Aceptado</option>
                         <option value="entregado">Entregado</option>
                         <option value="cancelado">Cancelado</option>
                       </select>
@@ -1612,12 +1622,12 @@ const AdminDashboard: React.FC = () => {
                             )
                             .map((pedido) => (
                             <tr key={pedido.id_pedido}>
-                              <td>#{pedido.id_pedido}</td>
-                              <td>{pedido.usuario || pedido.nombre_completo || 'Usuario'}</td>
+                              <td>#{pedido.id_pedido}</td>                              <td>{pedido.usuario || pedido.nombre_completo || 'Usuario'}</td>
                               <td>{new Date(pedido.fecha).toLocaleDateString()}</td>
                               <td>
                                 <span className={`badge ${
                                   pedido.estado === 'pendiente' ? 'bg-warning' :
+                                  pedido.estado === 'aceptado' ? 'bg-info' :
                                   pedido.estado === 'entregado' ? 'bg-success' :
                                   pedido.estado === 'cancelado' ? 'bg-danger' : 'bg-secondary'
                                 }`}>
@@ -1625,8 +1635,7 @@ const AdminDashboard: React.FC = () => {
                                 </span>
                               </td>
                               <td>${typeof pedido.total === 'number' ? pedido.total.toFixed(2) : pedido.total || '(calculando)'}</td>
-                              <td>
-                                <div className="btn-group">
+                              <td>                                <div className="btn-group">
                                   {/* Botón Ver Detalles */}
                                   <button 
                                     className="btn btn-sm btn-outline-primary" 
@@ -1635,6 +1644,15 @@ const AdminDashboard: React.FC = () => {
                                     <i className="bi bi-eye me-1"></i>
                                     Ver
                                   </button>
+                                  {pedido.estado === 'pendiente' && (
+                                    <button 
+                                      className="btn btn-sm btn-outline-info"
+                                      onClick={() => handleOrderStatus(pedido.id_pedido, 'aceptado')}
+                                    >
+                                      <i className="bi bi-check2-circle me-1"></i>
+                                      Aceptar
+                                    </button>
+                                  )}
                                   <button 
                                     className="btn btn-sm btn-outline-success"
                                     onClick={() => handleOrderStatus(pedido.id_pedido, 'entregado')}
