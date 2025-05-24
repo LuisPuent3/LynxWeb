@@ -5,7 +5,7 @@ const { verifyToken } = require('../middlewares/authMiddleware');
 const pool = require('../config/db');
 
 // Configuración del servicio de recomendaciones
-const RECOMMENDER_SERVICE_URL = process.env.RECOMMENDER_SERVICE_URL || 'http://localhost:8000';
+const RECOMMENDER_SERVICE_URL = process.env.RECOMMENDER_SERVICE_URL || 'http://127.0.0.1:8000';
 
 /**
  * @route GET /api/recommendations
@@ -21,10 +21,13 @@ router.get('/', verifyToken, async (req, res) => {
     
     if (!user || user.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
-    }
-
-    // Llamar al microservicio de recomendaciones
-    const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/predict/${userId}`);
+    }    // Llamar al microservicio de recomendaciones
+    const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/predict/${userId}`, {
+      // Desactiva el uso de resolución DNS de IPv6 para localhost
+      headers: {
+        'Host': '127.0.0.1:8000'
+      }
+    });
     
     if (!response.data || !response.data.recommendations) {
       return res.status(500).json({ error: 'Error al obtener recomendaciones' });
@@ -82,10 +85,14 @@ router.get('/', verifyToken, async (req, res) => {
  * @access Público
  */
 router.get('/guest', async (req, res) => {
-  try {
-    // Para usuarios invitados, simplemente obtenemos productos populares
+  try {    // Para usuarios invitados, simplemente obtenemos productos populares
     // El ID 0 está reservado para indicar al servicio que devuelva productos populares
-    const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/predict/0`);
+    const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/predict/0`, {
+      // Desactiva el uso de resolución DNS de IPv6 para localhost
+      headers: {
+        'Host': '127.0.0.1:8000'
+      }
+    });
     
     if (!response.data || !response.data.recommendations) {
       return res.status(500).json({ error: 'Error al obtener recomendaciones' });
@@ -144,7 +151,11 @@ router.get('/guest', async (req, res) => {
  */
 router.get('/health', async (req, res) => {
   try {
-    const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/health`);
+    const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/health`, {
+      headers: {
+        'Host': '127.0.0.1:8000'
+      }
+    });
     res.json(response.data);
   } catch (error) {
     res.status(503).json({ 
