@@ -21,7 +21,8 @@ const OrderSummaryPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [additionalInfo, setAdditionalInfo] = useState('');
-  const [contactPhone, setContactPhone] = useState(user?.telefono || '');
+  const [contactPhone, setContactPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -29,10 +30,6 @@ const OrderSummaryPage: React.FC = () => {
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
   const [isLoading, setIsLoading] = useState(true);
-  const [totalAmount, setTotalAmount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [processingOrder, setProcessingOrder] = useState(false);
-  const [shippingAddress, setShippingAddress] = useState('');
 
   // Obtener estado de localización
   const locationState = location.state as LocationState;
@@ -92,6 +89,19 @@ const OrderSummaryPage: React.FC = () => {
   const procesarPedido = async () => {
     try {
       setIsProcessing(true);
+      
+      // Validar teléfono antes de procesar
+      if (!contactPhone) {
+        alert('Por favor, ingrese un número de teléfono de contacto.');
+        setIsProcessing(false);
+        return;
+      }
+      
+      if (!/^[0-9]{10}$/.test(contactPhone)) {
+        alert('El teléfono debe tener exactamente 10 dígitos.');
+        setIsProcessing(false);
+        return;
+      }
       
       // Ensure we have a valid user ID
       if (!user || !user.id_usuario) {
@@ -172,7 +182,15 @@ const OrderSummaryPage: React.FC = () => {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setContactPhone(e.target.value);
+    const phone = e.target.value;
+    setContactPhone(phone);
+    
+    // Validar que tenga exactamente 10 dígitos
+    if (phone && !/^[0-9]{10}$/.test(phone)) {
+      setPhoneError('El teléfono debe tener exactamente 10 dígitos');
+    } else {
+      setPhoneError('');
+    }
   };
 
   const handleFirstNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -277,14 +295,23 @@ const OrderSummaryPage: React.FC = () => {
                 <label htmlFor="phone" className="form-label">Teléfono de Contacto <span className="text-danger">*</span></label>
                 <input 
                   type="tel" 
-                  className="form-control" 
+                  className={`form-control ${phoneError ? 'is-invalid' : contactPhone && !phoneError ? 'is-valid' : ''}`}
                   id="phone" 
-                  placeholder="Teléfono para contacto" 
+                  placeholder="Ingresa tu número de teléfono" 
                   value={contactPhone}
                   onChange={handlePhoneChange}
+                  maxLength={10}
+                  pattern="[0-9]{10}"
                   required
                 />
-                <div className="form-text">Este número es necesario para confirmar su pedido.</div>
+                {phoneError && (
+                  <div className="invalid-feedback">
+                    {phoneError}
+                  </div>
+                )}
+                <div className="form-text">
+                  {phoneError ? '' : 'Ingrese exactamente 10 dígitos. Este número es necesario para confirmar su pedido.'}
+                </div>
               </div>
               
               <div className="row mb-3">
@@ -376,7 +403,7 @@ const OrderSummaryPage: React.FC = () => {
                 <button 
                   className="btn btn-primary py-3 fw-bold"
                   onClick={procesarPedido}
-                  disabled={isProcessing || !contactPhone.trim()}
+                  disabled={isProcessing || !contactPhone.trim() || phoneError !== ''}
                 >
                   {isProcessing ? (
                     <>
