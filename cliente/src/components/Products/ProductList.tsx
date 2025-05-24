@@ -3,31 +3,54 @@ import api from "../../utils/api";
 import ProductCard from "./ProductCard";
 import { Producto } from "../../types/types";
 
-// Actualizamos la interfaz para incluir searchTerm
+// Actualizamos la interfaz para incluir searchTerm y categoryFilter
 interface ProductListProps {
   addToCart: (producto: Producto) => void;
-  searchTerm: string; // Añadimos esta prop
+  searchTerm: string;
+  categoryFilter: number | null;
 }
 
-const ProductList: React.FC<ProductListProps> = ({ addToCart, searchTerm }) => {
+const ProductList: React.FC<ProductListProps> = ({ addToCart, searchTerm, categoryFilter }) => {
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        setLoading(true);
         const response = await api.get("/productos");
         setProductos(response.data);
       } catch (error) {
         console.error("Error al obtener productos:", error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchProducts();
   }, []);
 
-  // Filtramos los productos basados en searchTerm
-  const productosFiltrados = productos.filter(producto =>
-    producto.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtramos los productos basados en searchTerm y categoryFilter
+  const productosFiltrados = productos.filter(producto => {
+    // Verificar si cumple con la condición de búsqueda
+    const matchesSearch = producto.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Verificar si cumple con el filtro de categoría (si hay alguno seleccionado)
+    const matchesCategory = categoryFilter === null || producto.id_categoria === categoryFilter;
+    
+    // El producto debe cumplir con ambas condiciones para ser incluido
+    return matchesSearch && matchesCategory;
+  });
+
+  if (loading) {
+    return (
+      <div className="text-center py-4">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </div>
+        <p className="mt-2">Cargando productos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="row g-3">
@@ -38,11 +61,20 @@ const ProductList: React.FC<ProductListProps> = ({ addToCart, searchTerm }) => {
       ))}
       {productosFiltrados.length === 0 && (
         <div className="col-12 text-center py-4">
-          <p className="text-muted">No se encontraron productos</p>
+          <i className="bi bi-search display-4 text-muted"></i>
+          <p className="text-muted mt-2">
+            {searchTerm && categoryFilter 
+              ? "No se encontraron productos con los filtros seleccionados" 
+              : searchTerm 
+                ? "No se encontraron productos con ese término de búsqueda"
+                : categoryFilter
+                  ? "No hay productos en esta categoría"
+                  : "No hay productos disponibles"}
+          </p>
         </div>
       )}
     </div>
   );
-};
+}
 
 export default ProductList;

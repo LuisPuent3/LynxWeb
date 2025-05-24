@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { Producto } from "../types/types";
 import { AxiosError, AxiosResponse } from 'axios';
 import { useAuth } from "../contexts/AuthContext";
+import { useCategorias } from "../hooks/useCategorias"; // Importar el hook de categorías
 
 interface ApiErrorResponse {
  error?: string;
@@ -24,8 +25,10 @@ const Home = () => {
  });
  const [showAuthModal, setShowAuthModal] = useState(false);
  const [searchTerm, setSearchTerm] = useState("");
+ const [categoryFilter, setCategoryFilter] = useState<number | null>(null); // Estado para filtro de categorías
  const navigate = useNavigate();
  const { isAuthenticated, user, logout, login } = useAuth();
+ const { categorias, loading: loadingCategorias } = useCategorias(); // Usar el hook
 
  useEffect(() => {
    localStorage.setItem('tempCarrito', JSON.stringify(carrito));
@@ -376,11 +379,37 @@ const Home = () => {
        <div className="row">
          <div className="col-lg-8 mb-4">
            <div className="card shadow-sm">
-             <div className="card-header bg-white py-3">
+             <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                <h5 className="card-title mb-0">Productos Disponibles</h5>
+               <div className="dropdown">
+                 <button className="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="dropdownCategorias" data-bs-toggle="dropdown" aria-expanded="false">
+                   <i className="bi bi-filter me-1"></i>
+                   {categoryFilter ? categorias.find(c => c.id_categoria === categoryFilter)?.nombre : 'Todas las categorías'}
+                 </button>
+                 <ul className="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="dropdownCategorias">
+                   <li>
+                     <button className="dropdown-item d-flex align-items-center" onClick={() => setCategoryFilter(null)}>
+                       <i className="bi bi-grid me-2 text-primary"></i>
+                       Todas las categorías
+                     </button>
+                   </li>
+                   <li><hr className="dropdown-divider" /></li>
+                   {categorias.map(categoria => (
+                     <li key={categoria.id_categoria}>
+                       <button 
+                         className={`dropdown-item d-flex align-items-center ${categoryFilter === categoria.id_categoria ? 'active' : ''}`}
+                         onClick={() => setCategoryFilter(categoria.id_categoria)}
+                       >
+                         <i className="bi bi-tag me-2"></i>
+                         {categoria.nombre}
+                       </button>
+                     </li>
+                   ))}
+                 </ul>
+               </div>
              </div>
              <div className="card-body">
-               <ProductList addToCart={addToCart} searchTerm={searchTerm} />
+               <ProductList addToCart={addToCart} searchTerm={searchTerm} categoryFilter={categoryFilter} />
              </div>
            </div>
          </div>
