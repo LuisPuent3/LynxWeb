@@ -198,6 +198,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, isModal = false }) => {
 
                 {/* Enlaces adicionales */}
                 <div className="text-center mt-4">
+                  <p className="mb-2">
+                    <Link to="/request-reset" className="text-secondary text-decoration-none">
+                      ¿Olvidaste tu contraseña?
+                    </Link>
+                  </p>
                   <p className="mb-0">
                     ¿No tienes una cuenta?{" "}
                     <Link to="/register" className="text-primary text-decoration-none fw-semibold">

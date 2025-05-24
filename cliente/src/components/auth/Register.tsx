@@ -76,10 +76,11 @@ const Register = () => {
             }
           });
         }, 2000);
-        
-      } catch (err: any) {
+          } catch (err: any) {
         console.error("Error de registro:", err);
+        // Mostrar mensaje de error específico si está disponible, o un mensaje genérico
         setError(
+          err.response?.data?.mensaje || 
           err.response?.data?.error || 
           "No se pudo completar el registro. Intenta nuevamente."
         );

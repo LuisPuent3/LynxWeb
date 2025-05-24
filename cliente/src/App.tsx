@@ -2,6 +2,8 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import RequestPasswordReset from './components/auth/RequestPasswordReset';
+import ResetPassword from './components/auth/ResetPassword';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminProductsPage from './pages/AdminProductsPage';
@@ -39,6 +41,12 @@ const App = () => {
         } />
         <Route path="/register" element={
           isAuthenticated ? <Navigate to="/" replace /> : <Register />
+        } />
+        <Route path="/request-reset" element={
+          isAuthenticated ? <Navigate to="/" replace /> : <RequestPasswordReset />
+        } />
+        <Route path="/reset-password/:token" element={
+          isAuthenticated ? <Navigate to="/" replace /> : <ResetPassword />
         } />
         <Route path="/" element={<Home />} />
         <Route path="/cart" element={<CartPage />} />

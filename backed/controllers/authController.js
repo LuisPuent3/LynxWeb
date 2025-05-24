@@ -55,7 +55,37 @@ exports.registerUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al registrar usuario:', error);
-    res.status(500).json({ error: 'Error al registrar usuario', detalles: error.message });
+    
+    // Detectar errores específicos de duplicación
+    if (error.code === 'ER_DUP_ENTRY') {
+      // Analizar el mensaje de error para identificar qué campo está duplicado
+      const errorMsg = error.message.toLowerCase();
+      
+      if (errorMsg.includes('correo')) {
+        return res.status(400).json({ 
+          error: 'Error de validación', 
+          mensaje: 'El correo electrónico ya está registrado. Por favor, utiliza otro correo.' 
+        });
+      } 
+      else if (errorMsg.includes('telefono') || errorMsg.includes('teléfono')) {
+        return res.status(400).json({ 
+          error: 'Error de validación', 
+          mensaje: 'El número de teléfono ya está registrado. Por favor, utiliza otro número.' 
+        });
+      }
+      else {
+        return res.status(400).json({ 
+          error: 'Error de validación', 
+          mensaje: 'Ya existe un usuario con información similar. Por favor, verifica los datos ingresados.' 
+        });
+      }
+    }
+    
+    // Para errores no específicos
+    res.status(500).json({ 
+      error: 'Error al registrar usuario', 
+      mensaje: 'Ha ocurrido un problema al crear tu cuenta. Por favor, intenta de nuevo más tarde.' 
+    });
   }
 };
 

@@ -46,6 +46,7 @@ const pedidosRoutes = require('./routes/pedidosRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const recommendationRoutes = require('./routes/recommendations');
 const uploadRoutes = require('./routes/uploadRoutes');
+const passwordResetRoutes = require('./routes/passwordResetRoutes');
 
 // Logger avanzado para depuración
 app.use((req, res, next) => {
@@ -61,6 +62,7 @@ app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/categorias', categoryRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/password-reset', passwordResetRoutes);
 
 // Ruta de prueba para verificar que la API está en funcionamiento
 app.get('/api/test', (req, res) => {
