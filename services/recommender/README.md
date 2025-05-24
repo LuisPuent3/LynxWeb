@@ -65,7 +65,7 @@ python etl.py
 
 3. Iniciar servidor:
 ```bash
-uvicorn main:app --reload
+uvicorn -m main:app --reload
 ```
 
 ### Docker

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Producto } from "../../types/types";
+import { useRecommendations } from "../../hooks/useRecommendations";
 
 interface ProductCardProps {
   producto: Producto;
@@ -14,13 +15,32 @@ const ProductCard: React.FC<ProductCardProps> = ({ producto, addToCart }) => {
   
   // Estado para controlar errores de carga de imagen
   const [imgError, setImgError] = useState(false);
-
+  
+  // Obtener información de recomendaciones
+  const { recommendationIds } = useRecommendations();
+  const recommendationIndex = recommendationIds.indexOf(producto.id_producto);
+  const isTopRecommendation = recommendationIndex >= 0 && recommendationIndex < 6; // Top 6
+  const isSecondaryRecommendation = recommendationIndex >= 6 && recommendationIndex < 12; // Recomendaciones secundarias
   // Construir URL una sola vez
   const imageUrl = producto.imagen 
     ? `http://localhost:5000/uploads/${producto.imagen}?v=${producto.id_producto}` 
     : '';
+    
+  // Definimos los estilos de la tarjeta según las recomendaciones
+  const cardStyle = isTopRecommendation 
+    ? { transform: 'translateY(-3px)', transition: 'all 0.3s' } 
+    : isSecondaryRecommendation 
+      ? { transition: 'all 0.3s' } 
+      : undefined;
+      
+  const cardClass = isTopRecommendation 
+    ? 'card h-100 shadow' 
+    : isSecondaryRecommendation 
+      ? 'card h-100 shadow-sm border border-primary border-opacity-25' 
+      : 'card h-100 shadow-sm';
 
-  return (    <div className="card h-100 shadow-sm">
+  return (    
+    <div className={cardClass} style={cardStyle}>
       <div className="position-relative">
         {!imgError && producto.imagen ? (
           <img
@@ -36,12 +56,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ producto, addToCart }) => {
             <i className="bi bi-image text-secondary" style={{ fontSize: '3rem' }}></i>
           </div>
         )}
+        
+        {/* Mostramos badge de recomendación */}
+        {isTopRecommendation && (
+          <span className="position-absolute top-0 start-0 badge bg-primary m-2">
+            <i className="bi bi-star-fill me-1"></i> Recomendado
+          </span>
+        )}
+
         {/* Mostramos badge de últimas unidades */}
         {producto.cantidad > 0 && producto.cantidad <= 5 && (
           <span className="position-absolute top-0 end-0 badge bg-warning m-2">
-            ¡Últimas unidades!
+            ¡Pocas!
           </span>
         )}
+        
         {/* Mostramos badge de sin stock */}
         {producto.cantidad === 0 && (
           <span className="position-absolute top-0 end-0 badge bg-danger m-2">

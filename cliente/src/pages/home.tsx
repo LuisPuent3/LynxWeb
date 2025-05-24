@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import ProductList from "../components/products/ProductList";
 import AuthModal from "../components/auth/AuthModal";
 import api from "../utils/api";
@@ -8,7 +8,6 @@ import { Producto } from "../types/types";
 import { AxiosError, AxiosResponse } from 'axios';
 import { useAuth } from "../contexts/AuthContext";
 import { useCategorias } from "../hooks/useCategorias"; // Importar el hook de categorías
-import RecommendedProducts from "../components/products/RecommendedProducts"; // Importar componente de recomendaciones
 
 interface ApiErrorResponse {
  error?: string;
@@ -388,33 +387,7 @@ const Home = () => {
              <i className="bi bi-bag-check display-1 text-primary opacity-50"></i>
            </div>
          </div>
-       </div>       {/* Recomendaciones personalizadas */}
-       <RecommendedProducts 
-         limit={4} 
-         onAddToCart={(producto) => {
-           const productoEnCarrito = carrito.find(item => item.id_producto === producto.id_producto);
-           
-           // Si el stock es 0 o va a exceder el stock disponible
-           if (producto.cantidad === 0 || (productoEnCarrito && productoEnCarrito.cantidadEnCarrito >= producto.cantidad)) {
-             alert(`No hay suficiente stock disponible de ${producto.nombre}`);
-             return;
-           }
-           
-           // Si ya está en el carrito, incrementar cantidad
-           if (productoEnCarrito) {
-             setCarrito(carrito.map(item => 
-               item.id_producto === producto.id_producto 
-                 ? { ...item, cantidadEnCarrito: (item.cantidadEnCarrito || 1) + 1 } 
-                 : item
-             ));
-           } else {
-             // Si no está en el carrito, agregar con cantidad 1
-             setCarrito([...carrito, { ...producto, cantidadEnCarrito: 1 }]);
-           }
-         }} 
-       />
-
-       <div className="row">
+       </div>       <div className="row">
          <div className="col-lg-8 mb-4">
            <div className="card shadow-sm">
              <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">

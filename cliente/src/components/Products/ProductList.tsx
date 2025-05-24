@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import api from "../../utils/api";
 import ProductCard from "./ProductCard";
 import { Producto } from "../../types/types";
+import { useRecommendations } from "../../hooks/useRecommendations";
 
 // Actualizamos la interfaz para incluir searchTerm y categoryFilter
 interface ProductListProps {
@@ -13,6 +14,7 @@ interface ProductListProps {
 const ProductList: React.FC<ProductListProps> = ({ addToCart, searchTerm, categoryFilter }) => {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const { sortProductsByRecommendation, loading: loadingRecommendations } = useRecommendations();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -51,10 +53,14 @@ const ProductList: React.FC<ProductListProps> = ({ addToCart, searchTerm, catego
       </div>
     );
   }
+  // Ordenar productos filtrados basados en recomendaciones
+  const productosOrdenados = loadingRecommendations 
+    ? productosFiltrados 
+    : sortProductsByRecommendation(productosFiltrados);
 
   return (
     <div className="row g-3">
-      {productosFiltrados.map((producto) => (
+      {productosOrdenados.map((producto) => (
         <div className="col-md-6 col-lg-4" key={producto.id_producto}>
           <ProductCard producto={producto} addToCart={addToCart} />
         </div>
