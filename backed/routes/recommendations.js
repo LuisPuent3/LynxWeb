@@ -21,55 +21,79 @@ router.get('/', verifyToken, async (req, res) => {
     
     if (!user || user.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
-    }    // Llamar al microservicio de recomendaciones
-    const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/predict/${userId}`, {
-      // Desactiva el uso de resolución DNS de IPv6 para localhost
-      headers: {
-        'Host': '127.0.0.1:8000'
-      }
-    });
+    }
+
+    let productos = [];
     
-    if (!response.data || !response.data.recommendations) {
-      return res.status(500).json({ error: 'Error al obtener recomendaciones' });
-    }
-
-    const recommendedProductIds = response.data.recommendations.map(item => item.id_producto);
-
-    // Si no hay recomendaciones, devolver array vacío
-    if (recommendedProductIds.length === 0) {
-      return res.json({ productos: [] });
-    }
-
-    // Obtener información detallada de los productos recomendados
-    const [productos] = await pool.query(
-      `SELECT 
-        p.id_producto, 
-        p.nombre, 
-        p.precio, 
-        p.imagen, 
-        p.cantidad as stock, 
-        c.nombre as categoria 
-      FROM productos p
-      JOIN Categorias c ON p.id_categoria = c.id_categoria
-      WHERE p.id_producto IN (?)`,
-      [recommendedProductIds]
-    );
-
-    // Ordenar productos según el orden de las recomendaciones (mantener scores originales)
-    const recomendacionesConDetalles = recommendedProductIds.map(id => {
-      const producto = productos.find(p => p.id_producto === id);
-      const recomendacion = response.data.recommendations.find(r => r.id_producto === id);
+    try {
+      // Llamar al microservicio de recomendaciones
+      const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/predict/${userId}`, {
+        timeout: 5000,
+        headers: {
+          'Host': '127.0.0.1:8000'
+        }
+      });
       
-      if (producto && recomendacion) {
-        return {
-          ...producto,
-          score: recomendacion.score
-        };
-      }
-      return null;
-    }).filter(Boolean);
+      if (response.data && response.data.recommendations && response.data.recommendations.length > 0) {
+        const recommendedProductIds = response.data.recommendations.map(item => item.id_producto);
 
-    res.json({ productos: recomendacionesConDetalles });
+        // Obtener información detallada de los productos recomendados
+        const [productosRecomendados] = await pool.query(
+          `SELECT 
+            p.id_producto, 
+            p.nombre, 
+            p.precio, 
+            p.imagen, 
+            p.cantidad as stock, 
+            c.nombre as categoria 
+          FROM productos p
+          JOIN categorias c ON p.id_categoria = c.id_categoria
+          WHERE p.id_producto IN (?)`,
+          [recommendedProductIds]
+        );
+
+        // Ordenar productos según el orden de las recomendaciones
+        productos = recommendedProductIds.map(id => {
+          const producto = productosRecomendados.find(p => p.id_producto === id);
+          const recomendacion = response.data.recommendations.find(r => r.id_producto === id);
+          
+          if (producto && recomendacion) {
+            return {
+              ...producto,
+              score: recomendacion.score
+            };
+          }
+          return null;
+        }).filter(Boolean);
+      }
+    } catch (pythonServiceError) {
+      console.log('Python service not available for user recommendations, using fallback:', pythonServiceError.message);
+    }
+
+    // Fallback: Si el servicio Python no está disponible, devolver productos populares
+    if (productos.length === 0) {
+      const [productosFallback] = await pool.query(
+        `SELECT 
+          p.id_producto, 
+          p.nombre, 
+          p.precio, 
+          p.imagen, 
+          p.cantidad as stock, 
+          c.nombre as categoria 
+        FROM productos p
+        JOIN categorias c ON p.id_categoria = c.id_categoria
+        WHERE p.cantidad > 0
+        ORDER BY p.cantidad DESC
+        LIMIT 10`
+      );
+      
+      productos = productosFallback.map(producto => ({
+        ...producto,
+        score: 1.0 // Score por defecto para productos populares
+      }));
+    }
+
+    res.json({ productos });
   } catch (error) {
     console.error('Error al obtener recomendaciones:', error);
     res.status(500).json({ 
@@ -85,56 +109,78 @@ router.get('/', verifyToken, async (req, res) => {
  * @access Público
  */
 router.get('/guest', async (req, res) => {
-  try {    // Para usuarios invitados, simplemente obtenemos productos populares
-    // El ID 0 está reservado para indicar al servicio que devuelva productos populares
-    const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/predict/0`, {
-      // Desactiva el uso de resolución DNS de IPv6 para localhost
-      headers: {
-        'Host': '127.0.0.1:8000'
-      }
-    });
+  try {
+    let productos = [];
     
-    if (!response.data || !response.data.recommendations) {
-      return res.status(500).json({ error: 'Error al obtener recomendaciones' });
-    }
-
-    const recommendedProductIds = response.data.recommendations.map(item => item.id_producto);
-
-    // Si no hay recomendaciones, devolver array vacío
-    if (recommendedProductIds.length === 0) {
-      return res.json({ productos: [] });
-    }
-
-    // Obtener información detallada de los productos recomendados
-    const [productos] = await pool.query(
-      `SELECT 
-        p.id_producto, 
-        p.nombre, 
-        p.precio, 
-        p.imagen, 
-        p.cantidad as stock, 
-        c.nombre as categoria 
-      FROM productos p
-      JOIN Categorias c ON p.id_categoria = c.id_categoria
-      WHERE p.id_producto IN (?)`,
-      [recommendedProductIds]
-    );
-
-    // Ordenar productos según el orden de las recomendaciones
-    const recomendacionesConDetalles = recommendedProductIds.map(id => {
-      const producto = productos.find(p => p.id_producto === id);
-      const recomendacion = response.data.recommendations.find(r => r.id_producto === id);
+    try {
+      // Intentar obtener recomendaciones del servicio Python
+      const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/predict/0`, {
+        timeout: 5000,
+        headers: {
+          'Host': '127.0.0.1:8000'
+        }
+      });
       
-      if (producto && recomendacion) {
-        return {
-          ...producto,
-          score: recomendacion.score
-        };
-      }
-      return null;
-    }).filter(Boolean);
+      if (response.data && response.data.recommendations && response.data.recommendations.length > 0) {
+        const recommendedProductIds = response.data.recommendations.map(item => item.id_producto);
 
-    res.json({ productos: recomendacionesConDetalles });
+        // Obtener información detallada de los productos recomendados
+        const [productosRecomendados] = await pool.query(
+          `SELECT 
+            p.id_producto, 
+            p.nombre, 
+            p.precio, 
+            p.imagen, 
+            p.cantidad as stock, 
+            c.nombre as categoria 
+          FROM productos p
+          JOIN categorias c ON p.id_categoria = c.id_categoria
+          WHERE p.id_producto IN (?)`,
+          [recommendedProductIds]
+        );
+
+        // Ordenar productos según el orden de las recomendaciones
+        productos = recommendedProductIds.map(id => {
+          const producto = productosRecomendados.find(p => p.id_producto === id);
+          const recomendacion = response.data.recommendations.find(r => r.id_producto === id);
+          
+          if (producto && recomendacion) {
+            return {
+              ...producto,
+              score: recomendacion.score
+            };
+          }
+          return null;
+        }).filter(Boolean);
+      }
+    } catch (pythonServiceError) {
+      console.log('Python service not available, using fallback recommendations:', pythonServiceError.message);
+    }
+
+    // Fallback: Si el servicio Python no está disponible, devolver productos populares
+    if (productos.length === 0) {
+      const [productosFallback] = await pool.query(
+        `SELECT 
+          p.id_producto, 
+          p.nombre, 
+          p.precio, 
+          p.imagen, 
+          p.cantidad as stock, 
+          c.nombre as categoria 
+        FROM productos p
+        JOIN categorias c ON p.id_categoria = c.id_categoria
+        WHERE p.cantidad > 0
+        ORDER BY p.cantidad DESC
+        LIMIT 10`
+      );
+      
+      productos = productosFallback.map(producto => ({
+        ...producto,
+        score: 1.0 // Score por defecto para productos populares
+      }));
+    }
+
+    res.json({ productos });
   } catch (error) {
     console.error('Error al obtener recomendaciones para invitado:', error);
     res.status(500).json({ 
@@ -152,18 +198,25 @@ router.get('/guest', async (req, res) => {
 router.get('/health', async (req, res) => {
   try {
     const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/health`, {
+      timeout: 5000,
       headers: {
         'Host': '127.0.0.1:8000'
       }
     });
-    res.json(response.data);
+    res.json({ 
+      ...response.data, 
+      python_service: 'available',
+      fallback: false 
+    });
   } catch (error) {
-    res.status(503).json({ 
-      status: 'error',
-      message: 'Servicio de recomendaciones no disponible',
+    res.status(200).json({ 
+      status: 'ok',
+      python_service: 'unavailable',
+      fallback: true,
+      message: 'Using fallback recommendations',
       error: error.message
     });
   }
 });
 
-module.exports = router; 
+module.exports = router;

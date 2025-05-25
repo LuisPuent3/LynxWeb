@@ -46,11 +46,22 @@ RUN mkdir -p logs
 
 # Crear script de inicio que ejecute ambos servicios
 RUN echo '#!/bin/sh' > start.sh && \
-    echo 'echo "🚀 Iniciando microservicio de recomendaciones en puerto 8000..."' >> start.sh && \
-    echo 'cd /app/recommender && python3 main.py &' >> start.sh && \
-    echo 'sleep 5' >> start.sh && \
-    echo 'echo "🚀 Iniciando backend Node.js en puerto $PORT..."' >> start.sh && \
-    echo 'cd /app && node index.js' >> start.sh && \
+    echo 'echo "🚀 Starting LynxWeb monolith..."' >> start.sh && \
+    echo 'echo "🐍 Starting Python recommender service on port 8000..."' >> start.sh && \
+    echo 'cd /app/recommender' >> start.sh && \
+    echo 'python3 main.py &' >> start.sh && \
+    echo 'PYTHON_PID=$!' >> start.sh && \
+    echo 'echo "Python service started with PID: $PYTHON_PID"' >> start.sh && \
+    echo 'sleep 10' >> start.sh && \
+    echo 'echo "🔍 Checking if Python service is running..."' >> start.sh && \
+    echo 'if ps -p $PYTHON_PID > /dev/null; then' >> start.sh && \
+    echo '  echo "✅ Python service is running"' >> start.sh && \
+    echo 'else' >> start.sh && \
+    echo '  echo "❌ Python service failed to start"' >> start.sh && \
+    echo 'fi' >> start.sh && \
+    echo 'echo "🟢 Starting Node.js backend on port $PORT..."' >> start.sh && \
+    echo 'cd /app' >> start.sh && \
+    echo 'node index.js' >> start.sh && \
     chmod +x start.sh
 
 # Exponer solo el puerto principal (Railway usa PORT)
