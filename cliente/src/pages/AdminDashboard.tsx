@@ -1259,9 +1259,8 @@ const AdminDashboard: React.FC = () => {
                             <td>
                               <div className="d-flex align-items-center">
                                 <div className="me-3 bg-light rounded p-2 text-center" style={{width: "50px", height: "50px", overflow: "hidden"}}>
-                                  {producto.imagen && producto.imagen !== 'default.jpg' ? (
-                                    <img 
-                                      src={`http://localhost:5000/uploads/${producto.imagen}`} 
+                                  {producto.imagen && producto.imagen !== 'default.jpg' ? (                                    <img 
+                                      src={`/uploads/${producto.imagen}`} 
                                       alt={producto.nombre}
                                       style={{width: "100%", height: "100%", objectFit: "cover"}}
                                       onError={(e) => {

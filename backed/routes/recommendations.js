@@ -28,10 +28,7 @@ router.get('/', verifyToken, async (req, res) => {
     try {
       // Llamar al microservicio de recomendaciones
       const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/predict/${userId}`, {
-        timeout: 5000,
-        headers: {
-          'Host': '127.0.0.1:8000'
-        }
+        timeout: 5000
       });
       
       if (response.data && response.data.recommendations && response.data.recommendations.length > 0) {
@@ -115,10 +112,7 @@ router.get('/guest', async (req, res) => {
     try {
       // Intentar obtener recomendaciones del servicio Python
       const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/predict/0`, {
-        timeout: 5000,
-        headers: {
-          'Host': '127.0.0.1:8000'
-        }
+        timeout: 5000
       });
       
       if (response.data && response.data.recommendations && response.data.recommendations.length > 0) {
@@ -198,10 +192,7 @@ router.get('/guest', async (req, res) => {
 router.get('/health', async (req, res) => {
   try {
     const response = await axios.get(`${RECOMMENDER_SERVICE_URL}/health`, {
-      timeout: 5000,
-      headers: {
-        'Host': '127.0.0.1:8000'
-      }
+      timeout: 5000
     });
     res.json({ 
       ...response.data, 

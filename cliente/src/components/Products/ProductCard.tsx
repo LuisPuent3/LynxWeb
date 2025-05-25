@@ -22,8 +22,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ producto, addToCart }) => {
   const isTopRecommendation = recommendationIndex >= 0 && recommendationIndex < 6; // Top 6
   const isSecondaryRecommendation = recommendationIndex >= 6 && recommendationIndex < 12; // Recomendaciones secundarias
   // Construir URL una sola vez
-  const imageUrl = producto.imagen 
-    ? `http://localhost:5000/uploads/${producto.imagen}?v=${producto.id_producto}` 
+  const imageUrl = producto.imagen    ? `/uploads/${producto.imagen}?v=${producto.id_producto}` 
     : '';
     
   // Definimos los estilos de la tarjeta según las recomendaciones

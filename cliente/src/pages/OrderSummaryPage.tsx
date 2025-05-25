@@ -238,7 +238,7 @@ const OrderSummaryPage: React.FC = () => {
                     <div className="col-md-2">
                       {item.imagen ? (
                         <img 
-                          src={`http://localhost:5000/uploads/${item.imagen}?v=${item.id_producto}`}
+                          src={`/uploads/${item.imagen}?v=${item.id_producto}`}
                           alt={item.nombre}
                           className="img-fluid rounded shadow-sm"
                           style={{ 

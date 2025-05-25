@@ -23,7 +23,7 @@ const SimpleImageUploader: React.FC<SimpleImageUploaderProps> = ({
     setFilename(initialFilename);
     // Mostrar preview de imagen existente si hay un nombre inicial
     if (initialFilename) {
-      const imageUrl = `http://localhost:5000/uploads/${initialFilename}?v=${Date.now()}`;
+      const imageUrl = `/uploads/${initialFilename}?v=${Date.now()}`;
       fetch(imageUrl)
         .then(response => {
           if (!response.ok) throw new Error('La imagen no existe');

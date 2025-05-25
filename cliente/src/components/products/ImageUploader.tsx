@@ -23,10 +23,9 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     setPreview(null);
     setImgError(false);
   }, [productId, currentImage]);
-
   // Construir URL una sola vez con parámetro para evitar caché
   const imageUrl = currentImage 
-    ? `http://localhost:5000/uploads/${currentImage}?v=${Date.now()}` 
+    ? `/uploads/${currentImage}?v=${Date.now()}` 
     : '';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

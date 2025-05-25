@@ -30,10 +30,9 @@ const AdminProductCard: React.FC<AdminProductCardProps> = ({
     const categoria = categorias.find(cat => cat.id_categoria === producto.id_categoria);
     return categoria ? categoria.nombre : `Categoría ${producto.id_categoria}`;
   };
-
-  // URL directa a la imagen en el servidor
+  // URL relativa que funciona tanto en desarrollo como en producción
   const imageUrl = producto.imagen 
-    ? `http://localhost:5000/uploads/${producto.imagen}` 
+    ? `/uploads/${producto.imagen}` 
     : '';
 
   return (
@@ -154,4 +153,4 @@ const AdminProductCard: React.FC<AdminProductCardProps> = ({
   );
 };
 
-export default AdminProductCard; 
+export default AdminProductCard;

@@ -1,7 +1,7 @@
 /**
  * Test Case ID: LYNX_003
  * Este archivo contiene pruebas de integración que verifican la conexión real entre frontend y backend.
- * Estas pruebas deben ejecutarse con el backend en funcionamiento en http://localhost:5000.
+ * Estas pruebas deben ejecutarse con el backend en funcionamiento en la URL de la API correspondiente (por ejemplo, Railway o local).
  * 
  * De acuerdo al Plan de Pruebas:
  * - Este test forma parte del Sprint 4, actividad "Pruebas de conexión frontend-backend"
@@ -238,4 +238,4 @@ describe('LYNX_003: Prueba de Integración de Conexión API Frontend-Backend', (
       throw error;
     }
   });
-}); 
+});

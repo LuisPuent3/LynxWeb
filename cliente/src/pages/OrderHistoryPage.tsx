@@ -532,9 +532,8 @@ Gracias por tu compra!
                               <tr key={item.id_producto}>
                                 <td>
                                   <div className="d-flex align-items-center">
-                                    {item.imagen ? (
-                                      <img 
-                                        src={`http://localhost:5000/uploads/${item.imagen}?v=${item.id_producto}`}
+                                    {item.imagen ? (                                      <img 
+                                        src={`/uploads/${item.imagen}?v=${item.id_producto}`}
                                         alt={item.nombre}
                                         className="img-fluid rounded shadow-sm me-3"
                                         style={{ 
