@@ -24,7 +24,7 @@ app.use(cors({
 app.use(express.json());
 
 // Configuración para servir archivos estáticos desde el directorio uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   maxAge: '1d', // Caché por 1 día
   setHeaders: function (res, path, stat) {
     res.set('Cache-Control', 'public, max-age=86400'); // 1 día en segundos

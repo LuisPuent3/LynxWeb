@@ -57,38 +57,38 @@ const createOrder = async (req, res) => {
             });
         }
         
-        // Verificar si la tabla Pedidos tiene las columnas necesarias
+        // Verificar si la tabla pedidos tiene las columnas necesarias
         let tablasActualizadas = false;
         
         try {
             // Verificar si las columnas existen
-            const [columnas] = await db.query('SHOW COLUMNS FROM Pedidos');
+            const [columnas] = await db.query('SHOW COLUMNS FROM pedidos');
             const columnasExistentes = columnas.map(col => col.Field);
             
             // Si no existen las columnas adicionales, añadirlas
             if (!columnasExistentes.includes('nombre_completo')) {
-                await db.query('ALTER TABLE Pedidos ADD COLUMN nombre_completo VARCHAR(100)');
+                await db.query('ALTER TABLE pedidos ADD COLUMN nombre_completo VARCHAR(100)');
                 tablasActualizadas = true;
             }
             if (!columnasExistentes.includes('telefono_contacto')) {
-                await db.query('ALTER TABLE Pedidos ADD COLUMN telefono_contacto VARCHAR(20)');
+                await db.query('ALTER TABLE pedidos ADD COLUMN telefono_contacto VARCHAR(20)');
                 tablasActualizadas = true;
             }
             if (!columnasExistentes.includes('informacion_adicional')) {
-                await db.query('ALTER TABLE Pedidos ADD COLUMN informacion_adicional TEXT');
+                await db.query('ALTER TABLE pedidos ADD COLUMN informacion_adicional TEXT');
                 tablasActualizadas = true;
             }
             if (!columnasExistentes.includes('metodo_pago')) {
-                await db.query('ALTER TABLE Pedidos ADD COLUMN metodo_pago VARCHAR(20) DEFAULT "efectivo"');
+                await db.query('ALTER TABLE pedidos ADD COLUMN metodo_pago VARCHAR(20) DEFAULT "efectivo"');
                 tablasActualizadas = true;
             }
             if (!columnasExistentes.includes('total')) {
-                await db.query('ALTER TABLE Pedidos ADD COLUMN total DECIMAL(10,2)');
+                await db.query('ALTER TABLE pedidos ADD COLUMN total DECIMAL(10,2)');
                 tablasActualizadas = true;
             }
             
             if (tablasActualizadas) {
-                console.log('Se han añadido nuevas columnas a la tabla Pedidos');
+                console.log('Se han añadido nuevas columnas a la tabla pedidos');
             }
         } catch (error) {
             console.error('Error al verificar/actualizar estructura de tabla:', error);
@@ -200,7 +200,7 @@ const getOrdersByUser = async (req, res) => {
             `SELECT p.id_pedido, p.fecha, p.estado, ep.nombre AS estado_nombre, 
                    p.nombre_completo, p.telefono_contacto, p.informacion_adicional, p.metodo_pago
              FROM pedidos p
-             LEFT JOIN EstadosPedidos ep ON p.id_estado = ep.id_estado
+             LEFT JOIN estadospedidos ep ON p.id_estado = ep.id_estado
              WHERE p.id_usuario = ?
              ORDER BY p.fecha DESC`,
             [id]
@@ -219,7 +219,7 @@ const getOrdersByUser = async (req, res) => {
             `SELECT dp.id_pedido, dp.id_producto, dp.cantidad, dp.subtotal, 
                     p.nombre, p.precio, p.imagen
              FROM detallepedido dp
-             JOIN Productos p ON dp.id_producto = p.id_producto
+             JOIN productos p ON dp.id_producto = p.id_producto
              WHERE dp.id_pedido IN (?)`,
             [pedidoIds]
         );
@@ -262,8 +262,8 @@ const getAllOrders = async (req, res) => {
             `SELECT p.id_pedido, p.id_usuario, u.correo AS usuario, p.fecha, p.estado, ep.nombre AS estado_nombre,
                     p.nombre_completo, p.telefono_contacto, p.informacion_adicional, p.metodo_pago, p.total
              FROM pedidos p
-             JOIN Usuarios u ON p.id_usuario = u.id_usuario
-             LEFT JOIN EstadosPedidos ep ON p.id_estado = ep.id_estado
+             JOIN usuarios u ON p.id_usuario = u.id_usuario
+             LEFT JOIN estadospedidos ep ON p.id_estado = ep.id_estado
              ORDER BY p.fecha DESC`
         );
         
@@ -425,8 +425,8 @@ const getOrderById = async (req, res) => {
                    p.nombre_completo, p.telefono_contacto, p.informacion_adicional, p.metodo_pago, p.total,
                    u.correo AS usuario
              FROM pedidos p
-             LEFT JOIN Usuarios u ON p.id_usuario = u.id_usuario
-             LEFT JOIN EstadosPedidos ep ON p.id_estado = ep.id_estado
+             LEFT JOIN usuarios u ON p.id_usuario = u.id_usuario
+             LEFT JOIN estadospedidos ep ON p.id_estado = ep.id_estado
              WHERE p.id_pedido = ?`,
             [id]
         );
@@ -451,7 +451,7 @@ const getOrderById = async (req, res) => {
             `SELECT dp.id_detalle, dp.id_producto, dp.cantidad, dp.subtotal,
                     p.nombre, p.precio, p.imagen
              FROM detallepedido dp
-             JOIN Productos p ON dp.id_producto = p.id_producto
+             JOIN productos p ON dp.id_producto = p.id_producto
              WHERE dp.id_pedido = ?`,
             [id]
         );

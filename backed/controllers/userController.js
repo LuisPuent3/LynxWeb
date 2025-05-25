@@ -4,8 +4,8 @@ const bcrypt = require('bcryptjs');
 exports.register = async (req, res) => {
     const { nombre, apellidoP, apellidoM, correo, telefono, contraseña } = req.body;
     
-    // Primero insertar en la tabla Nombres
-    const nombreQuery = 'INSERT INTO Nombres (nombre, apellidoP, apellidoM) VALUES (?, ?, ?)';
+    // Primero insertar en la tabla nombres
+    const nombreQuery = 'INSERT INTO nombres (nombre, apellidoP, apellidoM) VALUES (?, ?, ?)';
     db.query(nombreQuery, [nombre, apellidoP, apellidoM], (err, nombreResult) => {
         if (err) {
             return res.status(500).json({ error: err.message });
@@ -46,7 +46,7 @@ exports.getUserById = (req, res) => {
     const query = `
         SELECT u.*, n.nombre, n.apellidoP, n.apellidoM 
         FROM usuarios u 
-        JOIN Nombres n ON u.id_nombre = n.id_nombre 
+        JOIN nombres n ON u.id_nombre = n.id_nombre 
         WHERE u.id_usuario = ?`;
     db.query(query, [req.params.id], (err, results) => {
         if (err) {
@@ -63,7 +63,7 @@ exports.updateUser = (req, res) => {
     const { nombre, apellidoP, apellidoM, correo, telefono } = req.body;
     const userId = req.params.id;
 
-    // Primero actualizar la tabla Nombres
+    // Primero actualizar la tabla nombres
     const getUserQuery = 'SELECT id_nombre FROM usuarios WHERE id_usuario = ?';
     db.query(getUserQuery, [userId], (err, results) => {
         if (err) {
@@ -74,7 +74,7 @@ exports.updateUser = (req, res) => {
         }
 
         const idNombre = results[0].id_nombre;
-        const updateNombreQuery = 'UPDATE Nombres SET nombre = ?, apellidoP = ?, apellidoM = ? WHERE id_nombre = ?';
+        const updateNombreQuery = 'UPDATE nombres SET nombre = ?, apellidoP = ?, apellidoM = ? WHERE id_nombre = ?';
         db.query(updateNombreQuery, [nombre, apellidoP, apellidoM, idNombre], (err) => {
             if (err) {
                 return res.status(500).json({ error: err.message });

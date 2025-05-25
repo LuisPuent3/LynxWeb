@@ -55,24 +55,23 @@ exports.requestPasswordReset = async (req, res) => {
     let user;    try {
       console.log("Ejecutando consulta SQL para verificar si existe el correo:", correo);
       
-      // Primero verificamos si la tabla Usuarios existe y tiene la estructura esperada
+      // Primero verificamos si la tabla usuarios existe y tiene la estructura esperada
       const [tables] = await pool.query(`
-        SHOW TABLES LIKE 'Usuarios'
+        SHOW TABLES LIKE 'usuarios'
       `);
       
       if (tables.length === 0) {
-        console.error("La tabla Usuarios no existe en la base de datos");
-        throw new Error("Estructura de base de datos incorrecta: tabla Usuarios no encontrada");
+        console.error("La tabla usuarios no existe en la base de datos");
+        throw new Error("Estructura de base de datos incorrecta: tabla usuarios no encontrada");
       }
-      
-      console.log("Tabla Usuarios encontrada, verificando columnas...");
+      console.log("Tabla usuarios encontrada, verificando columnas...");
       
       // Comprobamos la estructura de las tablas
       const [columns] = await pool.query(`
         SHOW COLUMNS FROM usuarios
       `);
       
-      console.log("Columnas en tabla Usuarios:", columns.map(c => c.Field));
+      console.log("Columnas en tabla usuarios:", columns.map(c => c.Field));
       
       // Realizamos la consulta
       console.log("Buscando usuario con correo:", correo);
@@ -81,7 +80,7 @@ exports.requestPasswordReset = async (req, res) => {
         [user] = await pool.query(`
           SELECT u.id_usuario, u.correo, n.nombre
           FROM usuarios u
-          LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
+          LEFT JOIN nombres n ON u.id_nombre = n.id_nombre
           WHERE u.correo = ?
         `, [correo]);
       } catch (joinError) {

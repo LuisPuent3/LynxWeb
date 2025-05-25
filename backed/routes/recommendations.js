@@ -5,7 +5,7 @@ const { verifyToken } = require('../middlewares/authMiddleware');
 const pool = require('../config/db');
 
 // Configuración del servicio de recomendaciones
-const RECOMMENDER_SERVICE_URL = process.env.RECOMMENDER_SERVICE_URL || 'http://127.0.0.1:8000';
+const RECOMMENDER_SERVICE_URL = 'http://127.0.0.1:8000'; // Force IPv4 loopback
 
 /**
  * @route GET /api/recommendations

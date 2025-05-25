@@ -13,12 +13,12 @@ exports.registerUser = async (req, res) => {
     // ID de rol: 1 = Cliente, 3 = Invitado
     const rolId = isGuestUser ? 3 : 1;
     
-    // Para todos los usuarios, crear entrada en Nombres primero
+    // Para todos los usuarios, crear entrada en nombres primero
     // El nombre será el correo para invitados si no se proporciona
     const nombreToUse = isGuestUser ? correo.split('@')[0] : nombre;
     
     const [nombreResult] = await pool.query(
-      'INSERT INTO Nombres (nombre, apellidoP, apellidoM) VALUES (?, ?, ?)',
+      'INSERT INTO nombres (nombre, apellidoP, apellidoM) VALUES (?, ?, ?)',
       [nombreToUse, apellidoP || '', apellidoM || '']
     );
     
@@ -147,8 +147,8 @@ exports.loginUser = async (req, res) => {
     const [rows] = await pool.query(`
       SELECT u.*, n.nombre, r.nombre as rol_nombre
       FROM usuarios u
-      LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
-      JOIN Roles r ON u.id_rol = r.id_rol
+      LEFT JOIN nombres n ON u.id_nombre = n.id_nombre
+      JOIN roles r ON u.id_rol = r.id_rol
       WHERE u.correo = ?
     `, [correo]);
 
@@ -254,8 +254,8 @@ exports.verifyToken = async (req, res) => {
     const [rows] = await pool.query(`
       SELECT u.id_usuario, u.correo, n.nombre, r.nombre as rol_nombre
       FROM usuarios u
-      LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
-      JOIN Roles r ON u.id_rol = r.id_rol
+      LEFT JOIN nombres n ON u.id_nombre = n.id_nombre
+      JOIN roles r ON u.id_rol = r.id_rol
       WHERE u.id_usuario = ?
     `, [req.userId]);
 
@@ -289,8 +289,8 @@ exports.getAllUsers = async (req, res) => {
     const [rows] = await pool.query(`
       SELECT u.id_usuario, u.correo, n.nombre, r.nombre as rol_nombre, u.fecha_registro
       FROM usuarios u
-      LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
-      JOIN Roles r ON u.id_rol = r.id_rol
+      LEFT JOIN nombres n ON u.id_nombre = n.id_nombre
+      JOIN roles r ON u.id_rol = r.id_rol
       ORDER BY u.id_usuario DESC
     `);
 
