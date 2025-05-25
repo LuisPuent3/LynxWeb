@@ -1,0 +1,66 @@
+# Archivos de desarrollo
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+logs/*.log
+*.log
+
+# Archivos temporales
+.tmp
+.temp
+temp_change.txt
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile.test
+docker-compose.test.yml
+
+# Documentación y tests
+docs/
+README.md
+CHECKLIST_PRE_DEPLOYMENT.md
+DEPLOY_RAILWAY.md
+
+# Configuraciones locales
+.env.local
+.env.development
+
+# Archivos de XAMPP
+*.xampp
+
+# Archivos de backup
+*.bak
+*.backup
+
+# Cliente en desarrollo (se copia el build)
+cliente/node_modules
+cliente/dist
+cliente/.vite
+
+# Tests
+**/*.test.js
+**/*.test.ts
+backed/tests/
+cliente/src/**/*.test.tsx
+vitest.config.ts
+vitest.setup.ts
+
+# Scripts de desarrollo
+migrate-to-railway.sh
+migrate-to-railway.ps1

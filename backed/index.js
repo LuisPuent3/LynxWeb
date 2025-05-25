@@ -16,7 +16,9 @@ app.use((req, res, next) => {
 
 // Middlewares
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: process.env.NODE_ENV === 'production' 
+        ? process.env.FRONTEND_URL || true 
+        : 'http://localhost:5173',
     credentials: true
 }));
 app.use(express.json());
@@ -30,14 +32,21 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   }
 }));
 
-// Configuración para servir archivos estáticos desde el directorio cliente/public
-app.use('/assets', express.static(path.join(__dirname, '../cliente/public/assets'), {
-  maxAge: '1d', // Caché por 1 día
-  setHeaders: function (res, path, stat) {
-    res.set('Cache-Control', 'public, max-age=86400'); // 1 día en segundos
-    res.set('Expires', new Date(Date.now() + 86400000).toUTCString()); // 1 día en milisegundos
-  }
-}));
+// En producción, servir el frontend React build
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'public')));
+}
+
+// Configuración para servir archivos estáticos desde el directorio cliente/public (desarrollo)
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/assets', express.static(path.join(__dirname, '../cliente/public/assets'), {
+    maxAge: '1d', // Caché por 1 día
+    setHeaders: function (res, path, stat) {
+      res.set('Cache-Control', 'public, max-age=86400'); // 1 día en segundos
+      res.set('Expires', new Date(Date.now() + 86400000).toUTCString()); // 1 día en milisegundos
+    }
+  }));
+}
 
 // Importar rutas
 const authRoutes = require('./routes/authRoutes');
@@ -69,6 +78,29 @@ app.get('/api/test', (req, res) => {
     res.json({ message: 'API funcionando correctamente', timestamp: new Date().toISOString() });
 });
 
+// Health check para Railway
+app.get('/api/health', async (req, res) => {
+    try {
+        // Verificar conexión a BD
+        const db = require('./config/db');
+        await db.query('SELECT 1');
+        res.json({ 
+            status: 'healthy', 
+            timestamp: new Date().toISOString(),
+            database: 'connected',
+            environment: process.env.NODE_ENV || 'development'
+        });
+    } catch (error) {
+        console.error('Health check failed:', error);
+        res.status(500).json({ 
+            status: 'unhealthy', 
+            timestamp: new Date().toISOString(),
+            database: 'disconnected',
+            error: error.message 
+        });
+    }
+});
+
 // Ruta de depuración específica para pedidos
 app.get('/api/debug/rutas', (req, res) => {
     // Recopilar información sobre las rutas registradas
@@ -96,7 +128,23 @@ app.get('/api/debug/rutas', (req, res) => {
     });
 });
 
-// Manejo de rutas no encontradas
+// Fallback para React Router - DEBE IR DESPUÉS de todas las rutas API
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    // Verificar que no sea una ruta API o de uploads
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    } else {
+      res.status(404).json({ 
+        error: 'API endpoint not found',
+        path: req.originalUrl,
+        method: req.method
+      });
+    }
+  });
+}
+
+// Manejo de rutas no encontradas (desarrollo)
 app.use((req, res, next) => {
     if (!res.headersSent) {
         console.log(`Ruta no encontrada: ${req.method} ${req.originalUrl}`);
