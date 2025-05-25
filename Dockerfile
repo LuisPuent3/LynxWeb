@@ -46,23 +46,23 @@ RUN mkdir -p logs
 
 # Crear script de inicio que ejecute ambos servicios
 RUN echo '#!/bin/sh' > start.sh && \
-    echo 'echo "🚀 Iniciando microservicio de recomendaciones..."' >> start.sh && \
+    echo 'echo "🚀 Iniciando microservicio de recomendaciones en puerto 8000..."' >> start.sh && \
     echo 'cd /app/recommender && python3 main.py &' >> start.sh && \
-    echo 'echo "🚀 Iniciando backend Node.js..."' >> start.sh && \
+    echo 'sleep 5' >> start.sh && \
+    echo 'echo "🚀 Iniciando backend Node.js en puerto $PORT..."' >> start.sh && \
     echo 'cd /app && node index.js' >> start.sh && \
     chmod +x start.sh
 
-# Exponer puertos (5000 para Node.js, 8000 para Python)
-EXPOSE 5000 8000
+# Exponer solo el puerto principal (Railway usa PORT)
+EXPOSE $PORT
 
 # Variables de entorno por defecto
 ENV NODE_ENV=production
-ENV PORT=5000
 ENV RECOMMENDER_SERVICE_URL=http://localhost:8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 5000) + '/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
 
 # Comando de inicio
 CMD ["./start.sh"]
