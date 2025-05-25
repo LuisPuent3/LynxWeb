@@ -3,7 +3,7 @@ const db = require('../config/db');
 exports.createCategory = async (req, res) => {
     try {
         const { nombre, descripcion } = req.body;
-        const query = 'INSERT INTO Categorias (nombre, descripcion) VALUES (?, ?)';
+        const query = 'INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)';
         const [result] = await db.query(query, [nombre, descripcion]);
         res.status(201).json({ id: result.insertId, nombre, descripcion });
     } catch (err) {
@@ -14,7 +14,7 @@ exports.createCategory = async (req, res) => {
 
 exports.getCategories = async (req, res) => {
     try {
-        const query = 'SELECT * FROM Categorias';
+        const query = 'SELECT * FROM categorias';
         const [results] = await db.query(query);
         res.json(results);
     } catch (err) {
@@ -25,7 +25,7 @@ exports.getCategories = async (req, res) => {
 
 exports.getCategoryById = async (req, res) => {
     try {
-        const query = 'SELECT * FROM Categorias WHERE id_categoria = ?';
+        const query = 'SELECT * FROM categorias WHERE id_categoria = ?';
         const [results] = await db.query(query, [req.params.id]);
         
         if (results.length === 0) {
@@ -42,7 +42,7 @@ exports.getCategoryById = async (req, res) => {
 exports.updateCategory = async (req, res) => {
     try {
         const { nombre, descripcion } = req.body;
-        const query = 'UPDATE Categorias SET nombre = ?, descripcion = ? WHERE id_categoria = ?';
+        const query = 'UPDATE categorias SET nombre = ?, descripcion = ? WHERE id_categoria = ?';
         await db.query(query, [nombre, descripcion, req.params.id]);
         res.json({ message: 'Categoría actualizada' });
     } catch (err) {
@@ -53,7 +53,7 @@ exports.updateCategory = async (req, res) => {
 
 exports.deleteCategory = async (req, res) => {
     try {
-        const query = 'DELETE FROM Categorias WHERE id_categoria = ?';
+        const query = 'DELETE FROM categorias WHERE id_categoria = ?';
         await db.query(query, [req.params.id]);
         res.json({ message: 'Categoría eliminada' });
     } catch (err) {

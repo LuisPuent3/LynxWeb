@@ -13,7 +13,7 @@ exports.register = async (req, res) => {
 
         // Luego insertar en la tabla Usuarios
         const hashedPassword = bcrypt.hashSync(contraseña, 10);
-        const usuarioQuery = 'INSERT INTO Usuarios (id_nombre, correo, telefono, contraseña, id_rol) VALUES (?, ?, ?, ?, 1)';
+        const usuarioQuery = 'INSERT INTO usuarios (id_nombre, correo, telefono, contraseña, id_rol) VALUES (?, ?, ?, ?, 1)';
         db.query(usuarioQuery, [nombreResult.insertId, correo, telefono, hashedPassword], (err, usuarioResult) => {
             if (err) {
                 return res.status(500).json({ error: err.message });
@@ -25,7 +25,7 @@ exports.register = async (req, res) => {
 
 exports.login = (req, res) => {
     const { correo, contraseña } = req.body;
-    const query = 'SELECT * FROM Usuarios WHERE correo = ?';
+    const query = 'SELECT * FROM usuarios WHERE correo = ?';
     db.query(query, [correo], (err, results) => {
         if (err) {
             return res.status(500).json({ error: err.message });
@@ -45,7 +45,7 @@ exports.login = (req, res) => {
 exports.getUserById = (req, res) => {
     const query = `
         SELECT u.*, n.nombre, n.apellidoP, n.apellidoM 
-        FROM Usuarios u 
+        FROM usuarios u 
         JOIN Nombres n ON u.id_nombre = n.id_nombre 
         WHERE u.id_usuario = ?`;
     db.query(query, [req.params.id], (err, results) => {
@@ -64,7 +64,7 @@ exports.updateUser = (req, res) => {
     const userId = req.params.id;
 
     // Primero actualizar la tabla Nombres
-    const getUserQuery = 'SELECT id_nombre FROM Usuarios WHERE id_usuario = ?';
+    const getUserQuery = 'SELECT id_nombre FROM usuarios WHERE id_usuario = ?';
     db.query(getUserQuery, [userId], (err, results) => {
         if (err) {
             return res.status(500).json({ error: err.message });
@@ -81,7 +81,7 @@ exports.updateUser = (req, res) => {
             }
 
             // Luego actualizar la tabla Usuarios
-            const updateUsuarioQuery = 'UPDATE Usuarios SET correo = ?, telefono = ? WHERE id_usuario = ?';
+            const updateUsuarioQuery = 'UPDATE usuarios SET correo = ?, telefono = ? WHERE id_usuario = ?';
             db.query(updateUsuarioQuery, [correo, telefono, userId], (err) => {
                 if (err) {
                     return res.status(500).json({ error: err.message });

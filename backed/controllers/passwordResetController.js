@@ -69,7 +69,7 @@ exports.requestPasswordReset = async (req, res) => {
       
       // Comprobamos la estructura de las tablas
       const [columns] = await pool.query(`
-        SHOW COLUMNS FROM Usuarios
+        SHOW COLUMNS FROM usuarios
       `);
       
       console.log("Columnas en tabla Usuarios:", columns.map(c => c.Field));
@@ -80,7 +80,7 @@ exports.requestPasswordReset = async (req, res) => {
       try {
         [user] = await pool.query(`
           SELECT u.id_usuario, u.correo, n.nombre
-          FROM Usuarios u
+          FROM usuarios u
           LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
           WHERE u.correo = ?
         `, [correo]);
@@ -90,7 +90,7 @@ exports.requestPasswordReset = async (req, res) => {
         // Si hay problemas con el JOIN, hacemos una consulta más simple
         [user] = await pool.query(`
           SELECT id_usuario, correo, id_nombre
-          FROM Usuarios
+          FROM usuarios
           WHERE correo = ?
         `, [correo]);
           // Si encontramos el usuario pero no tenemos su nombre, lo dejamos como null
@@ -224,7 +224,7 @@ exports.resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(nuevaContraseña, 10);
     
     // Actualizar contraseña en la base de datos
-    await pool.query('UPDATE Usuarios SET contraseña = ? WHERE id_usuario = ?', [hashedPassword, userId]);
+    await pool.query('UPDATE usuarios SET contraseña = ? WHERE id_usuario = ?', [hashedPassword, userId]);
     
     // Responder al cliente
     res.status(200).json({

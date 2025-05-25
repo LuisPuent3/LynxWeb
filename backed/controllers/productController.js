@@ -53,7 +53,7 @@ if (!fs.existsSync(defaultImagePath)) {
 exports.getProducts = async (req, res) => {
     try {
         const connection = await db;
-        const [results] = await connection.query('SELECT * FROM Productos');
+        const [results] = await connection.query('SELECT * FROM productos');
         res.json(results);
     } catch (error) {
         console.error('Error en getProducts:', error);
@@ -73,7 +73,7 @@ exports.createProduct = async (req, res) => {
         
         // Verificar si ya existe un producto con el mismo nombre
         const connection = await db;
-        const [existingProducts] = await connection.query('SELECT * FROM Productos WHERE nombre = ?', [nombre]);
+        const [existingProducts] = await connection.query('SELECT * FROM productos WHERE nombre = ?', [nombre]);
         
         if (existingProducts.length > 0) {
             return res.status(400).json({ 
@@ -82,7 +82,7 @@ exports.createProduct = async (req, res) => {
             });
         }
         
-        const query = 'INSERT INTO Productos (nombre, precio, cantidad, id_categoria, imagen) VALUES (?, ?, ?, ?, ?)';
+        const query = 'INSERT INTO productos (nombre, precio, cantidad, id_categoria, imagen) VALUES (?, ?, ?, ?, ?)';
         const [result] = await connection.query(query, [nombre, precio, cantidad, id_categoria, imagenFinal]);
         
         res.status(201).json({ 
@@ -114,7 +114,7 @@ exports.createProduct = async (req, res) => {
 exports.getProductById = async (req, res) => {
     try {
         const connection = await db;
-        const [results] = await connection.query('SELECT * FROM Productos WHERE id_producto = ?', [req.params.id]);
+        const [results] = await connection.query('SELECT * FROM productos WHERE id_producto = ?', [req.params.id]);
         
         if (results.length === 0) {
             return res.status(404).json({ message: 'Producto no encontrado' });
@@ -138,7 +138,7 @@ exports.updateProduct = async (req, res) => {
         
         // Verificar si ya existe otro producto con el mismo nombre
         const [existingProducts] = await connection.query(
-            'SELECT * FROM Productos WHERE nombre = ? AND id_producto != ?', 
+            'SELECT * FROM productos WHERE nombre = ? AND id_producto != ?', 
             [nombre, productId]
         );
         
@@ -149,7 +149,7 @@ exports.updateProduct = async (req, res) => {
             });
         }
         
-        const query = 'UPDATE Productos SET nombre = ?, precio = ?, cantidad = ?, id_categoria = ?, imagen = ? WHERE id_producto = ?';
+        const query = 'UPDATE productos SET nombre = ?, precio = ?, cantidad = ?, id_categoria = ?, imagen = ? WHERE id_producto = ?';
         
         await connection.query(query, [nombre, precio, cantidad, id_categoria, imagenFinal, productId]);
         res.json({ 
@@ -181,7 +181,7 @@ exports.deleteProduct = async (req, res) => {
     try {
         const connection = await db;
         // Primero obtenemos el producto para eliminar la imagen si existe
-        const [producto] = await connection.query('SELECT imagen FROM Productos WHERE id_producto = ?', [req.params.id]);
+        const [producto] = await connection.query('SELECT imagen FROM productos WHERE id_producto = ?', [req.params.id]);
         
         if (producto.length > 0 && producto[0].imagen && producto[0].imagen !== DEFAULT_IMAGE) {
             const imagePath = path.join(uploadsDir, producto[0].imagen);
@@ -193,7 +193,7 @@ exports.deleteProduct = async (req, res) => {
             }
         }
         
-        await connection.query('DELETE FROM Productos WHERE id_producto = ?', [req.params.id]);
+        await connection.query('DELETE FROM productos WHERE id_producto = ?', [req.params.id]);
         res.json({ message: 'Producto eliminado exitosamente' });
     } catch (error) {
         console.error('Error en deleteProduct:', error);
@@ -219,7 +219,7 @@ exports.updateProductImage = async (req, res) => {
         const connection = await db;
         
         // Primero obtener la imagen actual para eliminarla
-        const [producto] = await connection.query('SELECT imagen FROM Productos WHERE id_producto = ?', [productId]);
+        const [producto] = await connection.query('SELECT imagen FROM productos WHERE id_producto = ?', [productId]);
         
         if (producto.length === 0) {
             return res.status(404).json({ message: 'Producto no encontrado' });
@@ -236,7 +236,7 @@ exports.updateProductImage = async (req, res) => {
         }
         
         // Actualizar con la nueva imagen
-        await connection.query('UPDATE Productos SET imagen = ? WHERE id_producto = ?', [newImageName, productId]);
+        await connection.query('UPDATE productos SET imagen = ? WHERE id_producto = ?', [newImageName, productId]);
         
         res.json({ 
             message: 'Imagen de producto actualizada exitosamente',

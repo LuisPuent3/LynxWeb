@@ -26,7 +26,7 @@ exports.createOrder = async (req, res) => {
     let userIdForDB;
     if (id_usuario === 'guest') {
       const [guestUser] = await orderConnection.query(
-        'SELECT id_usuario FROM Usuarios WHERE correo = ?',
+        'SELECT id_usuario FROM usuarios WHERE correo = ?',
         ['guest@lynxshop.com']
       );
       if (!guestUser || guestUser.length === 0) {
@@ -39,7 +39,7 @@ exports.createOrder = async (req, res) => {
     }
 
     const [orderResult] = await orderConnection.query(
-      'INSERT INTO Pedidos (id_usuario, id_estado) VALUES (?, 1)',
+      'INSERT INTO pedidos (id_usuario, id_estado) VALUES (?, 1)',
       [userIdForDB]
     );
     console.log('Pedido insertado correctamente:', orderResult);
@@ -54,7 +54,7 @@ exports.createOrder = async (req, res) => {
     ]);
 
     await orderConnection.query(
-      'INSERT INTO DetallePedido (id_pedido, id_producto, cantidad, subtotal) VALUES ?',
+      'INSERT INTO detallepedido (id_pedido, id_producto, cantidad, subtotal) VALUES ?',
       [detalles]
     );
     console.log('Detalles del pedido insertados correctamente');
@@ -85,7 +85,7 @@ exports.getOrdersByUser = async (req, res) => {
     const { id_usuario } = req.params;
 
     const [orders] = await connection.query(
-      'SELECT * FROM Pedidos WHERE id_usuario = ?',
+      'SELECT * FROM pedidos WHERE id_usuario = ?',
       [id_usuario]
     );
     res.json(orders);
@@ -102,7 +102,7 @@ exports.getOrderDetails = async (req, res) => {
 
     const [details] = await connection.query(
       `SELECT p.id_pedido, p.fecha, dp.id_producto, prod.nombre, dp.cantidad, dp.subtotal
-       FROM Pedidos p
+       FROM pedidos p
        JOIN DetallePedido dp ON p.id_pedido = dp.id_pedido
        JOIN Productos prod ON dp.id_producto = prod.id_producto
        WHERE p.id_pedido = ?`,

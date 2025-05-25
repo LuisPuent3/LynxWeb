@@ -26,7 +26,7 @@ exports.registerUser = async (req, res) => {
     
     // Crear entrada en tabla Usuarios
     const [userResult] = await pool.query(
-      'INSERT INTO Usuarios (id_nombre, correo, telefono, contraseña, id_rol) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO usuarios (id_nombre, correo, telefono, contraseña, id_rol) VALUES (?, ?, ?, ?, ?)',
       [id_nombre, correo, telefono, hashedPassword, rolId]
     );
     
@@ -146,7 +146,7 @@ exports.loginUser = async (req, res) => {
     // Recuperar usuario y detalles relacionados
     const [rows] = await pool.query(`
       SELECT u.*, n.nombre, r.nombre as rol_nombre
-      FROM Usuarios u
+      FROM usuarios u
       LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
       JOIN Roles r ON u.id_rol = r.id_rol
       WHERE u.correo = ?
@@ -253,7 +253,7 @@ exports.verifyToken = async (req, res) => {
     // El middleware ya verificó el token, solo devolvemos el usuario
     const [rows] = await pool.query(`
       SELECT u.id_usuario, u.correo, n.nombre, r.nombre as rol_nombre
-      FROM Usuarios u
+      FROM usuarios u
       LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
       JOIN Roles r ON u.id_rol = r.id_rol
       WHERE u.id_usuario = ?
@@ -288,7 +288,7 @@ exports.getAllUsers = async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT u.id_usuario, u.correo, n.nombre, r.nombre as rol_nombre, u.fecha_registro
-      FROM Usuarios u
+      FROM usuarios u
       LEFT JOIN Nombres n ON u.id_nombre = n.id_nombre
       JOIN Roles r ON u.id_rol = r.id_rol
       ORDER BY u.id_usuario DESC
@@ -316,7 +316,7 @@ exports.getUserPhone = async (req, res) => {
     // Consultar solo el teléfono del usuario por su ID
     const [rows] = await pool.query(`
       SELECT telefono
-      FROM Usuarios
+      FROM usuarios
       WHERE id_usuario = ?
     `, [userId]);
 

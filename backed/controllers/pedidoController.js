@@ -19,7 +19,7 @@ const createOrder = async (req, res) => {
         const stockChecks = await Promise.all(
             carrito.map(async ({ id_producto, cantidad }) => {
                 const [productRows] = await connection.query(
-                    'SELECT id_producto, nombre, cantidad as stock FROM Productos WHERE id_producto = ? FOR UPDATE',
+                    'SELECT id_producto, nombre, cantidad as stock FROM productos WHERE id_producto = ? FOR UPDATE',
                     [id_producto]
                 );
                 
@@ -99,7 +99,7 @@ const createOrder = async (req, res) => {
         
         // Insertar el pedido principal con la estructura actualizada (dentro de la misma transacción)
         const [pedido] = await connection.query(
-            `INSERT INTO Pedidos (
+            `INSERT INTO pedidos (
                 id_usuario, estado, id_estado, 
                 nombre_completo, telefono_contacto, 
                 informacion_adicional, metodo_pago, total
@@ -112,7 +112,7 @@ const createOrder = async (req, res) => {
         for (const { id_producto, cantidad, precio } of carrito) {
             const subtotal = cantidad * precio;
             await connection.query(
-                `INSERT INTO DetallePedido (id_pedido, id_producto, cantidad, subtotal) 
+                `INSERT INTO detallepedido (id_pedido, id_producto, cantidad, subtotal) 
                 VALUES (?, ?, ?, ?)`,
                 [id_pedido, id_producto, cantidad, subtotal]
             );
@@ -127,7 +127,7 @@ const createOrder = async (req, res) => {
             try {
                 // Primero verificar si el usuario existe y tiene un teléfono generado automáticamente
                 const [usuario] = await db.query(
-                    'SELECT telefono FROM Usuarios WHERE id_usuario = ?',
+                    'SELECT telefono FROM usuarios WHERE id_usuario = ?',
                     [id_usuario]
                 );
                 
@@ -136,7 +136,7 @@ const createOrder = async (req, res) => {
                     // Actualizar solo si no tiene teléfono o si el teléfono comienza con '000' (generado automáticamente)
                     if (!telefonoActual || telefonoActual.startsWith('000')) {
                         await db.query(
-                            'UPDATE Usuarios SET telefono = ? WHERE id_usuario = ?',
+                            'UPDATE usuarios SET telefono = ? WHERE id_usuario = ?',
                             [telefono_contacto, id_usuario]
                         );
                         console.log(`Teléfono actualizado para el usuario ${id_usuario}`);
@@ -199,7 +199,7 @@ const getOrdersByUser = async (req, res) => {
         const [orders] = await db.query(
             `SELECT p.id_pedido, p.fecha, p.estado, ep.nombre AS estado_nombre, 
                    p.nombre_completo, p.telefono_contacto, p.informacion_adicional, p.metodo_pago
-             FROM Pedidos p
+             FROM pedidos p
              LEFT JOIN EstadosPedidos ep ON p.id_estado = ep.id_estado
              WHERE p.id_usuario = ?
              ORDER BY p.fecha DESC`,
@@ -218,7 +218,7 @@ const getOrdersByUser = async (req, res) => {
         const [detalles] = await db.query(
             `SELECT dp.id_pedido, dp.id_producto, dp.cantidad, dp.subtotal, 
                     p.nombre, p.precio, p.imagen
-             FROM DetallePedido dp
+             FROM detallepedido dp
              JOIN Productos p ON dp.id_producto = p.id_producto
              WHERE dp.id_pedido IN (?)`,
             [pedidoIds]
@@ -261,7 +261,7 @@ const getAllOrders = async (req, res) => {
         const [orders] = await db.query(
             `SELECT p.id_pedido, p.id_usuario, u.correo AS usuario, p.fecha, p.estado, ep.nombre AS estado_nombre,
                     p.nombre_completo, p.telefono_contacto, p.informacion_adicional, p.metodo_pago, p.total
-             FROM Pedidos p
+             FROM pedidos p
              JOIN Usuarios u ON p.id_usuario = u.id_usuario
              LEFT JOIN EstadosPedidos ep ON p.id_estado = ep.id_estado
              ORDER BY p.fecha DESC`
@@ -276,7 +276,7 @@ const getAllOrders = async (req, res) => {
                 // Obtener detalles y calcular totales
                 const [detalles] = await db.query(
                     `SELECT id_pedido, SUM(subtotal) as total 
-                     FROM DetallePedido 
+                     FROM detallepedido 
                      WHERE id_pedido IN (?) 
                      GROUP BY id_pedido`,
                     [pedidosIds]
@@ -290,7 +290,7 @@ const getAllOrders = async (req, res) => {
                             order.total = detalle.total;
                             // Actualizar en la base de datos también
                             await db.query(
-                                `UPDATE Pedidos SET total = ? WHERE id_pedido = ?`,
+                                `UPDATE pedidos SET total = ? WHERE id_pedido = ?`,
                                 [detalle.total, order.id_pedido]
                             );
                         }
@@ -325,7 +325,7 @@ const updateOrderStatus = async (req, res) => {
         
         // Actualizamos ambos campos de estado para mantener consistencia
         const [result] = await connection.query(
-            `UPDATE Pedidos SET id_estado = ?, estado = ? WHERE id_pedido = ?`,
+            `UPDATE pedidos SET id_estado = ?, estado = ? WHERE id_pedido = ?`,
             [id_estado, estado, id]
         );
         
@@ -343,7 +343,7 @@ const updateOrderStatus = async (req, res) => {
             
             // Obtener todos los productos del pedido
             const [detalles] = await connection.query(
-                `SELECT id_producto, cantidad FROM DetallePedido WHERE id_pedido = ?`,
+                `SELECT id_producto, cantidad FROM detallepedido WHERE id_pedido = ?`,
                 [id]
             );
             
@@ -354,7 +354,7 @@ const updateOrderStatus = async (req, res) => {
                 console.log(`[pedidoController] Actualizando stock del producto ${id_producto}, reduciendo ${cantidad} unidades`);
                 
                 const [updateResult] = await connection.query(
-                    `UPDATE Productos SET cantidad = cantidad - ? WHERE id_producto = ? AND cantidad >= ?`,
+                    `UPDATE productos SET cantidad = cantidad - ? WHERE id_producto = ? AND cantidad >= ?`,
                     [cantidad, id_producto, cantidad]
                 );
                 
@@ -424,7 +424,7 @@ const getOrderById = async (req, res) => {
             `SELECT p.id_pedido, p.id_usuario, p.fecha, p.estado, ep.nombre AS estado_nombre, 
                    p.nombre_completo, p.telefono_contacto, p.informacion_adicional, p.metodo_pago, p.total,
                    u.correo AS usuario
-             FROM Pedidos p
+             FROM pedidos p
              LEFT JOIN Usuarios u ON p.id_usuario = u.id_usuario
              LEFT JOIN EstadosPedidos ep ON p.id_estado = ep.id_estado
              WHERE p.id_pedido = ?`,
@@ -450,7 +450,7 @@ const getOrderById = async (req, res) => {
         const [productsData] = await db.query(
             `SELECT dp.id_detalle, dp.id_producto, dp.cantidad, dp.subtotal,
                     p.nombre, p.precio, p.imagen
-             FROM DetallePedido dp
+             FROM detallepedido dp
              JOIN Productos p ON dp.id_producto = p.id_producto
              WHERE dp.id_pedido = ?`,
             [id]
