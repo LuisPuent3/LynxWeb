@@ -53,8 +53,8 @@ def fetch_product_data():
             # Consulta SQL para obtener productos con su categoría
             query = """
             SELECT p.id_producto, CONCAT_WS(' ', p.nombre, c.nombre) AS texto
-            FROM Productos p
-            JOIN Categorias c ON p.id_categoria = c.id_categoria
+            FROM productos p
+            JOIN categorias c ON p.id_categoria = c.id_categoria
             """
             cursor.execute(query)
             products = cursor.fetchall()

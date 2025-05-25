@@ -27,7 +27,7 @@ const verifyRole = (roles) => {
             if (!req.userRole) {
                 const query = `
                     SELECT r.nombre as rol 
-                    FROM Usuarios u 
+                    FROM usuarios u 
                     JOIN Roles r ON u.id_rol = r.id_rol 
                     WHERE u.id_usuario = ?
                 `;

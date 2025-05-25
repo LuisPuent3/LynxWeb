@@ -17,7 +17,7 @@ router.get('/', verifyToken, async (req, res) => {
     const userId = req.userId;
 
     // Verificar si el usuario existe
-    const [user] = await pool.query('SELECT id_usuario FROM Usuarios WHERE id_usuario = ?', [userId]);
+    const [user] = await pool.query('SELECT id_usuario FROM usuarios WHERE id_usuario = ?', [userId]);
     
     if (!user || user.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -49,7 +49,7 @@ router.get('/', verifyToken, async (req, res) => {
         p.imagen, 
         p.cantidad as stock, 
         c.nombre as categoria 
-      FROM Productos p
+      FROM productos p
       JOIN Categorias c ON p.id_categoria = c.id_categoria
       WHERE p.id_producto IN (?)`,
       [recommendedProductIds]
@@ -114,7 +114,7 @@ router.get('/guest', async (req, res) => {
         p.imagen, 
         p.cantidad as stock, 
         c.nombre as categoria 
-      FROM Productos p
+      FROM productos p
       JOIN Categorias c ON p.id_categoria = c.id_categoria
       WHERE p.id_producto IN (?)`,
       [recommendedProductIds]

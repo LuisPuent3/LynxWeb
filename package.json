@@ -1,51 +1,5 @@
 {
-  "name": "lynxwebpage",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite --config vite.config.mts",
-    "build": "tsc && vite build --config vite.config.mts",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview --config vite.config.mts",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:docker": "docker-compose -f docker-compose.test.yml up --build",
-    "test:docker:run": "docker-compose -f docker-compose.test.yml run --rm frontend-test",
-    "test:docker:single": "docker-compose -f docker-compose.test.yml run --rm frontend-test npm run test --",
-    "test:lynx": "vitest run cliente/src/__tests__/cases/LYNX_003 cliente/src/__tests__/cases/LYNX_010",
-    "test:docker:lynx": "npm run test:docker:single \"src/__tests__/cases/LYNX_010/ApiErrorHandling.test.ts\" && npm run test:docker:single \"src/__tests__/cases/LYNX_003/ApiConnectionSimple.test.ts\" && npm run test:docker:single \"src/__tests__/cases/LYNX_003/ApiConnection.test.tsx\""
-  },
   "dependencies": {
-    "@popperjs/core": "^2.11.8",
-    "axios": "^1.7.9",
-    "bootstrap": "^5.3.3",
-    "firebase": "^11.5.0",
-    "formik": "^2.4.6",
-    "jwt-decode": "^4.0.0",
-    "lynxwebpage": "file:",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^7.0.2",
-    "yup": "^1.5.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.15.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
-    "@types/bootstrap": "^5.2.10",
-    "@types/node": "^22.10.2",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.15.0",
-    "eslint-plugin-react-hooks": "^5.0.0",
-    "eslint-plugin-react-refresh": "^0.4.14",
-    "globals": "^15.12.0",
-    "jsdom": "^26.0.0",
-    "typescript": "~5.6.2",
-    "typescript-eslint": "^8.15.0",
-    "vite": "^6.0.1",
-    "vitest": "^3.0.9"
+    "mysql2": "^3.14.1"
   }
 }

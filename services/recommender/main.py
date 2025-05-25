@@ -17,12 +17,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger('recommender-api')
 
-# Configuración de conexión a MySQL con valores fijos
-DB_HOST = 'localhost'
-DB_PORT = 3306
-DB_USER = 'root'
-DB_PASSWORD = '12345678'  # Contraseña fija según .env
-DB_NAME = 'lynxshop'
+# Configuración de conexión a MySQL desde variables de entorno (Railway)
+DB_HOST = os.environ.get('MYSQLHOST', 'localhost')
+DB_PORT = int(os.environ.get('MYSQLPORT', 3306))
+DB_USER = os.environ.get('MYSQLUSER', 'root')
+DB_PASSWORD = os.environ.get('MYSQLPASSWORD', '12345678')
+DB_NAME = os.environ.get('MYSQLDATABASE', 'lynxshop')
 
 # Directorio del modelo
 MODEL_DIR = os.environ.get('MODEL_DIR', './data')
@@ -93,8 +93,8 @@ def get_user_history(user_id: int, limit: int = 20) -> List[int]:
         with connection.cursor() as cursor:
             query = """
             SELECT dp.id_producto 
-            FROM DetallePedido dp
-            JOIN Pedidos p ON dp.id_pedido = p.id_pedido
+            FROM detallepedido dp
+            JOIN pedidos p ON dp.id_pedido = p.id_pedido
             WHERE p.id_usuario = %s
             ORDER BY p.fecha DESC
             LIMIT %s
@@ -120,7 +120,7 @@ def get_popular_products(limit: int = 10) -> List[Dict[str, Union[int, float]]]:
         with connection.cursor() as cursor:
             query = """
             SELECT dp.id_producto, SUM(dp.cantidad) as total_vendido
-            FROM DetallePedido dp
+            FROM detallepedido dp
             GROUP BY dp.id_producto
             ORDER BY total_vendido DESC
             LIMIT %s
