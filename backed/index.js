@@ -32,6 +32,11 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   }
 }));
 
+// Configuración para servir archivos estáticos desde el directorio uploads en producción
+if (process.env.NODE_ENV === 'production') {
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+}
+
 // En producción, servir el frontend React build
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'public')));
