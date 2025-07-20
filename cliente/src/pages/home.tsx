@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import ProductList from "../components/products/ProductList";
 import AuthModal from "../components/auth/AuthModal";
+import SmartSearchBar from "../components/search/SmartSearchBar";
+import NLPSearchResults from "../components/search/NLPSearchResults";
+import useNLPSearch from "../hooks/useNLPSearch";
 import api from "../utils/api";
 import '../styles/Modal.css';
 import { useNavigate } from "react-router-dom";
@@ -26,9 +29,23 @@ const Home = () => {
  const [showAuthModal, setShowAuthModal] = useState(false);
  const [searchTerm, setSearchTerm] = useState("");
  const [categoryFilter, setCategoryFilter] = useState<number | null>(null); // Estado para filtro de categorías
+ const [showNLPResults, setShowNLPResults] = useState(false);
+ const [isUsingNLPResults, setIsUsingNLPResults] = useState(false);
  const navigate = useNavigate();
  const { isAuthenticated, user, logout, login } = useAuth();
  const { categorias, loading: loadingCategorias } = useCategorias(); // Usar el hook
+ 
+ // Hook NLP
+ const { 
+   isNLPAvailable, 
+   performNLPSearch, 
+   nlpResults, 
+   suggestedProducts,
+   clearNLPResults,
+   hasCorrections,
+   correctedQuery,
+   isSearching: nlpSearching
+ } = useNLPSearch();
 
  useEffect(() => {
    localStorage.setItem('tempCarrito', JSON.stringify(carrito));
@@ -81,6 +98,42 @@ const Home = () => {
 
  const removeFromCart = (id_producto: number) => {
    setCarrito(carrito.filter((item) => item.id_producto !== id_producto));
+ };
+
+ // Funciones para manejar búsqueda NLP
+ const handleSmartSearch = async (query: string) => {
+   console.log('🔍 Iniciando búsqueda:', query);
+   
+   // Si NLP está disponible, usar búsqueda inteligente
+   if (isNLPAvailable && query.trim().length > 0) {
+     setShowNLPResults(true);
+     setIsUsingNLPResults(false);
+     await performNLPSearch(query);
+   } else {
+     // Fallback a búsqueda normal
+     console.log('🔄 Fallback a búsqueda estándar');
+     setSearchTerm(query);
+     setIsUsingNLPResults(false);
+   }
+ };
+
+ const handleSearchChange = (term: string) => {
+   setSearchTerm(term);
+   // Si el usuario está borrando, limpiar resultados NLP
+   if (term.length === 0) {
+     clearNLPResults();
+     setShowNLPResults(false);
+     setIsUsingNLPResults(false);
+   }
+ };
+
+ const handleNLPResultsClose = () => {
+   setShowNLPResults(false);
+   // Usar los productos sugeridos por NLP si existen
+   if (suggestedProducts.length > 0) {
+     setIsUsingNLPResults(true);
+     console.log(`✅ Usando ${suggestedProducts.length} productos sugeridos por LYNX NLP`);
+   }
  };
 
  const vaciarCarrito = () => {
@@ -262,22 +315,16 @@ const Home = () => {
            data-bs-target="#navbarContent"
          >
            <span className="navbar-toggler-icon"></span>
-         </button>
-         <div className="collapse navbar-collapse" id="navbarContent">
-           <form className="d-flex mx-auto mt-2 mt-lg-0 col-12 col-lg-6">
-             <div className="input-group">
-               <input
-                 type="search"
-                 className="form-control"
-                 placeholder="Buscar productos..."
-                 value={searchTerm}
-                 onChange={(e) => setSearchTerm(e.target.value)}
-               />
-               <button className="btn btn-light" type="submit">
-                 <i className="bi bi-search"></i>
-               </button>
-             </div>
-           </form>
+         </button>         <div className="collapse navbar-collapse" id="navbarContent">
+           <div className="mx-auto mt-2 mt-lg-0 col-12 col-lg-6">
+             <SmartSearchBar
+               searchTerm={searchTerm}
+               onSearchChange={handleSearchChange}
+               onSearchSubmit={handleSmartSearch}
+               placeholder="Buscar productos..."
+               className="w-100"
+             />
+           </div>
            <div className="ms-auto mt-2 mt-lg-0 d-flex align-items-center">
              {isAuthenticated ? (
                <>
@@ -418,9 +465,14 @@ const Home = () => {
                    ))}
                  </ul>
                </div>
-             </div>
-             <div className="card-body">
-               <ProductList addToCart={addToCart} searchTerm={searchTerm} categoryFilter={categoryFilter} />
+             </div>             <div className="card-body">
+               <ProductList 
+                 addToCart={addToCart} 
+                 searchTerm={searchTerm} 
+                 categoryFilter={categoryFilter}
+                 nlpProducts={isUsingNLPResults ? suggestedProducts : []}
+                 isUsingNLP={isUsingNLPResults}
+               />
              </div>
            </div>
          </div>
@@ -591,9 +643,17 @@ const Home = () => {
                </div>
              </div>
            </div>
-         </div>
-         <div className="modal-backdrop fade show" style={{opacity: 0.6}} />
+         </div>         <div className="modal-backdrop fade show" style={{opacity: 0.6}} />
        </div>
+     )}
+
+     {/* Resultados de búsqueda NLP */}
+     {showNLPResults && (
+       <NLPSearchResults 
+         nlpResults={nlpResults}
+         isSearching={nlpSearching}
+         onDismiss={handleNLPResultsClose}
+       />
      )}
   </>
  );

@@ -712,7 +712,7 @@ const metricas_criticas = {
 **CASOS DE USO VALIDADOS:**
 ```
 Input: "bebidas sin azucar"     → Cola Light, Cola Zero (80% relevancia)
-Input: "productos picantes baratos" → Adobadas Mega Barcel $5.70 (100% criterios)
+Input: "productos picantes baratos" → Takis fuego (100% criterios)  
 Input: "coca cola zero"         → Coca Cola Zero 500ml (100% criterios) 
 Input: "leche descremada barata" → Descremada Danone $12.54 (100% criterios)
 Input: "votana brata" (errores) → "botana barata" + productos correctos
