@@ -1,0 +1,48 @@
+{
+  "consulta_original": "fruta fresca economica",
+  "tokens": [
+    {
+      "tipo": "CATEGORIA",
+      "valor": "frutas",
+      "posicion_inicial": 0,
+      "posicion_final": 6,
+      "longitud": 6,
+      "valor_original": "fruta",
+      "coincidencia_aproximada": false
+    },
+    {
+      "tipo": "PALABRA_GENERICA",
+      "valor": "fresca ",
+      "posicion_inicial": 6,
+      "posicion_final": 13,
+      "longitud": 7
+    },
+    {
+      "tipo": "FILTRO_PRECIO",
+      "valor": "economica",
+      "posicion_inicial": 13,
+      "posicion_final": 22,
+      "longitud": 9,
+      "interpretacion": {
+        "op": "menor_a",
+        "valor": 30.0
+      }
+    }
+  ],
+  "interpretacion": {
+    "productos": [],
+    "categorias": [
+      "frutas"
+    ],
+    "filtros": {
+      "atributos": [],
+      "precio": {
+        "max": 30.0
+      },
+      "cantidad": {},
+      "tamano": {},
+      "calidad": {}
+    }
+  },
+  "sql_sugerido": "SELECT * FROM productos WHERE categoria IN ('frutas') AND precio <= 30.0"
+}

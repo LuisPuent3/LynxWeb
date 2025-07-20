@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  lynx-nlp:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./logs:/app/logs
+      - ./productos_lynx_escalable.db:/app/productos_lynx_escalable.db
+      - ./sinonimos_lynx.db:/app/sinonimos_lynx.db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    
+  # Para desarrollo - Base de datos MySQL opcional
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: lynx_password
+      MYSQL_DATABASE: lynxshop
+      MYSQL_USER: lynx_user
+      MYSQL_PASSWORD: lynx_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d
+    profiles:
+      - dev
+    
+volumes:
+  mysql_data:

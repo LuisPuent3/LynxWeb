@@ -1,0 +1,73 @@
+{
+  "consulta_original": "productos con extra sal mayor a 50 pesos",
+  "tokens": [
+    {
+      "tipo": "PALABRA_GENERICA",
+      "valor": "productos ",
+      "posicion_inicial": 0,
+      "posicion_final": 10,
+      "longitud": 10
+    },
+    {
+      "tipo": "MODIFICADOR",
+      "valor": "con ",
+      "posicion_inicial": 10,
+      "posicion_final": 14,
+      "longitud": 4
+    },
+    {
+      "tipo": "ATRIBUTO",
+      "valor": "extra ",
+      "posicion_inicial": 14,
+      "posicion_final": 20,
+      "longitud": 6
+    },
+    {
+      "tipo": "MODIFICADOR",
+      "valor": "sal ",
+      "posicion_inicial": 20,
+      "posicion_final": 24,
+      "longitud": 4
+    },
+    {
+      "tipo": "OP_MAYOR",
+      "valor": "mayor a",
+      "posicion_inicial": 24,
+      "posicion_final": 31,
+      "longitud": 7
+    },
+    {
+      "tipo": "NUMERO_ENTERO",
+      "valor": "50",
+      "posicion_inicial": 32,
+      "posicion_final": 34,
+      "longitud": 2
+    },
+    {
+      "tipo": "UNIDAD_MONEDA",
+      "valor": "pesos",
+      "posicion_inicial": 35,
+      "posicion_final": 40,
+      "longitud": 5
+    }
+  ],
+  "interpretacion": {
+    "productos": [],
+    "categorias": [],
+    "filtros": {
+      "atributos": [
+        {
+          "modificador": "con ",
+          "atributo": "extra "
+        }
+      ],
+      "precio": {
+        "min": 50.0
+      },
+      "cantidad": {},
+      "tamano": {},
+      "calidad": {}
+    }
+  },
+  "sql_sugerido": "SELECT * FROM productos WHERE precio >= 50.0"
+}

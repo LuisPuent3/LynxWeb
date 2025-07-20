@@ -1,0 +1,57 @@
+{
+  "consulta_original": "manzana verde entre 10 y 25 pesos",
+  "tokens": [
+    {
+      "tipo": "PRODUCTO_COMPLETO",
+      "valor": "manzana verde",
+      "posicion_inicial": 0,
+      "posicion_final": 13,
+      "longitud": 13
+    },
+    {
+      "tipo": "OP_ENTRE",
+      "valor": "entre",
+      "posicion_inicial": 14,
+      "posicion_final": 19,
+      "longitud": 5
+    },
+    {
+      "tipo": "NUMERO_ENTERO",
+      "valor": "10",
+      "posicion_inicial": 20,
+      "posicion_final": 22,
+      "longitud": 2
+    },
+    {
+      "tipo": "NUMERO_ENTERO",
+      "valor": "25",
+      "posicion_inicial": 25,
+      "posicion_final": 27,
+      "longitud": 2
+    },
+    {
+      "tipo": "UNIDAD_MONEDA",
+      "valor": "pesos",
+      "posicion_inicial": 28,
+      "posicion_final": 33,
+      "longitud": 5
+    }
+  ],
+  "interpretacion": {
+    "productos": [
+      {
+        "nombre": "manzana verde",
+        "tipo": "PRODUCTO_COMPLETO"
+      }
+    ],
+    "categorias": [],
+    "filtros": {
+      "atributos": [],
+      "precio": {},
+      "cantidad": {},
+      "tamano": {},
+      "calidad": {}
+    }
+  },
+  "sql_sugerido": "SELECT * FROM productos WHERE nombre IN ('manzana verde')"
+}

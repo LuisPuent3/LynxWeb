@@ -1,0 +1,52 @@
+{
+  "consulta_original": "coca cola sin azucar menor a 20 pesos",
+  "tokens": [
+    {
+      "tipo": "PRODUCTO_COMPLETO",
+      "valor": "coca cola sin azucar",
+      "posicion_inicial": 0,
+      "posicion_final": 20,
+      "longitud": 20
+    },
+    {
+      "tipo": "OP_MENOR",
+      "valor": "menor a",
+      "posicion_inicial": 21,
+      "posicion_final": 28,
+      "longitud": 7
+    },
+    {
+      "tipo": "NUMERO_ENTERO",
+      "valor": "20",
+      "posicion_inicial": 29,
+      "posicion_final": 31,
+      "longitud": 2
+    },
+    {
+      "tipo": "UNIDAD_MONEDA",
+      "valor": "pesos",
+      "posicion_inicial": 32,
+      "posicion_final": 37,
+      "longitud": 5
+    }
+  ],
+  "interpretacion": {
+    "productos": [
+      {
+        "nombre": "coca cola sin azucar",
+        "tipo": "PRODUCTO_COMPLETO"
+      }
+    ],
+    "categorias": [],
+    "filtros": {
+      "atributos": [],
+      "precio": {
+        "max": 20.0
+      },
+      "cantidad": {},
+      "tamano": {},
+      "calidad": {}
+    }
+  },
+  "sql_sugerido": "SELECT * FROM productos WHERE nombre IN ('coca cola sin azucar') AND precio <= 20.0"
+}

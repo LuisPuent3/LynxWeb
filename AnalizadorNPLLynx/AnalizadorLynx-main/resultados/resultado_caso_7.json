@@ -1,0 +1,43 @@
+{
+  "consulta_original": "leche deslactosada 1 litro",
+  "tokens": [
+    {
+      "tipo": "PRODUCTO_COMPLETO",
+      "valor": "leche deslactosada",
+      "posicion_inicial": 0,
+      "posicion_final": 18,
+      "longitud": 18
+    },
+    {
+      "tipo": "NUMERO_ENTERO",
+      "valor": "1",
+      "posicion_inicial": 19,
+      "posicion_final": 20,
+      "longitud": 1
+    },
+    {
+      "tipo": "UNIDAD_MEDIDA",
+      "valor": "litro",
+      "posicion_inicial": 21,
+      "posicion_final": 26,
+      "longitud": 5
+    }
+  ],
+  "interpretacion": {
+    "productos": [
+      {
+        "nombre": "leche deslactosada",
+        "tipo": "PRODUCTO_COMPLETO"
+      }
+    ],
+    "categorias": [],
+    "filtros": {
+      "atributos": [],
+      "precio": {},
+      "cantidad": {},
+      "tamano": {},
+      "calidad": {}
+    }
+  },
+  "sql_sugerido": "SELECT * FROM productos WHERE nombre IN ('leche deslactosada')"
+}

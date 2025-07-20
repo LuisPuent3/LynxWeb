@@ -1,0 +1,31 @@
+{
+  "consulta_original": "productos baratos",
+  "tokens": [
+    {
+      "tipo": "PALABRA_GENERICA",
+      "valor": "productos ",
+      "posicion_inicial": 0,
+      "posicion_final": 10,
+      "longitud": 10
+    },
+    {
+      "tipo": "PALABRA_GENERICA",
+      "valor": "baratos",
+      "posicion_inicial": 10,
+      "posicion_final": 17,
+      "longitud": 7
+    }
+  ],
+  "interpretacion": {
+    "productos": [],
+    "categorias": [],
+    "filtros": {
+      "atributos": [],
+      "precio": {},
+      "cantidad": {},
+      "tamano": {},
+      "calidad": {}
+    }
+  },
+  "sql_sugerido": "SELECT * FROM productos"
+}
