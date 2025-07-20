@@ -7,15 +7,15 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./vitest.setup.ts'],
-    deps: {
-      inline: ['react-router-dom']
-    },
-    css: true,
-    environmentOptions: {
-      jsdom: {
-        url: 'http://localhost/'
-      }
-    }
+    setupFiles: './vitest.setup.ts', // o js, si es un archivo js
+    include: ['src/**/*.test.{ts,tsx,js,jsx}'], // Asegura que solo se incluyan tests del frontend
+    // Opcional: excluir node_modules u otros directorios si es necesario
+    // exclude: ['node_modules', 'dist', 'backed'],
   },
-}); 
+  resolve: {
+    alias: {
+      // Configura alias si los usas en tus importaciones, ej:
+      // '@/': '/src/'
+    },
+  },
+});

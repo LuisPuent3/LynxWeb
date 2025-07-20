@@ -9,22 +9,48 @@ dotenv.config();
 const app = express();
 
 // Logger para depuración
-app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-    next();
-});
+// app.use((req, res, next) => {
+//     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+//     next();
+// });
+
+// Configuración de CORS
+const allowedOrigins = ['http://localhost:3000']; // Always allow test environment
+const productionOrigin = process.env.CORS_ORIGIN;
+
+if (productionOrigin && productionOrigin.trim() !== '') {
+  allowedOrigins.push(productionOrigin);
+} else {
+  allowedOrigins.push('http://localhost:5173'); // Default frontend dev origin
+}
+
+// Ensure no empty strings if productionOrigin was an empty string and then trimmed.
+const uniqueAllowedOrigins = [...new Set(allowedOrigins.filter(origin => origin && origin.trim() !== ''))];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (uniqueAllowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+};
+
+app.use(cors(corsOptions));
+// console.log('[CORS DEBUG] Allowing all origins'); // Reverted
 
 // Middlewares
-app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? process.env.FRONTEND_URL || true 
-        : 'http://localhost:5173',
-    credentials: true
-}));
 app.use(express.json());
 
 // Configuración para servir archivos estáticos desde el directorio uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   maxAge: '1d', // Caché por 1 día
   setHeaders: function (res, path, stat) {
     res.set('Cache-Control', 'public, max-age=86400'); // 1 día en segundos
@@ -32,26 +58,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   }
 }));
 
-// Configuración para servir archivos estáticos desde el directorio uploads en producción
-if (process.env.NODE_ENV === 'production') {
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-}
-
-// En producción, servir el frontend React build
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'public')));
-}
-
-// Configuración para servir archivos estáticos desde el directorio cliente/public (desarrollo)
-if (process.env.NODE_ENV !== 'production') {
-  app.use('/assets', express.static(path.join(__dirname, '../cliente/public/assets'), {
-    maxAge: '1d', // Caché por 1 día
-    setHeaders: function (res, path, stat) {
-      res.set('Cache-Control', 'public, max-age=86400'); // 1 día en segundos
-      res.set('Expires', new Date(Date.now() + 86400000).toUTCString()); // 1 día en milisegundos
-    }
-  }));
-}
+// Configuración para servir archivos estáticos desde el directorio cliente/public
+app.use('/assets', express.static(path.join(__dirname, '../cliente/public/assets'), {
+  maxAge: '1d', // Caché por 1 día
+  setHeaders: function (res, path, stat) {
+    res.set('Cache-Control', 'public, max-age=86400'); // 1 día en segundos
+    res.set('Expires', new Date(Date.now() + 86400000).toUTCString()); // 1 día en milisegundos
+  }
+}));
 
 // Importar rutas
 const authRoutes = require('./routes/authRoutes');
@@ -83,24 +97,25 @@ app.get('/api/test', (req, res) => {
     res.json({ message: 'API funcionando correctamente', timestamp: new Date().toISOString() });
 });
 
-// Health check para Railway
+// Ruta de health check para Docker healthchecks
 app.get('/api/health', async (req, res) => {
     try {
-        // Verificar conexión a BD
-        const db = require('./config/db');
-        await db.query('SELECT 1');
+        // Verificar conexión a base de datos
+        const pool = require('./config/db');
+        await pool.query('SELECT 1');
+        
         res.json({ 
-            status: 'healthy', 
+            status: 'healthy',
             timestamp: new Date().toISOString(),
             database: 'connected',
-            environment: process.env.NODE_ENV || 'development'
+            service: 'backend' 
         });
     } catch (error) {
-        console.error('Health check failed:', error);
-        res.status(500).json({ 
-            status: 'unhealthy', 
+        res.status(503).json({ 
+            status: 'unhealthy',
             timestamp: new Date().toISOString(),
             database: 'disconnected',
+            service: 'backend',
             error: error.message 
         });
     }
@@ -133,23 +148,7 @@ app.get('/api/debug/rutas', (req, res) => {
     });
 });
 
-// Fallback para React Router - DEBE IR DESPUÉS de todas las rutas API
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    // Verificar que no sea una ruta API o de uploads
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
-      res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    } else {
-      res.status(404).json({ 
-        error: 'API endpoint not found',
-        path: req.originalUrl,
-        method: req.method
-      });
-    }
-  });
-}
-
-// Manejo de rutas no encontradas (desarrollo)
+// Manejo de rutas no encontradas
 app.use((req, res, next) => {
     if (!res.headersSent) {
         console.log(`Ruta no encontrada: ${req.method} ${req.originalUrl}`);
