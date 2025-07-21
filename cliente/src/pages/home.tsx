@@ -2,50 +2,34 @@ import { useState, useEffect } from "react";
 import ProductList from "../components/products/ProductList";
 import AuthModal from "../components/auth/AuthModal";
 import SmartSearchBar from "../components/search/SmartSearchBar";
-import NLPSearchResults from "../components/search/NLPSearchResults";
-import useNLPSearch from "../hooks/useNLPSearch";
 import api from "../utils/api";
 import '../styles/Modal.css';
 import { useNavigate } from "react-router-dom";
 import { Producto } from "../types/types";
-import { AxiosError, AxiosResponse } from 'axios';
 import { useAuth } from "../contexts/AuthContext";
-import { useCategorias } from "../hooks/useCategorias"; // Importar el hook de categorías
+import { useCategorias } from "../hooks/useCategorias";
+import useNLPSearch from "../hooks/useNLPSearch";
 
-interface ApiErrorResponse {
- error?: string;
- mensaje?: string;
-}
-
-interface ApiError extends AxiosError {
- response?: AxiosResponse<ApiErrorResponse>; 
-}
-
-const Home = () => {
+const Home = () => { 
  const [carrito, setCarrito] = useState<Producto[]>(() => {
    const savedCarrito = localStorage.getItem('tempCarrito');
    return savedCarrito ? JSON.parse(savedCarrito) : [];
  });
  const [showAuthModal, setShowAuthModal] = useState(false);
  const [searchTerm, setSearchTerm] = useState("");
- const [categoryFilter, setCategoryFilter] = useState<number | null>(null); // Estado para filtro de categorías
- const [showNLPResults, setShowNLPResults] = useState(false);
- const [isUsingNLPResults, setIsUsingNLPResults] = useState(false);
- const navigate = useNavigate();
- const { isAuthenticated, user, logout, login } = useAuth();
- const { categorias, loading: loadingCategorias } = useCategorias(); // Usar el hook
+ const [categoryFilter, setCategoryFilter] = useState<number | null>(null);
  
- // Hook NLP
+ // NLP Search Hook
  const { 
    isNLPAvailable, 
-   performNLPSearch, 
-   nlpResults, 
    suggestedProducts,
-   clearNLPResults,
-   hasCorrections,
-   correctedQuery,
-   isSearching: nlpSearching
+   performNLPSearch,
+   clearNLPResults
  } = useNLPSearch();
+ 
+ const navigate = useNavigate();
+ const { isAuthenticated, user, logout, login } = useAuth();
+ const { categorias } = useCategorias();
 
  useEffect(() => {
    localStorage.setItem('tempCarrito', JSON.stringify(carrito));
@@ -99,21 +83,17 @@ const Home = () => {
  const removeFromCart = (id_producto: number) => {
    setCarrito(carrito.filter((item) => item.id_producto !== id_producto));
  };
-
  // Funciones para manejar búsqueda NLP
  const handleSmartSearch = async (query: string) => {
    console.log('🔍 Iniciando búsqueda:', query);
    
    // Si NLP está disponible, usar búsqueda inteligente
    if (isNLPAvailable && query.trim().length > 0) {
-     setShowNLPResults(true);
-     setIsUsingNLPResults(false);
      await performNLPSearch(query);
    } else {
      // Fallback a búsqueda normal
      console.log('🔄 Fallback a búsqueda estándar');
      setSearchTerm(query);
-     setIsUsingNLPResults(false);
    }
  };
 
@@ -122,17 +102,6 @@ const Home = () => {
    // Si el usuario está borrando, limpiar resultados NLP
    if (term.length === 0) {
      clearNLPResults();
-     setShowNLPResults(false);
-     setIsUsingNLPResults(false);
-   }
- };
-
- const handleNLPResultsClose = () => {
-   setShowNLPResults(false);
-   // Usar los productos sugeridos por NLP si existen
-   if (suggestedProducts.length > 0) {
-     setIsUsingNLPResults(true);
-     console.log(`✅ Usando ${suggestedProducts.length} productos sugeridos por LYNX NLP`);
    }
  };
 
@@ -154,80 +123,6 @@ const Home = () => {
      setShowAuthModal(true);
    }
  };
-
- const procesarPedido = async () => {
-   try {
-     const token = localStorage.getItem("token");
-     if (!token) {
-       setShowAuthModal(true);
-       return;
-     }
- 
-     // Get user ID from context instead of using hardcoded values
-     if (!user || !user.id_usuario) {
-       alert("Error: No se pudo identificar al usuario. Inicie sesión nuevamente.");
-       return;
-     }
-
-     // Ensure user ID is a number
-     const userId = typeof user.id_usuario === 'string' 
-       ? parseInt(user.id_usuario as string, 10) 
-       : user.id_usuario;
-
-     const pedidoData = {
-       carrito: carrito.map(item => ({
-         id_producto: Number(item.id_producto),
-         cantidad: Number(item.cantidad),
-         precio: Number(item.precio)
-       })),
-       id_usuario: userId // Use numeric user ID
-     };
- 
-     console.log('Datos a enviar:', pedidoData);
-     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
- 
-     const response = await api.post("/pedidos", pedidoData);
-       
-     if (response.data.mensaje) {
-       navigate('/order/confirmation', { 
-         state: { 
-           cartItems: carrito,
-           orderId: response.data.id_pedido || null,
-           total: calculateTotal(),
-           discount: 0
-         } 
-       });
-       vaciarCarrito();
-     }
-   } catch (error) {
-     const apiError = error as ApiError;
-     console.error("Error completo:", apiError);
-     console.error("Detalles del error:", apiError.response?.data);
-
-     // More detailed error handling
-     if (apiError.response?.status === 500) {
-       const errorMsg = apiError.response.data?.error || "Error interno del servidor";
-       
-       // Check for foreign key error
-       if (errorMsg.includes("foreign key")) {
-         alert("Error: El ID de usuario no es válido. Por favor, inicie sesión nuevamente.");
-         localStorage.removeItem("token");
-         logout();
-         setShowAuthModal(true);
-       } else {
-         alert(`Error del servidor: ${errorMsg}`);
-       }
-     } else if (apiError.response?.status === 401) {
-       localStorage.removeItem("token");
-       setShowAuthModal(true);
-     } else if (apiError.response?.data?.error) {
-       alert(apiError.response.data.error);
-     } else {
-       alert("Error al procesar el pedido");
-     }
-   }
- };
-
  const handleGuestCheckout = async () => {
   try {
     const guestData = {
@@ -470,8 +365,8 @@ const Home = () => {
                  addToCart={addToCart} 
                  searchTerm={searchTerm} 
                  categoryFilter={categoryFilter}
-                 nlpProducts={isUsingNLPResults ? suggestedProducts : []}
-                 isUsingNLP={isUsingNLPResults}
+                 nlpProducts={suggestedProducts}
+                 isUsingNLP={suggestedProducts.length > 0}
                />
              </div>
            </div>
@@ -538,8 +433,7 @@ const Home = () => {
                )}
              </div>
            </div>
-         </div>
-       </div>
+         </div>       </div>
      </div>
 
      {showAuthModal && (
@@ -645,15 +539,6 @@ const Home = () => {
            </div>
          </div>         <div className="modal-backdrop fade show" style={{opacity: 0.6}} />
        </div>
-     )}
-
-     {/* Resultados de búsqueda NLP */}
-     {showNLPResults && (
-       <NLPSearchResults 
-         nlpResults={nlpResults}
-         isSearching={nlpSearching}
-         onDismiss={handleNLPResultsClose}
-       />
      )}
   </>
  );

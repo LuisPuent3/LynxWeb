@@ -1,0 +1,23 @@
+{
+  "database": {
+    "type": "mysql",
+    "config": {
+      "host": "localhost",
+      "database": "lynxshop",
+      "user": "root",
+      "password": "12345678",
+      "charset": "utf8mb4"
+    }
+  },
+  "metadata": {
+    "total_productos": 50,
+    "total_categorias": 5,
+    "total_sinonimos": 143,
+    "fecha_migracion": "2025-07-20T14:39:49.253713",
+    "source": "mysql_lynxshop"
+  },
+  "consultas_sql": {
+    "buscar_productos": "\n                    SELECT p.*, c.nombre as categoria\n                    FROM productos p \n                    JOIN categorias c ON p.id_categoria = c.id_categoria\n                    WHERE p.cantidad > 0 AND p.nombre LIKE %s\n                    ORDER BY p.precio\n                ",
+    "buscar_categoria": "\n                    SELECT p.*, c.nombre as categoria\n                    FROM productos p \n                    JOIN categorias c ON p.id_categoria = c.id_categoria\n                    WHERE p.cantidad > 0 AND c.nombre LIKE %s\n                    ORDER BY p.precio\n                "
+  }
+}

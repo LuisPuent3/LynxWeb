@@ -28,11 +28,13 @@ export const useNLPSearch = (): UseNLPSearchResult => {
   const [isSearching, setIsSearching] = useState(false);
   const [nlpResults, setNlpResults] = useState<NLPSearchResponse | null>(null);
   const [suggestedProducts, setSuggestedProducts] = useState<Producto[]>([]);
-
   // Verificar disponibilidad del servicio NLP al cargar
   useEffect(() => {
+    console.log('🐛 useNLPSearch - iniciando verificación de disponibilidad');
     const checkNLPAvailability = async () => {
+      console.log('🐛 checkNLPAvailability - llamando nlpService.checkHealth()');
       const available = await nlpService.checkHealth();
+      console.log('🐛 checkNLPAvailability - resultado:', available);
       setIsNLPAvailable(available);
       
       if (available) {
@@ -47,6 +49,7 @@ export const useNLPSearch = (): UseNLPSearchResult => {
     // Re-verificar cada 30 segundos si no está disponible
     const interval = setInterval(() => {
       if (!isNLPAvailable) {
+        console.log('🐛 Re-verificando NLP service (interval)');
         checkNLPAvailability();
       }
     }, 30000);

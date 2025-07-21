@@ -15,24 +15,32 @@ const app = express();
 // });
 
 // Configuración de CORS
-const allowedOrigins = ['http://localhost:3000']; // Always allow test environment
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173', 
+  'http://localhost:5174',  // Add the actual port the frontend is using
+  'http://localhost:8004'   // Add the NLP API port
+]; 
+
 const productionOrigin = process.env.CORS_ORIGIN;
 
 if (productionOrigin && productionOrigin.trim() !== '') {
   allowedOrigins.push(productionOrigin);
-} else {
-  allowedOrigins.push('http://localhost:5173'); // Default frontend dev origin
 }
 
 // Ensure no empty strings if productionOrigin was an empty string and then trimmed.
 const uniqueAllowedOrigins = [...new Set(allowedOrigins.filter(origin => origin && origin.trim() !== ''))];
 
+console.log('[CORS] Allowed origins:', uniqueAllowedOrigins);
+
 const corsOptions = {
   origin: function (origin, callback) {
+    console.log('[CORS] Request from origin:', origin);
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (uniqueAllowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+      console.log('[CORS ERROR]', msg);
       return callback(new Error(msg), false);
     }
     return callback(null, true);

@@ -1,16 +1,24 @@
 /**
- * Servicio NLP para integrar con el sistema LYNX
- * Conecta con el microservicio FastAPI en puerto 8000
+ * Servicio NLP para integrar con el sistema LYNX LCLN Dinámico
+ * Conecta con el microservicio FastAPI LCLN en puerto 8004
  */
 
 interface ProductRecommendation {
   id: number;
-  name: string;
-  price: number;
-  category: string;
+  id_producto: number;
+  nombre: string;
+  name?: string;
+  precio: number;
+  price?: number;
+  categoria: string;
+  category?: string;
+  id_categoria?: number;
+  cantidad: number;
+  imagen: string;
+  available: boolean;
   match_score: number;
   match_reasons: string[];
-  available: boolean;
+  source: string;
 }
 
 interface NLPCorrection {
@@ -63,10 +71,8 @@ interface HealthResponse {
 
 class NLPService {
   private baseUrl: string;
-  private isHealthy: boolean = false;
-
-  constructor() {
-    this.baseUrl = 'http://localhost:8000';
+  private isHealthy: boolean = false;  constructor() {
+    this.baseUrl = 'http://localhost:8004'; // API LCLN dinámico
     this.checkHealth();
   }
   /**
@@ -181,23 +187,24 @@ class NLPService {
 
     return filtered.slice(0, 5);
   }
-
   /**
    * Convertir respuesta NLP a formato compatible con el frontend
    */
   mapNLPProductsToFrontend(nlpProducts: ProductRecommendation[]): any[] {
     return nlpProducts.map(product => ({
-      id_producto: product.id,
-      nombre: product.name,
-      precio: product.price,
-      categoria: product.category,
-      cantidad: product.available ? 10 : 0, // Asumir stock si está disponible
+      // Usar las propiedades que ya vienen del NLP API con la estructura correcta
+      id_producto: product.id_producto || product.id,
+      nombre: product.nombre || product.name,
+      precio: product.precio || product.price,
+      cantidad: product.cantidad || (product.available ? 10 : 0),
+      id_categoria: product.id_categoria || 1,
+      imagen: product.imagen || 'default.jpg',
+      categoria: product.categoria || product.category,
+      // Propiedades adicionales del NLP
       match_score: product.match_score,
       match_reasons: product.match_reasons,
-      // Agregar propiedades por defecto que espera el frontend
-      descripcion: '',
-      id_categoria: 1, // Mapear según categoría
-      imagen: 'default.jpg'
+      // Propiedades por defecto que espera el frontend
+      descripcion: product.descripcion || ''
     }));
   }
 
@@ -207,13 +214,61 @@ class NLPService {
   isServiceHealthy(): boolean {
     return this.isHealthy;
   }
-
   /**
    * Obtener estadísticas del sistema
    */
   async getStats(): Promise<HealthResponse | null> {
     try {
       const response = await fetch(`${this.baseUrl}/health`);
+      if (!response.ok) return null;
+      return await response.json();
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Obtener URL completa de imagen del producto
+   */
+  getImageUrl(imageName: string): string {
+    if (!imageName || imageName === 'default.jpg') {
+      return '/uploads/default.jpg';
+    }
+    return `/uploads/${imageName}`;
+  }
+
+  /**
+   * Formatear producto para compatibilidad con frontend existente
+   */
+  private formatProductForDisplay(product: ProductRecommendation): ProductRecommendation {
+    return {
+      ...product,
+      name: product.name || product.nombre,
+      price: product.price || product.precio,
+      category: product.category || product.categoria?.toLowerCase(),
+      imagen: this.getImageUrl(product.imagen)
+    };
+  }
+
+  /**
+   * Obtener estadísticas del sistema LCLN
+   */
+  async getLCLNStats(): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/stats`);
+      if (!response.ok) return null;
+      return await response.json();
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Forzar actualización del cache (útil después de agregar productos)
+   */
+  async refreshCache(): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/force-cache-refresh`);
       if (!response.ok) return null;
       return await response.json();
     } catch (error) {
