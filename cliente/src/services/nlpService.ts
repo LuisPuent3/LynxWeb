@@ -70,17 +70,21 @@ interface NLPSearchResponse {
 
 interface HealthResponse {
   status: string;
-  timestamp: string;
-  version: string;
-  components: {
+  timestamp?: string;
+  version?: string;
+  // Formato original (otros sistemas)
+  components?: {
     [key: string]: string;
   };
+  // Formato AFD (nuestro sistema)
+  productos?: number;
+  sinonimos?: number;
 }
 
 class NLPService {
   private baseUrl: string;
   private isHealthy: boolean = false;  constructor() {
-    this.baseUrl = 'http://localhost:8004'; // API LCLN dinámico (puerto correcto)
+    this.baseUrl = 'http://localhost:8007'; // API LCLN con AFDs limpio (puerto 8007)
     this.checkHealth();
   }
   /**
@@ -105,9 +109,9 @@ class NLPService {
       this.isHealthy = health.status === 'healthy';
       
       if (this.isHealthy) {
-        const products = health.components.products || '0';
-        const synonyms = health.components.synonyms || '0';
-        console.log(`🧠 LYNX NLP Service ready: ${products}, ${synonyms}`);
+        const products = health.productos || health.components?.products || '0';
+        const synonyms = health.sinonimos || health.components?.synonyms || '0';
+        console.log(`🧠 LYNX NLP Service ready: ${products} productos, ${synonyms} sinónimos`);
       }
 
       return this.isHealthy;
