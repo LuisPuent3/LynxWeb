@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import Dashboard from '../components/admin/Dashboard';
 import SimpleImageUploader from '../components/products/SimpleImageUploader';
+import SinonimosManager from '../components/admin/SinonimosManager';
 
 // Utilidad para obtener teléfonos de usuarios conocidos
 const obtenerTelefonoUsuario = async (idUsuario: number, email?: string): Promise<string> => {
@@ -421,6 +422,9 @@ const AdminDashboard: React.FC = () => {
   
   // Nuevo estado para el filtro de categoría en productos
   const [categoryFilter, setCategoryFilter] = useState<number | null>(null);
+  
+  // Estado para gestión de sinónimos
+  const [showSinonimosManager, setShowSinonimosManager] = useState(false);
   
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -967,19 +971,6 @@ const AdminDashboard: React.FC = () => {
               </li>
               <li className="nav-item">
                 <a 
-                  className="nav-link" 
-                  href="#" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate('/admin/products');
-                  }}
-                >
-                  <i className="bi bi-tags me-1"></i>
-                  Gestión Avanzada
-                </a>
-              </li>
-              <li className="nav-item">
-                <a 
                   className={`nav-link ${activeTab === 'categories' ? 'active' : ''}`} 
                   href="#" 
                   onClick={(e) => {
@@ -1004,6 +995,19 @@ const AdminDashboard: React.FC = () => {
               </li>
             </ul>
             <div className="d-flex">
+              <button 
+                className="btn btn-outline-warning me-2"
+                onClick={() => navigate('/admin/products')}
+                title="Modo Avanzado - Gestión de Sinónimos"
+                style={{ 
+                  borderRadius: '20px',
+                  fontSize: '0.85rem',
+                  padding: '0.4rem 0.8rem'
+                }}
+              >
+                <i className="bi bi-rocket-takeoff me-1"></i>
+                Modo Avanzado
+              </button>
               <button className="btn btn-outline-light me-2" onClick={() => navigate('/')}>
                 <i className="bi bi-shop me-1"></i>
                 Ir a Tienda
@@ -1085,42 +1089,6 @@ const AdminDashboard: React.FC = () => {
                         <p className="text-muted small mt-2">
                           Por entregar
                         </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Tarjeta especial para gestión avanzada de productos con sinónimos */}
-                <div className="row mb-4">
-                  <div className="col-md-12">
-                    <div className="card border-0 shadow-sm bg-gradient" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-                      <div className="card-body text-white">
-                        <div className="row align-items-center">
-                          <div className="col-md-8">
-                            <h4 className="mb-2">
-                              <i className="bi bi-tags me-2"></i>
-                              Sistema de Sinónimos Inteligente
-                            </h4>
-                            <p className="mb-3 opacity-75">
-                              Mejora la búsqueda de productos con sinónimos inteligentes, métricas de popularidad y sugerencias automáticas basadas en el comportamiento de los usuarios.
-                            </p>
-                            <ul className="list-unstyled mb-0 opacity-75">
-                              <li><i className="bi bi-check-circle me-2"></i>Gestión orgánica de sinónimos por producto</li>
-                              <li><i className="bi bi-check-circle me-2"></i>Estadísticas de búsqueda en tiempo real</li>
-                              <li><i className="bi bi-check-circle me-2"></i>Sugerencias automáticas basadas en métricas</li>
-                            </ul>
-                          </div>
-                          <div className="col-md-4 text-center">
-                            <button 
-                              className="btn btn-light btn-lg shadow-sm"
-                              onClick={() => navigate('/admin/products')}
-                              style={{ borderRadius: '15px' }}
-                            >
-                              <i className="bi bi-rocket-takeoff me-2"></i>
-                              Acceder Ahora
-                            </button>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -1444,6 +1412,29 @@ const AdminDashboard: React.FC = () => {
                       />
                     </div>
                     
+                    {/* Sección de Gestión de Sinónimos - Solo para productos existentes */}
+                    {isEditing && formData.id_producto > 0 && (
+                      <div className="mb-3">
+                        <div className="border-top pt-3">
+                          <h6 className="text-muted mb-3">
+                            <i className="bi bi-tags me-2"></i>
+                            Gestión de Sinónimos
+                          </h6>
+                          <p className="text-muted small mb-3">
+                            Los sinónimos ayudan a los usuarios a encontrar este producto más fácilmente.
+                          </p>
+                          <button 
+                            type="button" 
+                            className="btn btn-outline-info w-100"
+                            onClick={() => setShowSinonimosManager(true)}
+                          >
+                            <i className="bi bi-tags me-2"></i>
+                            Gestionar Sinónimos del Producto
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="d-flex gap-2">
                       <button 
                         type="submit" 
@@ -1741,6 +1732,35 @@ const AdminDashboard: React.FC = () => {
           onClose={closeDetailModal}
           onStatusChange={handleOrderStatusFromModal}
         />
+      )}
+      
+      {/* Modal de Gestión de Sinónimos */}
+      {showSinonimosManager && (
+        <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg modal-dialog-scrollable">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="bi bi-tags me-2"></i>
+                  Gestión de Sinónimos
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowSinonimosManager(false)}
+                ></button>
+              </div>
+              <div className="modal-body p-0">
+                <SinonimosManager
+                  productoId={formData.id_producto}
+                  productoNombre={formData.nombre}
+                  visible={showSinonimosManager}
+                  onClose={() => setShowSinonimosManager(false)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

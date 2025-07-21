@@ -89,34 +89,15 @@ const SinonimosManager: React.FC<SinonimosManagerProps> = ({
   const cargarSinonimos = async () => {
     try {
       setLoading(true);
-      
       const response = await api.get(`/admin/sinonimos/producto/${productoId}`);
       
-      console.log('🔍 Respuesta RAW del servidor:', response);
-      console.log('🔍 response.data:', response.data);
-      console.log('🔍 response.data[0]:', response.data?.[0]);
-      console.log('🔍 response.data[1]:', response.data?.[1]);
-      
       if (response.data) {
-        // El backend devuelve [resultados, metadata], necesitamos solo el primer elemento
-        let sinonimosList = [];
-        if (Array.isArray(response.data)) {
-          // Si es un array y tiene elementos, tomar el primer elemento que son los resultados
-          if (response.data.length > 0 && Array.isArray(response.data[0])) {
-            sinonimosList = response.data[0]; // Tomar solo los resultados
-            console.log('🔍 Tomando response.data[0] como array de sinónimos');
-          } else {
-            sinonimosList = response.data; // Si ya es la lista directa
-            console.log('🔍 Usando response.data directamente');
-          }
-        }
-        console.log('✅ Sinónimos procesados finalmente:', sinonimosList);
-        setSinonimos(sinonimosList);
+        setSinonimos(Array.isArray(response.data) ? response.data : []);
       } else {
         setSinonimos([]);
       }
     } catch (error: any) {
-      console.error('❌ Error al cargar sinónimos:', error.response?.data?.detail || error.message);
+      console.error('Error al cargar sinónimos:', error.response?.data?.detail || error.message);
       setSinonimos([]);
     } finally {
       setLoading(false);
@@ -151,19 +132,9 @@ const SinonimosManager: React.FC<SinonimosManagerProps> = ({
       return {valid: false, message: 'El sinónimo solo puede contener letras y espacios'};
     }
 
-    // Verificar duplicados locales con debug
+    // Verificar duplicados locales
     const sinonimoLower = sinonimo.trim().toLowerCase();
-    console.log('🔍 Validando sinónimo:', sinonimoLower);
-    console.log('🔍 Lista de sinónimos actuales:', sinonimos);
-    console.log('🔍 Sinónimos existentes:', sinonimos.map(s => s.sinonimo?.toLowerCase()));
-    
-    const duplicado = sinonimos.some(s => {
-      const existingSynonym = s.sinonimo?.toLowerCase?.() || '';
-      console.log('🔍 Comparando:', sinonimoLower, 'vs', existingSynonym);
-      return existingSynonym === sinonimoLower;
-    });
-    
-    if (duplicado) {
+    if (sinonimos.some(s => s.sinonimo && s.sinonimo.toLowerCase() === sinonimoLower)) {
       return {valid: false, message: 'Este sinónimo ya existe para este producto'};
     }
 
@@ -335,7 +306,7 @@ const SinonimosManager: React.FC<SinonimosManagerProps> = ({
               <div className="d-flex flex-wrap gap-2">
                 {sugerencias.slice(0, 5).map((sugerencia, index) => (
                   <Button
-                    key={`${sugerencia.termino_busqueda}-${index}`}
+                    key={index}
                     variant="outline-warning"
                     size="sm"
                     onClick={() => {

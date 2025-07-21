@@ -27,6 +27,7 @@ const db = require('../config/db');
 router.get('/producto/:id', verifyToken, async (req, res) => {
   try {
     const { id: productoId } = req.params;
+    console.log('🔍 Buscando sinónimos para producto ID:', productoId);
     
     const query = `
       SELECT 
@@ -41,14 +42,19 @@ router.get('/producto/:id', verifyToken, async (req, res) => {
         s.fecha_ultima_actualizacion,
         p.nombre as producto_nombre
       FROM producto_sinonimos s
-      INNER JOIN productos p ON s.producto_id = p.id
+      INNER JOIN productos p ON s.producto_id = p.id_producto
       WHERE s.producto_id = ? AND s.activo = 1
       ORDER BY s.popularidad DESC, s.precision_score DESC
     `;
     
     const sinonimos = await db.query(query, [productoId]);
+    console.log('📝 Sinónimos encontrados:', sinonimos.length, sinonimos);
     
-    res.json(sinonimos);
+    // El resultado de db.query devuelve [resultados, metadata], necesitamos solo los resultados
+    const sinonimosList = Array.isArray(sinonimos[0]) ? sinonimos[0] : sinonimos;
+    console.log('📋 Lista procesada de sinónimos:', sinonimosList.length, sinonimosList);
+    
+    res.json(sinonimosList);
   } catch (error) {
     console.error('Error al obtener sinónimos:', error);
     res.status(500).json({ 
@@ -65,6 +71,7 @@ router.get('/producto/:id', verifyToken, async (req, res) => {
  */
 router.post('/', verifyToken, async (req, res) => {
   try {
+    console.log('🔥 POST /sinonimos recibido:', req.body);
     const { producto_id, sinonimo, fuente = 'admin' } = req.body;
     
     // Validaciones básicas
@@ -94,7 +101,7 @@ router.post('/', verifyToken, async (req, res) => {
     
     // Verificar que el producto existe
     const productoExists = await db.query(
-      'SELECT id, nombre FROM productos WHERE id = ?', 
+      'SELECT id_producto, nombre FROM productos WHERE id_producto = ?', 
       [producto_id]
     );
     
@@ -106,13 +113,18 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
     
-    // Verificar duplicados
+    // Verificar duplicados - solo entre sinónimos ACTIVOS
     const duplicateCheck = await db.query(
       'SELECT id FROM producto_sinonimos WHERE producto_id = ? AND LOWER(sinonimo) = LOWER(?) AND activo = 1',
       [producto_id, sinonimo.trim()]
     );
     
-    if (duplicateCheck.length > 0) {
+    console.log('🔍 Verificando duplicados para:', sinonimo.trim());
+    console.log('🔍 Resultado de duplicateCheck:', duplicateCheck);
+    console.log('🔍 duplicateCheck[0]:', duplicateCheck[0]);
+    console.log('🔍 duplicateCheck[0].length:', duplicateCheck[0].length);
+    
+    if (duplicateCheck[0].length > 0) {
       return res.status(409).json({
         success: false,
         message: 'Este sinónimo ya existe para este producto',
@@ -138,7 +150,9 @@ router.post('/', verifyToken, async (req, res) => {
       sinonimo.trim().toLowerCase(), 
       fuente
     ]);
-    
+
+    console.log('✅ Sinónimo insertado exitosamente:', result.insertId);
+
     res.status(201).json({
       success: true,
       message: 'Sinónimo creado exitosamente',
@@ -219,19 +233,20 @@ router.get('/sugerencias/producto/:id', verifyToken, async (req, res) => {
   try {
     const { id: productoId } = req.params;
     const { limit = 10 } = req.query;
+    console.log('💡 Buscando sugerencias para producto ID:', productoId);
     
     const query = `
       SELECT DISTINCT
         bm.termino_busqueda,
         COUNT(*) as frecuencia,
-        AVG(bm.clicks_producto) as promedio_clicks,
+        AVG(bm.clicks) as promedio_clicks,
         MAX(bm.fecha_busqueda) as ultima_busqueda,
         'user_search' as tipo
       FROM busqueda_metricas bm
-      WHERE bm.producto_encontrado_id = ?
+      WHERE bm.producto_id = ?
         AND bm.termino_busqueda IS NOT NULL
         AND bm.termino_busqueda != ''
-        AND bm.clicks_producto > 0
+        AND bm.clicks > 0
         AND bm.termino_busqueda NOT IN (
           SELECT LOWER(sinonimo) 
           FROM producto_sinonimos 
@@ -240,7 +255,7 @@ router.get('/sugerencias/producto/:id', verifyToken, async (req, res) => {
         AND bm.termino_busqueda NOT IN (
           SELECT LOWER(nombre) 
           FROM productos 
-          WHERE id = ?
+          WHERE id_producto = ?
         )
       GROUP BY bm.termino_busqueda
       HAVING frecuencia >= 2 AND promedio_clicks >= 1.0
@@ -249,10 +264,15 @@ router.get('/sugerencias/producto/:id', verifyToken, async (req, res) => {
     `;
     
     const sugerencias = await db.query(query, [productoId, productoId, productoId, parseInt(limit)]);
+    console.log('💡 Sugerencias encontradas:', sugerencias.length, sugerencias);
+    
+    // El resultado de db.query devuelve [resultados, metadata], necesitamos solo los resultados
+    const sugerenciasList = Array.isArray(sugerencias[0]) ? sugerencias[0] : sugerencias;
+    console.log('💡 Lista procesada de sugerencias:', sugerenciasList.length, sugerenciasList);
     
     res.json({
       success: true,
-      sugerencias: sugerencias || [],
+      sugerencias: sugerenciasList || [],
       producto_id: productoId,
       total_sugerencias: sugerencias?.length || 0
     });
@@ -326,7 +346,7 @@ router.post('/producto/:id/atributos', verifyToken, async (req, res) => {
     
     // Verificar que el producto existe
     const productoExists = await db.query(
-      'SELECT id FROM productos WHERE id = ?', 
+      'SELECT id_producto FROM productos WHERE id_producto = ?', 
       [productoId]
     );
     
