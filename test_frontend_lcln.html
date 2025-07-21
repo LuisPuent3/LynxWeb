@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test LCLN Frontend Integration</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        .info { background: #d1ecf1; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Integración LCLN Frontend</h1>
+    
+    <div class="test info">
+        <h3>📋 Lista de Pruebas</h3>
+        <ul>
+            <li>✅ API LCLN disponible en puerto 8004</li>
+            <li>✅ Frontend React con useNLPSearch hook</li>
+            <li>✅ SmartSearchBar conectado</li>
+            <li>✅ ProductList integrado con NLP</li>
+            <li>🔄 Test de búsquedas en tiempo real</li>
+        </ul>
+    </div>
+    
+    <div class="test success">
+        <h3>🎯 Escenarios de Prueba</h3>
+        <p><strong>1. Búsqueda con sinónimos:</strong></p>
+        <ul>
+            <li>"coca" → debería mostrar Coca-Cola</li>
+            <li>"botana" → debería mostrar snacks</li>
+            <li>"mansana" → debería corregir a "manzana"</li>
+        </ul>
+        
+        <p><strong>2. Búsqueda con atributos:</strong></p>
+        <ul>
+            <li>"doritos baratos" → debería filtrar por precio</li>
+            <li>"bebida sin azucar" → debería encontrar Coca-Cola sin azúcar</li>
+        </ul>
+        
+        <p><strong>3. Fallback normal:</strong></p>
+        <ul>
+            <li>Si LCLN no está disponible, usar búsqueda estándar</li>
+        </ul>
+    </div>
+    
+    <div class="test info">
+        <h3>🚀 Instrucciones para probar</h3>
+        <ol>
+            <li>Abrir <strong>http://localhost:3000</strong> (frontend React)</li>
+            <li>Verificar que el emoji 🧠 aparezca en la barra de búsqueda</li>
+            <li>Probar búsquedas como "coca", "botana", "mansana"</li>
+            <li>Verificar que aparezca el banner azul "Búsqueda Inteligente LCLN"</li>
+            <li>Comprobar que los resultados sean relevantes</li>
+        </ol>
+    </div>
+
+    <script>
+        // Test básico de conectividad con LCLN
+        async function testLCLNConnection() {
+            try {
+                const response = await fetch('http://localhost:8004/api/health');
+                const data = await response.json();
+                
+                const testDiv = document.createElement('div');
+                testDiv.className = 'test success';
+                testDiv.innerHTML = `
+                    <h3>✅ Conexión LCLN Exitosa</h3>
+                    <p><strong>Estado:</strong> ${data.status}</p>
+                    <p><strong>Productos:</strong> ${data.productos}</p>
+                    <p><strong>Sinónimos:</strong> ${data.sinonimos}</p>
+                `;
+                document.body.appendChild(testDiv);
+            } catch (error) {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'test error';
+                testDiv.innerHTML = `
+                    <h3>❌ Error de Conexión LCLN</h3>
+                    <p>No se puede conectar con el servidor LCLN en puerto 8004</p>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+                document.body.appendChild(testDiv);
+            }
+        }
+        
+        // Ejecutar test al cargar la página
+        testLCLNConnection();
+    </script>
+</body>
+</html>

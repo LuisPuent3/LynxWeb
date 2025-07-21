@@ -38,23 +38,21 @@ const ProductList: React.FC<ProductListProps> = ({
     };
     fetchProducts();
   }, []);
-  // Determinar qué productos mostrar
+  // 🧠 PRIORIDAD 1: Mostrar resultados LCLN si están disponibles
   const productosAMostrar = isUsingNLP && nlpProducts.length > 0 ? nlpProducts : productos;
 
-  // Filtramos los productos basados en searchTerm y categoryFilter
+  // Filtrar productos según el motor usado
   const productosFiltrados = productosAMostrar.filter(producto => {
-    // Si estamos usando NLP, no aplicar filtros adicionales ya que NLP ya los procesó
+    // 🎯 Si usamos LCLN, mostrar directamente los resultados (ya están procesados inteligentemente)
     if (isUsingNLP && nlpProducts.length > 0) {
+      console.log('🧠 Mostrando resultados LCLN procesados:', producto.nombre);
       return true;
     }
     
-    // Verificar si cumple con la condición de búsqueda
-    const matchesSearch = producto.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Verificar si cumple con el filtro de categoría (si hay alguno seleccionado)
+    // 🔄 Fallback: Búsqueda normal solo si no hay resultados LCLN
+    const matchesSearch = searchTerm.length === 0 || producto.nombre.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === null || producto.id_categoria === categoryFilter;
     
-    // El producto debe cumplir con ambas condiciones para ser incluido
     return matchesSearch && matchesCategory;
   });
 
@@ -74,14 +72,24 @@ const ProductList: React.FC<ProductListProps> = ({
     : sortProductsByRecommendation(productosFiltrados);
   return (
     <div>
-      {/* Indicador de búsqueda NLP */}
+      {/* Indicador de búsqueda LCLN inteligente */}
       {isUsingNLP && nlpProducts.length > 0 && (
-        <div className="alert alert-info border-0 mb-3 d-flex align-items-center">
-          <i className="bi bi-brain me-2 text-primary"></i>
-          <div>
-            <strong>Resultados de búsqueda inteligente LYNX</strong>
-            <div className="small text-muted">
-              Mostrando {productosFiltrados.length} productos sugeridos por inteligencia artificial
+        <div className="alert border-0 mb-3 d-flex align-items-center" style={{
+          background: 'linear-gradient(90deg, #e8f4fd 0%, #f0f9ff 100%)',
+          border: '1px solid #bee5eb'
+        }}>
+          <div className="d-flex align-items-center">
+            <span className="me-2" style={{ fontSize: '20px' }}>🧠</span>
+            <div>
+              <strong className="text-primary">Búsqueda Inteligente LCLN Activada</strong>
+              <div className="small text-muted">
+                🎯 Encontrados {productosFiltrados.length} productos con inteligencia artificial
+                {nlpProducts[0]?.match_score && (
+                  <span className="badge bg-success ms-2">
+                    {Math.round(nlpProducts[0].match_score * 100)}% precisión
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

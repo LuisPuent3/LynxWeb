@@ -83,17 +83,21 @@ const Home = () => {
  const removeFromCart = (id_producto: number) => {
    setCarrito(carrito.filter((item) => item.id_producto !== id_producto));
  };
- // Funciones para manejar búsqueda NLP
+ // Funciones para manejar búsqueda NLP como motor principal
  const handleSmartSearch = async (query: string) => {
-   console.log('🔍 Iniciando búsqueda:', query);
+   console.log('🔍 Iniciando búsqueda inteligente LCLN:', query);
    
-   // Si NLP está disponible, usar búsqueda inteligente
+   // PRIORIDAD 1: Usar LCLN si está disponible
    if (isNLPAvailable && query.trim().length > 0) {
+     console.log('🧠 Usando búsqueda inteligente LCLN');
      await performNLPSearch(query);
+     // Limpiar searchTerm para no mezclar con búsqueda normal
+     setSearchTerm('');
    } else {
-     // Fallback a búsqueda normal
-     console.log('🔄 Fallback a búsqueda estándar');
+     // FALLBACK: Búsqueda normal solo si LCLN no está disponible
+     console.log('🔄 LCLN no disponible - fallback a búsqueda estándar');
      setSearchTerm(query);
+     clearNLPResults(); // Limpiar resultados NLP
    }
  };
 
