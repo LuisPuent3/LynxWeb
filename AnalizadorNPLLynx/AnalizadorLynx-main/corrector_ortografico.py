@@ -12,12 +12,13 @@ class CorrectorOrtografico:
         self.vocabulario = self._cargar_vocabulario()
         self.indices_foneticos = self._crear_indices_foneticos()
         self.errores_comunes = {
-            # Productos comunes mal escritos
+            # Productos comunes mal escritos - SEGÚN DOCUMENTACIÓN TÉCNICA LCLN
             "coca": "coca-cola",
             "koka": "coca-cola", 
             "coka": "coca-cola",
+            "kola": "cola",
             "votana": "botana",
-            "botana": "botana",
+            "botana": "botana", 
             "chetoos": "cheetos",
             "dorito": "doritos",
             "brata": "barata",
@@ -26,16 +27,26 @@ class CorrectorOrtografico:
             "picante": "picante",
             "azucar": "azúcar",
             "asucar": "azúcar",
+            "sin": "sin",
             "bebida": "bebida",
             "vebida": "bebida",
+            "vebidas": "bebidas",
+            "bebidas": "bebidas",
             "galleta": "galleta",
             "gayeta": "galleta",
             "leche": "leche",
             "lechee": "leche",
             "mansana": "manzana",
-            "mansana": "manzana",
+            "manzana": "manzana",
             "arroz": "arroz",
-            "arros": "arroz"
+            "arros": "arroz",
+            # Correcciones específicas para casos documentados
+            "menor": "menor",
+            "menr": "menor",
+            "a": "a",
+            # Números mal interpretados
+            "20": "20",
+            "200g": "20"
         }
         self.cache_correcciones = {}
         self.max_distancia = 2

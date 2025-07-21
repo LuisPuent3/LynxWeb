@@ -107,16 +107,12 @@ def analyze_lcln_dynamic(request: QueryRequest):
         
         if not resultado['success']:
             raise HTTPException(status_code=500, detail="Error en Sistema LCLN")
-        
-        # Preparar respuesta compatible con frontend existente
+          # Preparar respuesta compatible con frontend existente
         return {
             "success": True,
             "processing_time_ms": resultado['processing_time_ms'],
             "original_query": request.query,
-            "corrections": {
-                "applied": False,  # TODO: Implementar correcciones en versión futura
-                "original_query": request.query
-            },
+            "corrections": resultado['corrections'],  # Use actual corrections from LCLN system
             "interpretation": {
                 "type": resultado['interpretation']['tipo'],
                 "termino_busqueda": resultado['interpretation']['termino_busqueda'],

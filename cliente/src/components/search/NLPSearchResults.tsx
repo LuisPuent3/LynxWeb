@@ -136,9 +136,8 @@ const NLPSearchResults: React.FC<NLPSearchResultsProps> = ({
                     </h6>
                     
                     {nlpResults.recommendations.length > 0 ? (
-                      <div className="row g-3">
-                        {nlpResults.recommendations.slice(0, 6).map((product, index) => (
-                          <div className="col-md-6 col-lg-4" key={product.id}>
+                      <div className="row g-3">                        {nlpResults.recommendations.slice(0, 6).map((product, index) => (
+                          <div className="col-md-6 col-lg-4" key={product.id_producto || product.id || index}>
                             <div className={`card h-100 border-0 shadow-sm ${index === 0 ? 'border-primary border-2' : ''}`}>
                               {index === 0 && (
                                 <div className="position-absolute top-0 start-0 m-2">
@@ -147,52 +146,75 @@ const NLPSearchResults: React.FC<NLPSearchResultsProps> = ({
                                     Mejor resultado
                                   </span>
                                 </div>
-                              )}
-                              <div className="card-body">
+                              )}                              <div className="card-body">
                                 <h6 className="card-title text-primary">
-                                  {product.name}
+                                  {product.nombre || product.name}
                                 </h6>
                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                   <span className="h6 text-success mb-0">
-                                    ${product.price.toFixed(2)}
+                                    ${(product.precio || product.price || 0).toFixed(2)}
                                   </span>
                                   <span className="badge bg-light text-dark">
-                                    {product.category}
+                                    {product.categoria_nombre || product.category}
                                   </span>
                                 </div>
                                 <div className="mb-2">
                                   <div className="progress" style={{ height: '4px' }}>
                                     <div 
                                       className="progress-bar bg-success" 
-                                      style={{ width: `${product.match_score * 100}%` }}
+                                      style={{ width: `${(product.match_score || product.relevance || 0.8) * 100}%` }}
                                     ></div>
                                   </div>
                                   <small className="text-muted">
-                                    Relevancia: {Math.round(product.match_score * 100)}%
+                                    Relevancia: {Math.round((product.match_score || product.relevance || 0.8) * 100)}%
                                   </small>
                                 </div>
-                                {product.match_reasons.length > 0 && (
+                                {/* Mostrar imagen del producto */}
+                                {(product.imagen || product.image) && (
+                                  <div className="mb-2 text-center">
+                                    <img 
+                                      src={`/uploads/${product.imagen || product.image}`} 
+                                      alt={product.nombre || product.name}
+                                      className="img-fluid rounded"
+                                      style={{ maxHeight: '100px', objectFit: 'cover' }}
+                                      onError={(e) => {
+                                        e.currentTarget.src = '/uploads/default.jpg';
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                {(product.match_reasons || []).length > 0 && (
                                   <div className="mt-2">
                                     <small className="text-muted d-block mb-1">Por qué coincide:</small>
-                                    {product.match_reasons.slice(0, 2).map((reason, idx) => (
+                                    {(product.match_reasons || []).slice(0, 2).map((reason, idx) => (
                                       <span key={idx} className="badge bg-secondary me-1 mb-1" style={{ fontSize: '0.7em' }}>
                                         {reason}
                                       </span>
                                     ))}
                                   </div>
                                 )}
-                                <div className="mt-3">
-                                  {product.available ? (
-                                    <span className="badge bg-success">
-                                      <i className="bi bi-check-circle me-1"></i>
-                                      Disponible
+                                <div className="mt-3 d-flex justify-content-between align-items-center">
+                                  {/* Stock info */}
+                                  <div>
+                                    <small className="text-muted">Stock: </small>
+                                    <span className={`badge ${(product.cantidad || product.stock || 0) > 0 ? 'bg-success' : 'bg-danger'}`}>
+                                      {product.cantidad || product.stock || 0}
                                     </span>
-                                  ) : (
-                                    <span className="badge bg-danger">
-                                      <i className="bi bi-x-circle me-1"></i>
-                                      Agotado
-                                    </span>
-                                  )}
+                                  </div>
+                                  {/* Availability */}
+                                  <div>
+                                    {(product.available !== false && (product.cantidad || product.stock || 0) > 0) ? (
+                                      <span className="badge bg-success">
+                                        <i className="bi bi-check-circle me-1"></i>
+                                        Disponible
+                                      </span>
+                                    ) : (
+                                      <span className="badge bg-danger">
+                                        <i className="bi bi-x-circle me-1"></i>
+                                        Agotado
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>

@@ -83,6 +83,7 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const recommendationRoutes = require('./routes/recommendations');
 const uploadRoutes = require('./routes/uploadRoutes');
 const passwordResetRoutes = require('./routes/passwordResetRoutes');
+const sinonimosRoutes = require('./routes/sinonimosRoutes');
 
 // Logger avanzado para depuración
 app.use((req, res, next) => {
@@ -99,6 +100,11 @@ app.use('/api/categorias', categoryRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
+app.use('/api/admin/sinonimos', sinonimosRoutes);
+
+// Ruta temporal de pruebas (sin autenticación)
+const testSinonimosRoutes = require('./routes/testSinonimosRoutes');
+app.use('/api/test/sinonimos', testSinonimosRoutes);
 
 // Ruta de prueba para verificar que la API está en funcionamiento
 app.get('/api/test', (req, res) => {

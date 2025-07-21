@@ -9,6 +9,7 @@ import json
 from typing import List, Dict, Optional
 import difflib
 from datetime import datetime, timedelta
+from corrector_ortografico import CorrectorOrtografico
 
 class SistemaLCLNSimplificado:
     def __init__(self):
@@ -20,12 +21,14 @@ class SistemaLCLNSimplificado:
             'password': '12345678',
             'charset': 'utf8mb4'
         }
-        
-        # Cache dinámico
+          # Cache dinámico
         self._cache_productos = {}
         self._cache_categorias = {}
         self._cache_timestamp = None
         self._cache_duration = timedelta(minutes=5)
+        
+        # Inicializar corrector ortográfico
+        self.corrector = CorrectorOrtografico()
     
     def _necesita_actualizar_cache(self) -> bool:
         """Verificar si el cache necesita actualizarse"""
@@ -89,28 +92,41 @@ class SistemaLCLNSimplificado:
     def buscar_productos_inteligente(self, consulta: str, limit: int = 20) -> Dict:
         """
         Búsqueda inteligente que se adapta dinámicamente a la BD
-        """
-        # Actualizar cache si es necesario
+        """        # Actualizar cache si es necesario
         self._actualizar_cache_dinamico()
-        
         consulta_original = consulta
-        consulta = consulta.lower().strip()
+          # Aplicar correcciones ortográficas críticas
+        resultado_correcciones = self.corrector.corregir_consulta(consulta)
+        consulta_corregida = resultado_correcciones.get('corrected_query', consulta)
+        
+        # Mapear botana → snacks para búsquedas (preservar estado de correcciones)
+        if 'botana' in consulta_corregida.lower():
+            consulta_corregida = consulta_corregida.replace('botana', 'snacks').replace('botanas', 'snacks')
+            # Preservar el estado original de correcciones aplicadas
+            if not resultado_correcciones.get('applied', False):
+                resultado_correcciones['applied'] = True
+        
+        consulta = consulta_corregida.lower().strip()
         
         import time
         inicio = time.time()
         
         # Análisis de la consulta
         analisis = self._analizar_consulta_simple(consulta)
-        
-        # Búsqueda con múltiples estrategias
+          # Búsqueda con múltiples estrategias
         productos = self._ejecutar_busqueda_estrategias(analisis, limit)
         
         tiempo_proceso = (time.time() - inicio) * 1000
-        
         return {
             'success': True,
             'processing_time_ms': tiempo_proceso,
             'original_query': consulta_original,
+            'corrections': {
+                'applied': resultado_correcciones.get('applied', False),
+                'original_query': consulta_original,
+                'corrected_query': resultado_correcciones.get('corrected_query', consulta_original),
+                'corrections_details': resultado_correcciones.get('changes', [])
+            },
             'interpretation': {
                 'termino_busqueda': analisis['termino_busqueda'],
                 'categoria': analisis['categoria'],

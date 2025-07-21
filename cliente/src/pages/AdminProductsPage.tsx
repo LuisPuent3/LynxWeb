@@ -6,6 +6,7 @@ import api from '../utils/api';
 import { Producto } from '../types/types';
 import ImageUploader from '../components/products/ImageUploader';
 import SimpleImageUploader from '../components/products/SimpleImageUploader';
+import SinonimosManager from '../components/admin/SinonimosManager';
 
 interface FormData {
   id_producto: number;
@@ -23,6 +24,7 @@ const AdminProductsPage: React.FC = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSinonimosManager, setShowSinonimosManager] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     id_producto: 0,
     nombre: '',
@@ -299,6 +301,29 @@ const AdminProductsPage: React.FC = () => {
                     </div>
                   </div>
                   
+                  {/* Sección de Gestión de Sinónimos - Solo para productos existentes */}
+                  {isEditing && formData.id_producto > 0 && (
+                    <div className="col-12 mt-3">
+                      <div className="border-top pt-3">
+                        <h6 className="text-muted mb-3">
+                          <i className="bi bi-tags me-2"></i>
+                          Gestión de Sinónimos
+                        </h6>
+                        <p className="text-muted small mb-3">
+                          Los sinónimos ayudan a los usuarios a encontrar este producto más fácilmente.
+                        </p>
+                        <button 
+                          type="button" 
+                          className="btn btn-outline-info w-100"
+                          onClick={() => setShowSinonimosManager(true)}
+                        >
+                          <i className="bi bi-tags me-2"></i>
+                          Gestionar Sinónimos del Producto
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="col-12 mt-4">
                     <button 
                       type="submit" 
@@ -364,6 +389,36 @@ const AdminProductsPage: React.FC = () => {
           searchTerm={searchTerm}
           refreshTrigger={refreshTrigger}
         />
+        
+        {/* Modal de Gestión de Sinónimos */}
+        {showSinonimosManager && (
+          <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-lg modal-dialog-scrollable">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    <i className="bi bi-tags me-2"></i>
+                    Gestión de Sinónimos
+                  </h5>
+                  <button 
+                    type="button" 
+                    className="btn-close" 
+                    onClick={() => setShowSinonimosManager(false)}
+                  ></button>
+                </div>
+                <div className="modal-body p-0">
+                  <SinonimosManager
+                    productoId={formData.id_producto}
+                    productoNombre={formData.nombre}
+                    visible={showSinonimosManager}
+                    onClose={() => setShowSinonimosManager(false)}
+                    apiBaseUrl="/api/admin/sinonimos"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

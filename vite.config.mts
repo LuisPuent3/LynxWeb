@@ -4,12 +4,11 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  server: {
+  plugins: [react()],  server: {
     proxy: {
-      '/api': 'http://localhost:5000'
+      '/api': 'http://localhost:8004'  // API LCLN dinámico
     },
-    port: 3000
+    port: 5174  // Puerto original del frontend
   },
   resolve: {
     alias: {

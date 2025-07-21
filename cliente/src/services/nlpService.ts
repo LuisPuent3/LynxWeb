@@ -4,14 +4,13 @@
  */
 
 interface ProductRecommendation {
+  // Formato español (original)
   id: number;
   id_producto: number;
   nombre: string;
-  name?: string;
   precio: number;
-  price?: number;
   categoria: string;
-  category?: string;
+  categoria_nombre?: string;
   id_categoria?: number;
   cantidad: number;
   imagen: string;
@@ -19,6 +18,15 @@ interface ProductRecommendation {
   match_score: number;
   match_reasons: string[];
   source: string;
+  descripcion?: string;
+  
+  // Formato inglés (nuevo formato de API)
+  name?: string;
+  price?: number;
+  category?: string;
+  stock?: number;
+  image?: string;
+  relevance?: number;
 }
 
 interface NLPCorrection {
@@ -72,7 +80,7 @@ interface HealthResponse {
 class NLPService {
   private baseUrl: string;
   private isHealthy: boolean = false;  constructor() {
-    this.baseUrl = 'http://localhost:8004'; // API LCLN dinámico
+    this.baseUrl = 'http://localhost:8004'; // API LCLN dinámico (puerto correcto)
     this.checkHealth();
   }
   /**
@@ -186,25 +194,27 @@ class NLPService {
     );
 
     return filtered.slice(0, 5);
-  }
-  /**
+  }  /**
    * Convertir respuesta NLP a formato compatible con el frontend
    */
   mapNLPProductsToFrontend(nlpProducts: ProductRecommendation[]): any[] {
     return nlpProducts.map(product => ({
-      // Usar las propiedades que ya vienen del NLP API con la estructura correcta
+      // Mapeo flexible - soporta tanto formato español como inglés
       id_producto: product.id_producto || product.id,
       nombre: product.nombre || product.name,
       precio: product.precio || product.price,
-      cantidad: product.cantidad || (product.available ? 10 : 0),
+      cantidad: product.cantidad || product.stock || (product.available ? 10 : 0),
       id_categoria: product.id_categoria || 1,
-      imagen: product.imagen || 'default.jpg',
+      imagen: product.imagen || product.image || 'default.jpg',
       categoria: product.categoria || product.category,
+      categoria_nombre: product.categoria_nombre || product.category,
       // Propiedades adicionales del NLP
-      match_score: product.match_score,
-      match_reasons: product.match_reasons,
+      match_score: product.match_score || product.relevance || 0.8,
+      match_reasons: product.match_reasons || [],
       // Propiedades por defecto que espera el frontend
-      descripcion: product.descripcion || ''
+      descripcion: product.descripcion || '',
+      // Asegurar disponibilidad
+      available: (product.cantidad || product.stock || 0) > 0
     }));
   }
 
@@ -236,20 +246,6 @@ class NLPService {
     }
     return `/uploads/${imageName}`;
   }
-
-  /**
-   * Formatear producto para compatibilidad con frontend existente
-   */
-  private formatProductForDisplay(product: ProductRecommendation): ProductRecommendation {
-    return {
-      ...product,
-      name: product.name || product.nombre,
-      price: product.price || product.precio,
-      category: product.category || product.categoria?.toLowerCase(),
-      imagen: this.getImageUrl(product.imagen)
-    };
-  }
-
   /**
    * Obtener estadísticas del sistema LCLN
    */

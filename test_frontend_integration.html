@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend NLP Integration</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 20px 0; padding: 15px; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .product { border: 1px solid #ccc; margin: 10px 0; padding: 10px; border-radius: 3px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 300px; border: 1px solid #ccc; border-radius: 3px; }
+        .status { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Frontend NLP Integration</h1>
+    <p>Probando la integración completa entre frontend y sistema LCLN mejorado</p>
+    
+    <div class="test-section">
+        <h2>1. Test de Conectividad</h2>
+        <button onclick="testHealth()">🔍 Verificar Health API</button>
+        <div id="health-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test de Búsqueda NLP</h2>
+        <input type="text" id="searchQuery" placeholder="Ej: botana sin picante" value="botana sin picante">
+        <button onclick="testSearch()">🚀 Buscar con NLP</button>
+        <div id="search-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Tests Automáticos</h2>
+        <button onclick="runAutomaticTests()">🤖 Ejecutar Tests Críticos</button>
+        <div id="auto-test-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+        
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            resultDiv.innerHTML = '<p>⏳ Verificando conexión con API LCLN...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <p class="status">✅ API CONECTADA</p>
+                            <p><strong>Versión:</strong> ${data.version}</p>
+                            <p><strong>Estado:</strong> ${data.status}</p>
+                            <p><strong>Productos:</strong> ${data.components.products || 'N/A'}</p>
+                            <p><strong>Cache:</strong> ${data.components.cache_updated || 'N/A'}</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <p class="status">❌ ERROR HTTP: ${response.status}</p>
+                            <p>La API no responde correctamente</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <p class="status">❌ ERROR DE CONEXIÓN</p>
+                        <p>${error.message}</p>
+                        <p>¿Está corriendo el servidor en puerto 8001?</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function testSearch() {
+            const query = document.getElementById('searchQuery').value;
+            const resultDiv = document.getElementById('search-result');
+            
+            if (!query.trim()) {
+                resultDiv.innerHTML = '<div class="error"><p>❌ Ingresa una consulta</p></div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = `<p>⏳ Buscando: "${query}"...</p>`;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/nlp/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Simular el mapeo que hace el frontend
+                    const mappedProducts = data.recommendations.map(product => ({
+                        id_producto: product.id,
+                        nombre: product.name,
+                        precio: product.price,
+                        cantidad: product.stock,
+                        imagen: product.image,
+                        categoria_nombre: product.category,
+                        match_score: product.relevance
+                    }));
+                    
+                    let html = `
+                        <div class="success">
+                            <p class="status">✅ BÚSQUEDA EXITOSA</p>
+                            <p><strong>Consulta:</strong> ${data.original_query}</p>
+                            <p><strong>Correcciones:</strong> ${data.corrections.applied ? 'Sí' : 'No'}</p>
+                            ${data.corrections.applied ? `<p><strong>Texto corregido:</strong> ${data.corrections.corrected_query}</p>` : ''}
+                            <p><strong>Productos encontrados:</strong> ${mappedProducts.length}</p>
+                            <p><strong>Tiempo:</strong> ${data.processing_time_ms}ms</p>
+                            <p><strong>Estrategia:</strong> ${data.interpretation.estrategia_usada}</p>
+                        </div>
+                    `;
+                    
+                    if (mappedProducts.length > 0) {
+                        html += '<h3>📦 Productos (mapeados para frontend):</h3>';
+                        mappedProducts.slice(0, 5).forEach((product, index) => {
+                            html += `
+                                <div class="product">
+                                    <h4>${index + 1}. ${product.nombre}</h4>
+                                    <p><strong>💰 Precio:</strong> $${product.precio}</p>
+                                    <p><strong>📦 Stock:</strong> ${product.cantidad}</p>
+                                    <p><strong>🖼️ Imagen:</strong> ${product.imagen}</p>
+                                    <p><strong>🏷️ Categoría:</strong> ${product.categoria_nombre}</p>
+                                    <p><strong>⭐ Relevancia:</strong> ${product.match_score}</p>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    resultDiv.innerHTML = html;
+                    
+                } else {
+                    const errorText = await response.text();
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <p class="status">❌ ERROR HTTP: ${response.status}</p>
+                            <p>${errorText}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <p class="status">❌ ERROR DE BÚSQUEDA</p>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function runAutomaticTests() {
+            const resultDiv = document.getElementById('auto-test-result');
+            resultDiv.innerHTML = '<p>⏳ Ejecutando tests automáticos...</p>';
+            
+            const criticalQueries = [
+                'botana sin picante',
+                'coca cola',
+                'dulces',
+                'snacks picantes',
+                'bebidas baratas'
+            ];
+            
+            let results = [];
+            
+            for (const query of criticalQueries) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/nlp/analyze`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        results.push({
+                            query,
+                            success: true,
+                            count: data.recommendations.length,
+                            strategy: data.interpretation.estrategia_usada,
+                            time: data.processing_time_ms
+                        });
+                    } else {
+                        results.push({
+                            query,
+                            success: false,
+                            error: `HTTP ${response.status}`
+                        });
+                    }
+                } catch (error) {
+                    results.push({
+                        query,
+                        success: false,
+                        error: error.message
+                    });
+                }
+            }
+            
+            let html = '<h3>📊 Resultados de Tests Críticos:</h3>';
+            results.forEach(result => {
+                if (result.success) {
+                    html += `
+                        <div class="success" style="margin: 5px 0; padding: 10px;">
+                            <p><strong>✅ "${result.query}"</strong></p>
+                            <p>📦 ${result.count} productos | ⚡ ${result.time}ms | 📊 ${result.strategy}</p>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="error" style="margin: 5px 0; padding: 10px;">
+                            <p><strong>❌ "${result.query}"</strong></p>
+                            <p>Error: ${result.error}</p>
+                        </div>
+                    `;
+                }
+            });
+            
+            const successCount = results.filter(r => r.success).length;
+            html += `<p><strong>🎯 Resultado: ${successCount}/${results.length} tests exitosos</strong></p>`;
+            
+            resultDiv.innerHTML = html;
+        }
+        
+        // Ejecutar test de health automáticamente al cargar
+        window.addEventListener('load', testHealth);
+    </script>
+</body>
+</html>

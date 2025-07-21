@@ -967,6 +967,19 @@ const AdminDashboard: React.FC = () => {
               </li>
               <li className="nav-item">
                 <a 
+                  className="nav-link" 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/admin/products');
+                  }}
+                >
+                  <i className="bi bi-tags me-1"></i>
+                  Gestión Avanzada
+                </a>
+              </li>
+              <li className="nav-item">
+                <a 
                   className={`nav-link ${activeTab === 'categories' ? 'active' : ''}`} 
                   href="#" 
                   onClick={(e) => {
@@ -1072,6 +1085,42 @@ const AdminDashboard: React.FC = () => {
                         <p className="text-muted small mt-2">
                           Por entregar
                         </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Tarjeta especial para gestión avanzada de productos con sinónimos */}
+                <div className="row mb-4">
+                  <div className="col-md-12">
+                    <div className="card border-0 shadow-sm bg-gradient" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                      <div className="card-body text-white">
+                        <div className="row align-items-center">
+                          <div className="col-md-8">
+                            <h4 className="mb-2">
+                              <i className="bi bi-tags me-2"></i>
+                              Sistema de Sinónimos Inteligente
+                            </h4>
+                            <p className="mb-3 opacity-75">
+                              Mejora la búsqueda de productos con sinónimos inteligentes, métricas de popularidad y sugerencias automáticas basadas en el comportamiento de los usuarios.
+                            </p>
+                            <ul className="list-unstyled mb-0 opacity-75">
+                              <li><i className="bi bi-check-circle me-2"></i>Gestión orgánica de sinónimos por producto</li>
+                              <li><i className="bi bi-check-circle me-2"></i>Estadísticas de búsqueda en tiempo real</li>
+                              <li><i className="bi bi-check-circle me-2"></i>Sugerencias automáticas basadas en métricas</li>
+                            </ul>
+                          </div>
+                          <div className="col-md-4 text-center">
+                            <button 
+                              className="btn btn-light btn-lg shadow-sm"
+                              onClick={() => navigate('/admin/products')}
+                              style={{ borderRadius: '15px' }}
+                            >
+                              <i className="bi bi-rocket-takeoff me-2"></i>
+                              Acceder Ahora
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
