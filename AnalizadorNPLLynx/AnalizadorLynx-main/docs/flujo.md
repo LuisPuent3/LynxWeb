@@ -1,585 +1,762 @@
-# Documento Técnico: Sistema LCLN (Lenguaje de Consulta en Lenguaje Natural)
-## Analizador Léxico Inteligente con Corrección Ortográfica y Sistema de Recomendaciones
-
-**Proyecto:** LYNX - Sistema de Gestión de Inventarios  
-**Módulo:** Microservicio de Procesamiento de Lenguaje Natural  
-**Versión:** 2.0  
-**Fecha:** Enero 2025
+# Documento Técnico Detallado: Flujo Completo del Sistema LCLN
+## Procesamiento Paso a Paso de una Consulta en Lenguaje Natural
 
 ---
 
-## 1. DESCRIPCIÓN GENERAL DEL SISTEMA
+## 1. INTRODUCCIÓN
 
-### 1.1 Objetivo
-El sistema LCLN es un analizador léxico inteligente diseñado como microservicio para el sistema LYNX. Procesa consultas en lenguaje natural sobre productos, resolviendo ambigüedades, corrigiendo errores ortográficos y generando recomendaciones cuando los productos solicitados no existen en el inventario.
+Este documento describe con **máximo detalle** cada paso que realiza el sistema LCLN (Lenguaje de Consulta en Lenguaje Natural) cuando procesa una cadena de entrada. Se explicará cada iteración, cada decisión y cada transformación de datos.
 
-### 1.2 Arquitectura del Sistema
+### Sistema LCLN
+- **Propósito**: Convertir búsquedas en lenguaje natural a consultas SQL estructuradas
+- **Contexto**: Microservicio para el sistema LYNX de gestión de inventarios
+- **Entrada**: String en español con errores, sinónimos y lenguaje coloquial
+- **Salida**: JSON con interpretación + SQL query
 
+---
+
+## 2. EJEMPLO DE PROCESAMIENTO COMPLETO
+
+### Entrada de ejemplo:
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         FLUJO GENERAL DEL SISTEMA                     │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│  Entrada: "votana barata picabte menor a 20"                        │
-│     ↓                                                                │
-│  [1] MÓDULO DE CORRECCIÓN ORTOGRÁFICA                               │
-│     • Detecta: votana → botana (85% confianza)                      │
-│     • Detecta: picabte → picante (92% confianza)                    │
-│     ↓                                                                │
-│  [2] ANÁLISIS LÉXICO MULTI-AFD                                      │
-│     • AFD_Multipalabra: No encuentra coincidencias                  │
-│     • AFD_Palabras: botana → PRODUCTO_GENERICO                      │
-│     • AFD_Operadores: menor a → OP_MENOR                            │
-│     • AFD_Números: 20 → NUMERO                                      │
-│     ↓                                                                │
-│  [3] ANÁLISIS CONTEXTUAL                                            │
-│     • barata → ATRIBUTO_PRECIO                                      │
-│     • picante → ATRIBUTO_SABOR                                      │
-│     • Asocia "menor a 20" como filtro de precio                     │
-│     ↓                                                                │
-│  [4] INTERPRETACIÓN SEMÁNTICA                                       │
-│     • Identifica búsqueda genérica de categoría "snacks"            │
-│     • Aplica filtros: precio < 20, sabor = picante                  │
-│     ↓                                                                │
-│  [5] MOTOR DE RECOMENDACIONES                                       │
-│     • Como "botana" no es producto específico                       │
-│     • Busca en categoría "snacks" con atributos                     │
-│     ↓                                                                │
-│  [6] GENERACIÓN SQL Y RESPUESTA                                     │
-│     • SQL: SELECT * FROM Productos WHERE categoria='snacks'         │
-│            AND precio < 20 ORDER BY precio ASC                      │
-│     • Mensaje: "Mostrando snacks picantes económicos"               │
-│                                                                       │
-└─────────────────────────────────────────────────────────────────────┘
+"koka kola sin asucar barata menor a 20 pesos"
 ```
 
-## 2. COMPONENTES DEL SISTEMA
-
-### 2.1 Módulo de Corrección Ortográfica
-
-#### Algoritmo Principal: Distancia de Levenshtein Optimizada
-```python
-class CorrectorOrtografico:
-    def __init__(self):
-        self.vocabulario = self._cargar_vocabulario()
-        self.indices_foneticos = self._crear_indices_foneticos()
-        self.errores_comunes = {
-            "coca": "coca-cola",
-            "koka": "coca-cola", 
-            "votana": "botana",
-            "chetoos": "cheetos",
-            "dorito": "doritos",
-            "brata": "barata",
-            "varata": "barata"
-        }
-```
-
-#### Características:
-- **Distancia máxima permitida:** 2 caracteres
-- **Umbral de confianza:** 70%
-- **Soporte fonético español:** v↔b, s↔c, y↔ll
-- **Cache de correcciones:** Para optimizar consultas repetidas
-
-### 2.2 Análisis Léxico Multi-AFD
-
-#### Estructura de AFDs Paralelos:
-1. **AFD_Multipalabra:** Reconoce productos de múltiples palabras
-2. **AFD_Operadores:** Identifica operadores de comparación
-3. **AFD_Números:** Procesa valores numéricos
-4. **AFD_Unidades:** Detecta unidades de medida y moneda
-5. **AFD_Palabras:** Clasifica palabras individuales
-
-#### Tabla de Componentes Léxicos Extendida:
-
-| Token | Patrón | Prioridad | Ejemplo | Acción Post-Análisis |
-|-------|--------|-----------|---------|---------------------|
-| PRODUCTO_COMPLETO | `coca cola sin azucar` | 1 | "coca cola sin azucar" | Búsqueda exacta |
-| PRODUCTO_MULTIPALABRA | `coca cola|arroz integral` | 2 | "coca cola" | Verificar variantes |
-| PRODUCTO_GENERICO | `botana|snack|bebida` | 3 | "botana" | Inferir categoría |
-| CATEGORIA | `bebidas|frutas|snacks` | 4 | "bebidas" | Filtrar por categoría |
-| ATRIBUTO_PRECIO | `barat[oa]|economic[oa]|car[oa]` | 5 | "barata" | Aplicar filtro precio |
-| ATRIBUTO_SABOR | `picante|dulce|salado` | 6 | "picante" | Filtrar por atributo |
-| NEGACION | `sin|no` | 7 | "sin" | Excluir atributo |
-| OP_MENOR | `menor a|menos de` | 8 | "menor a" | Comparación < |
-| OP_MAYOR | `mayor a|mas de` | 8 | "mayor a" | Comparación > |
-| OP_ENTRE | `entre` | 8 | "entre" | Rango de valores |
-| NUMERO | `\d+(\.\d+)?` | 9 | "20" | Valor numérico |
-| UNIDAD_MONEDA | `pesos?` | 10 | "pesos" | Moneda |
-| PALABRA_NO_RECONOCIDA | `.+` | 15 | "xyz" | Intentar corrección |
-
-### 2.3 Análisis Contextual
-
-#### Reglas de Desambiguación:
-
-```python
-reglas_contextuales = [
-    {
-        "patron": ["NEGACION", "PALABRA_GENERICA"],
-        "accion": lambda tokens: tokens[1].tipo = "ATRIBUTO",
-        "ejemplo": "sin azúcar"
-    },
-    {
-        "patron": ["NUMERO", "UNIDAD_MONEDA"],
-        "accion": lambda tokens: crear_filtro_precio(tokens),
-        "ejemplo": "20 pesos"
-    },
-    {
-        "patron": ["PRODUCTO_GENERICO", "ATRIBUTO_PRECIO"],
-        "accion": lambda tokens: inferir_categoria_y_filtro(tokens),
-        "ejemplo": "botana barata"
-    }
-]
-```
-
-### 2.4 Motor de Recomendaciones
-
-#### Algoritmo de Similitud de Productos:
-
-```python
-class MotorRecomendaciones:
-    def calcular_similitud(self, consulta, producto_bd):
-        score = 0.0
-        
-        # 1. Similitud por categoría
-        if self.misma_categoria(consulta, producto_bd):
-            score += 0.4
-            
-        # 2. Similitud por atributos
-        atributos_comunes = self.atributos_compartidos(consulta, producto_bd)
-        score += len(atributos_comunes) * 0.2
-        
-        # 3. Similitud por nombre (usando n-gramas)
-        score += self.similitud_ngrams(consulta.nombre, producto_bd.nombre) * 0.3
-        
-        # 4. Similitud por precio
-        if consulta.rango_precio and self.precio_en_rango(producto_bd, consulta.rango_precio):
-            score += 0.1
-            
-        return min(score, 1.0)
-```
-
-## 3. FLUJO DE PROCESAMIENTO DETALLADO
-
-### 3.1 Ejemplo Completo: "chetoos picantes baratos"
-
-```
-ENTRADA: "chetoos picantes baratos"
-         ↓
-┌─────────────────────────────────────┐
-│ FASE 1: CORRECCIÓN ORTOGRÁFICA      │
-├─────────────────────────────────────┤
-│ • "chetoos" → "cheetos" (conf: 0.9) │
-│ • "picantes" → OK                   │
-│ • "baratos" → OK                    │
-│ Salida: "cheetos picantes baratos"  │
-└─────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────┐
-│ FASE 2: TOKENIZACIÓN                │
-├─────────────────────────────────────┤
-│ Tokens detectados:                  │
-│ • cheetos: PRODUCTO_NO_ENCONTRADO   │
-│ • picantes: ATRIBUTO_SABOR          │
-│ • baratos: ATRIBUTO_PRECIO          │
-└─────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────┐
-│ FASE 3: ANÁLISIS CONTEXTUAL         │
-├─────────────────────────────────────┤
-│ • Producto no existe en BD          │
-│ • Inferir categoría: "snacks"       │
-│ • Aplicar filtros de atributos      │
-└─────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────┐
-│ FASE 4: RECOMENDACIONES             │
-├─────────────────────────────────────┤
-│ Productos similares encontrados:     │
-│ 1. Doritos (similitud: 0.85)       │
-│    - Misma categoría: snacks        │
-│    - Disponible en sabor picante    │
-│ 2. Otros snacks (similitud: 0.60)   │
-└─────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────┐
-│ FASE 5: GENERACIÓN DE RESPUESTA     │
-├─────────────────────────────────────┤
-│ JSON Response:                      │
-│ {                                   │
-│   "query_original": "chetoos...",   │
-│   "correcciones": [...],            │
-│   "interpretacion": {               │
-│     "busqueda_tipo": "similar",     │
-│     "categoria": "snacks",          │
-│     "filtros": {                    │
-│       "sabor": "picante",           │
-│       "precio": "bajo"              │
-│     }                               │
-│   },                                │
-│   "recomendaciones": [...],         │
-│   "sql": "SELECT * FROM..."         │
-│ }                                   │
-└─────────────────────────────────────┘
-```
-
-## 4. AUTÓMATA FINITO DETERMINISTA - ESPECIFICACIÓN FORMAL
-
-### 4.1 Definición Matemática
-
-**M = (Q, Σ, δ, q0, F)**
-
-Donde:
-- **Q** = {q0, q1, ..., q50, qt} (51 estados + estado trampa)
-- **Σ** = {a-z, A-Z, 0-9, á, é, í, ó, ú, ñ, ' ', caracteres especiales}
-- **δ**: Q × Σ → Q (función de transición)
-- **q0** = Estado inicial
-- **F** = {q9, q13, q16, q18, q21, q23, q26, ...} (estados de aceptación)
-
-### 4.2 Tabla de Transiciones Principales
-
-| Estado | Entrada | Siguiente | Token Reconocido | Prioridad |
-|--------|---------|-----------|------------------|-----------|
-| q0 | 'c' | q1 | - | - |
-| q1 | 'o' | q2 | - | - |
-| q2 | 'c' | q3 | - | - |
-| q3 | 'a' | q4 | - | - |
-| q4 | ' ' | q5 | - | - |
-| q5 | 'c' | q6 | - | - |
-| q6 | 'o' | q7 | - | - |
-| q7 | 'l' | q8 | - | - |
-| q8 | 'a' | q9 | PRODUCTO_MULTIPALABRA | 2 |
-| q9 | ' ' | q10 | - | - |
-| q10 | 's' | q11 | - | - |
-| q11 | 'i' | q12 | - | - |
-| q12 | 'n' | q13 | PRODUCTO_COMPLETO | 1 |
-| q0 | 'b' | q14 | - | - |
-| q14 | 'ebidas' | q16 | CATEGORIA | 4 |
-| q0 | [0-9] | q22 | - | - |
-| q22 | [0-9]* | q23 | NUMERO | 9 |
-| q0 | otro | qt | PALABRA_NO_RECONOCIDA | 15 |
-
-## 5. INTEGRACIÓN CON SISTEMA LYNX
-
-### 5.1 API REST del Microservicio
-
-#### Endpoint Principal
-```http
-POST /api/nlp/analyze
-Content-Type: application/json
-
-Request:
+### Salida esperada:
+```json
 {
-  "query": "votana barata picabte menor a 20",
-  "options": {
-    "enable_correction": true,
-    "enable_recommendations": true,
-    "max_recommendations": 5
-  },
-  "context": {
-    "user_id": "123",
-    "location": "campus_norte"
-  }
-}
-
-Response Success:
-{
-  "success": true,
-  "processing_time_ms": 45,
-  "original_query": "votana barata picabte menor a 20",
-  "corrections": {
-    "applied": true,
-    "changes": [
-      {"from": "votana", "to": "botana", "confidence": 0.85},
-      {"from": "picabte", "to": "picante", "confidence": 0.92}
-    ],
-    "corrected_query": "botana barata picante menor a 20"
-  },
-  "interpretation": {
-    "type": "category_search",
-    "category": "snacks",
-    "filters": {
-      "price": {"max": 20, "tendency": "low"},
-      "attributes": ["picante"]
+  "query_original": "koka kola sin asucar barata menor a 20 pesos",
+  "query_corregida": "coca cola sin azucar barata menor a 20 pesos",
+  "tokens": [...],
+  "interpretacion": {
+    "producto": "coca cola sin azucar",
+    "filtros": {
+      "precio": {"max": 20, "tendencia": "bajo"}
     }
   },
-  "sql_query": "SELECT p.*, c.nombre as categoria FROM Productos p JOIN Categorias c ON p.id_categoria = c.id_categoria WHERE c.nombre = 'snacks' AND p.precio < 20 AND (p.nombre LIKE '%picante%' OR p.descripcion LIKE '%picante%') ORDER BY p.precio ASC",
-  "recommendations": [
-    {
-      "product_id": 2,
-      "name": "Doritos",
-      "category": "snacks",
-      "price": 25.00,
-      "match_score": 0.75,
-      "match_reasons": ["categoria_correcta", "precio_cercano"]
-    }
-  ],
-  "user_message": "Mostrando snacks picantes económicos (menos de $20)"
+  "sql": "SELECT * FROM Productos WHERE nombre = 'Coca-Cola Sin Azúcar' AND precio <= 20 ORDER BY precio ASC"
 }
 ```
 
-### 5.2 Configuración del Microservicio
+---
 
-```yaml
-# config/lcln-service.yml
-service:
-  name: lcln-analyzer
-  version: 2.0
-  port: 5000
-  
-lexical_analysis:
-  max_token_length: 50
-  enable_multi_word: true
-  priority_based_matching: true
-  
-spell_correction:
-  enabled: true
-  max_distance: 2
-  min_confidence: 0.7
-  cache_size: 1000
-  custom_dictionary: ./dictionaries/productos_lynx.txt
-  
-recommendations:
-  enabled: true
-  max_results: 5
-  min_similarity_score: 0.5
-  algorithms:
-    - name_similarity
-    - category_matching
-    - attribute_matching
-    - price_range_matching
+## 3. FLUJO DETALLADO PASO A PASO
+
+### PASO 1: RECEPCIÓN Y VALIDACIÓN INICIAL
+
+```python
+def procesar_consulta(entrada_cruda):
+    """
+    PASO 1: Validación y preparación inicial
+    """
+    # 1.1 Recibir entrada
+    entrada_cruda = "koka kola sin asucar barata menor a 20 pesos"
     
-database:
-  connection_string: mysql://lynxshop
-  pool_size: 10
-  query_timeout: 5000
-  
-monitoring:
-  log_level: INFO
-  metrics_enabled: true
-  track_corrections: true
-  track_recommendations: true
-```
-
-### 5.3 Implementación en Node.js (Backend LYNX)
-
-```javascript
-// services/NaturalLanguageSearchService.js
-const axios = require('axios');
-const Redis = require('redis');
-const logger = require('../utils/logger');
-
-class NaturalLanguageSearchService {
-  constructor() {
-    this.lcnlServiceUrl = process.env.LCLN_SERVICE_URL;
-    this.cache = Redis.createClient();
-    this.analyticsCollector = new AnalyticsCollector();
-  }
-
-  async searchProducts(query, userId, options = {}) {
-    const startTime = Date.now();
+    # 1.2 Validar que no esté vacía
+    if not entrada_cruda or entrada_cruda.strip() == "":
+        return {"error": "Consulta vacía"}
     
-    try {
-      // Check cache first
-      const cacheKey = this.generateCacheKey(query, options);
-      const cachedResult = await this.cache.get(cacheKey);
-      
-      if (cachedResult && !options.skipCache) {
-        logger.info(`Cache hit for query: ${query}`);
-        return JSON.parse(cachedResult);
-      }
-      
-      // Call LCLN microservice
-      const lcnlResponse = await axios.post(`${this.lcnlServiceUrl}/api/nlp/analyze`, {
-        query,
-        options: {
-          enable_correction: true,
-          enable_recommendations: true,
-          ...options
-        },
-        context: {
-          user_id: userId,
-          timestamp: new Date().toISOString()
-        }
-      });
-      
-      const { interpretation, sql_query, corrections, recommendations } = lcnlResponse.data;
-      
-      // Execute SQL query
-      const products = await this.executeSearchQuery(sql_query);
-      
-      // Enrich results
-      const enrichedResults = await this.enrichResults(products, interpretation);
-      
-      // Prepare response
-      const response = {
-        success: true,
-        query: {
-          original: query,
-          corrected: corrections?.corrected_query || query,
-          corrections: corrections?.changes || []
-        },
-        results: {
-          products: enrichedResults,
-          count: enrichedResults.length,
-          recommendations: recommendations || []
-        },
-        metadata: {
-          processing_time: Date.now() - startTime,
-          interpretation_type: interpretation.type,
-          filters_applied: interpretation.filters
-        }
-      };
-      
-      // Cache results
-      await this.cache.setex(cacheKey, 300, JSON.stringify(response));
-      
-      // Track analytics
-      this.analyticsCollector.track('natural_search', {
-        query,
-        corrections_applied: corrections?.applied || false,
-        results_count: enrichedResults.length,
-        has_recommendations: recommendations?.length > 0
-      });
-      
-      return response;
-      
-    } catch (error) {
-      logger.error('Natural language search error:', error);
-      
-      // Fallback to traditional search
-      return this.fallbackSearch(query);
+    # 1.3 Limpiar entrada básica
+    entrada_limpia = entrada_cruda.strip().lower()
+    # Resultado: "koka kola sin asucar barata menor a 20 pesos"
+    
+    # 1.4 Validar longitud máxima (protección DoS)
+    if len(entrada_limpia) > 200:
+        return {"error": "Consulta demasiado larga"}
+    
+    # 1.5 Registrar en log
+    log_entry = {
+        "timestamp": "2024-01-20T10:15:30Z",
+        "entrada_original": entrada_cruda,
+        "longitud": len(entrada_limpia)
     }
-  }
-  
-  async executeSearchQuery(sqlQuery) {
-    // Ejecutar query con protección contra SQL injection
-    const sanitizedQuery = this.sanitizeSQL(sqlQuery);
-    const [results] = await db.query(sanitizedQuery);
-    return results;
-  }
-  
-  async enrichResults(products, interpretation) {
-    // Agregar información adicional a cada producto
-    return Promise.all(products.map(async (product) => {
-      const enriched = { ...product };
-      
-      // Agregar disponibilidad en tiempo real
-      enriched.disponibilidad = await this.checkAvailability(product.id_producto);
-      
-      // Agregar score de relevancia basado en la interpretación
-      enriched.relevance_score = this.calculateRelevance(product, interpretation);
-      
-      // Agregar información de promociones si existe
-      enriched.promociones = await this.getActivePromotions(product.id_producto);
-      
-      return enriched;
-    }));
-  }
-}
-
-module.exports = NaturalLanguageSearchService;
 ```
 
-## 6. CASOS DE USO Y EJEMPLOS
+### PASO 2: CORRECCIÓN ORTOGRÁFICA
 
-### 6.1 Casos de Éxito
-
-| Entrada | Salida | Explicación |
-|---------|--------|-------------|
-| "coca cola sin azucar menor a 20 pesos" | Producto exacto + filtro precio | Reconocimiento perfecto |
-| "bebidas baratas" | Categoría completa ordenada por precio | Inferencia correcta |
-| "snacks picantes entre 10 y 30 pesos" | Productos filtrados por rango | Operadores complejos |
-
-### 6.2 Casos con Corrección
-
-| Entrada | Corrección | Resultado |
-|---------|------------|-----------|
-| "koka kola" | "coca cola" | Encuentra Coca-Cola |
-| "mansana verde" | "manzana verde" | Producto específico |
-| "vebidas sin asucar" | "bebidas sin azucar" | Categoría + filtro |
-
-### 6.3 Casos con Recomendaciones
-
-| Entrada | Análisis | Recomendación |
-|---------|----------|---------------|
-| "cheetos picantes" | Producto no existe | Sugiere Doritos (snacks similares) |
-| "refresco de naranja" | No hay match exacto | Sugiere bebidas categoría |
-| "galletas sin gluten" | Atributo no disponible | Muestra todas las galletas con nota |
-
-## 7. MÉTRICAS Y MONITOREO
-
-### 7.1 KPIs del Sistema
-
-```javascript
-const metricas = {
-  // Precisión
-  precision_correccion: 0.92,        // 92% de correcciones acertadas
-  precision_interpretacion: 0.88,    // 88% de interpretaciones correctas
-  
-  // Performance
-  tiempo_promedio_respuesta: 45,     // 45ms promedio
-  tiempo_maximo_respuesta: 200,      // 200ms máximo
-  
-  // Uso
-  queries_por_minuto: 150,           // Capacidad actual
-  cache_hit_rate: 0.65,              // 65% desde cache
-  
-  // Calidad
-  recomendaciones_aceptadas: 0.73,   // 73% de recomendaciones útiles
-  fallback_rate: 0.05                // 5% requiere búsqueda tradicional
-};
+```python
+def corregir_ortografia(entrada_limpia):
+    """
+    PASO 2: Corregir errores ortográficos palabra por palabra
+    """
+    # 2.1 Dividir en palabras
+    palabras = entrada_limpia.split()
+    # ["koka", "kola", "sin", "asucar", "barata", "menor", "a", "20", "pesos"]
+    
+    palabras_corregidas = []
+    correcciones_aplicadas = []
+    
+    # 2.2 Conectar a BD para obtener correcciones
+    # QUERY SQL:
+    # SELECT termino_correcto FROM CorreccionesOrtograficas WHERE termino_incorrecto IN (...)
+    
+    # 2.3 Procesar cada palabra
+    for i, palabra in enumerate(palabras):
+        # Iteración 1: palabra = "koka"
+        # Buscar en tabla CorreccionesOrtograficas
+        correccion = buscar_correccion(palabra)
+        # SQL: SELECT termino_correcto FROM CorreccionesOrtograficas WHERE termino_incorrecto = 'koka'
+        # Resultado: "coca"
+        
+        if correccion:
+            palabras_corregidas.append(correccion)
+            correcciones_aplicadas.append({
+                "original": palabra,
+                "corregida": correccion,
+                "posicion": i,
+                "tipo": "ortografica"
+            })
+        else:
+            palabras_corregidas.append(palabra)
+    
+    # 2.4 Resultado de correcciones:
+    # palabras_corregidas = ["coca", "cola", "sin", "azucar", "barata", "menor", "a", "20", "pesos"]
+    # correcciones_aplicadas = [
+    #   {"original": "koka", "corregida": "coca", "posicion": 0},
+    #   {"original": "asucar", "corregida": "azucar", "posicion": 3}
+    # ]
+    
+    entrada_corregida = " ".join(palabras_corregidas)
+    # "coca cola sin azucar barata menor a 20 pesos"
+    
+    return entrada_corregida, correcciones_aplicadas
 ```
 
-### 7.2 Logs y Trazabilidad
+### PASO 3: TOKENIZACIÓN CON AFD
+
+```python
+def tokenizar_con_afd(entrada_corregida):
+    """
+    PASO 3: Análisis léxico usando Autómata Finito Determinista
+    """
+    entrada = "coca cola sin azucar barata menor a 20 pesos"
+    tokens = []
+    posicion = 0
+    
+    # 3.1 Inicializar AFD en estado q0
+    estado_actual = "q0"
+    buffer = ""
+    
+    # 3.2 Procesar carácter por carácter
+    i = 0
+    while i < len(entrada):
+        char = entrada[i]
+        
+        # 3.3 FASE DE LOOK-AHEAD para productos multi-palabra
+        # Verificar si las próximas palabras forman un producto conocido
+        ventana_4_palabras = extraer_palabras(entrada[i:], 4)
+        # ["coca", "cola", "sin", "azucar"]
+        
+        # 3.3.1 Verificar producto completo (máxima prioridad)
+        if " ".join(ventana_4_palabras) == "coca cola sin azucar":
+            tokens.append({
+                "tipo": "PRODUCTO_COMPLETO",
+                "valor": "coca cola sin azucar",
+                "inicio": i,
+                "fin": i + len("coca cola sin azucar"),
+                "prioridad": 1
+            })
+            i += len("coca cola sin azucar") + 1
+            continue
+        
+        # 3.3.2 Verificar producto de 2 palabras
+        ventana_2_palabras = ventana_4_palabras[:2]
+        if " ".join(ventana_2_palabras) == "coca cola":
+            # Verificar contexto: ¿viene "sin azucar" después?
+            if i + len("coca cola") < len(entrada):
+                siguientes = entrada[i + len("coca cola"):].strip().split()
+                if len(siguientes) >= 2 and siguientes[0] == "sin" and siguientes[1] == "azucar":
+                    # No tokenizar aún, es parte de producto completo
+                    pass
+                else:
+                    tokens.append({
+                        "tipo": "PRODUCTO_MULTIPALABRA",
+                        "valor": "coca cola",
+                        "inicio": i,
+                        "fin": i + len("coca cola"),
+                        "prioridad": 2
+                    })
+                    i += len("coca cola") + 1
+                    continue
+    
+    # 3.4 Después del look-ahead, continuar con análisis palabra por palabra
+    # Entrada restante: "barata menor a 20 pesos"
+    
+    palabras_restantes = entrada[i:].split()
+    for palabra in palabras_restantes:
+        token = clasificar_palabra(palabra)
+        tokens.append(token)
+```
+
+### PASO 4: CLASIFICACIÓN DE TOKENS INDIVIDUALES
+
+```python
+def clasificar_palabra(palabra, contexto_anterior=None):
+    """
+    PASO 4: Clasificar cada palabra según su tipo
+    """
+    # 4.1 Verificar si es número
+    if es_numero(palabra):  # regex: ^\d+(\.\d+)?$
+        return {"tipo": "NUMERO", "valor": palabra, "prioridad": 9}
+    
+    # 4.2 Verificar en diccionarios
+    # SQL: SELECT * FROM SinonimosProductos WHERE termino = ?
+    
+    # Ejemplo: palabra = "barata"
+    # 4.2.1 Buscar en sinónimos de atributos
+    resultado = ejecutar_sql("""
+        SELECT atributo_normalizado, categoria_atributo, valor_asociado 
+        FROM SinonimosAtributos 
+        WHERE atributo_usado = 'barata'
+    """)
+    # Resultado: atributo_normalizado = "precio_bajo", categoria = "precio"
+    
+    if resultado:
+        return {
+            "tipo": "ATRIBUTO_PRECIO",
+            "valor": palabra,
+            "valor_normalizado": "precio_bajo",
+            "prioridad": 5
+        }
+    
+    # 4.2.2 Verificar operadores
+    if palabra == "menor":
+        return {"tipo": "OP_MENOR_INCOMPLETO", "valor": palabra, "prioridad": 8}
+    
+    # 4.2.3 Verificar categorías
+    if palabra in ["bebidas", "snacks", "frutas", "verduras", "abarrotes"]:
+        return {"tipo": "CATEGORIA", "valor": palabra, "prioridad": 4}
+    
+    # 4.2.4 Verificar unidades
+    if palabra in ["pesos", "peso"]:
+        return {"tipo": "UNIDAD_MONEDA", "valor": palabra, "prioridad": 10}
+    
+    # 4.2.5 Si no se reconoce
+    return {"tipo": "PALABRA_GENERICA", "valor": palabra, "prioridad": 13}
+```
+
+### PASO 5: ANÁLISIS CONTEXTUAL
+
+```python
+def analisis_contextual(tokens):
+    """
+    PASO 5: Refinar tokens basándose en contexto
+    """
+    # tokens = [
+    #   {"tipo": "PRODUCTO_COMPLETO", "valor": "coca cola sin azucar"},
+    #   {"tipo": "ATRIBUTO_PRECIO", "valor": "barata"},
+    #   {"tipo": "OP_MENOR_INCOMPLETO", "valor": "menor"},
+    #   {"tipo": "PREPOSICION", "valor": "a"},
+    #   {"tipo": "NUMERO", "valor": "20"},
+    #   {"tipo": "UNIDAD_MONEDA", "valor": "pesos"}
+    # ]
+    
+    tokens_refinados = []
+    i = 0
+    
+    while i < len(tokens):
+        token_actual = tokens[i]
+        
+        # 5.1 Regla: Combinar operadores compuestos
+        if token_actual["tipo"] == "OP_MENOR_INCOMPLETO":
+            if i + 1 < len(tokens) and tokens[i + 1]["valor"] == "a":
+                # Combinar "menor" + "a" = "menor a"
+                token_combinado = {
+                    "tipo": "OP_MENOR",
+                    "valor": "menor a",
+                    "prioridad": 8
+                }
+                tokens_refinados.append(token_combinado)
+                i += 2  # Saltar el "a"
+                continue
+        
+        # 5.2 Regla: Asociar números con unidades
+        if token_actual["tipo"] == "NUMERO":
+            if i + 1 < len(tokens) and tokens[i + 1]["tipo"] == "UNIDAD_MONEDA":
+                token_actual["unidad"] = tokens[i + 1]["valor"]
+                token_actual["contexto"] = "precio"
+        
+        # 5.3 Regla: Negación + palabra = atributo
+        if token_actual["tipo"] == "NEGACION":
+            if i + 1 < len(tokens) and tokens[i + 1]["tipo"] == "PALABRA_GENERICA":
+                tokens[i + 1]["tipo"] = "ATRIBUTO"
+                tokens[i + 1]["modificador"] = "sin"
+        
+        tokens_refinados.append(token_actual)
+        i += 1
+    
+    return tokens_refinados
+```
+
+### PASO 6: CONSTRUCCIÓN DE INTERPRETACIÓN SEMÁNTICA
+
+```python
+def construir_interpretacion(tokens_refinados):
+    """
+    PASO 6: Construir estructura semántica de la consulta
+    """
+    interpretacion = {
+        "elemento_principal": None,
+        "filtros": {
+            "precio": {},
+            "atributos": {"incluir": [], "excluir": []},
+            "cantidad": {}
+        },
+        "ordenamiento": None
+    }
+    
+    # 6.1 Identificar elemento principal (producto o categoría)
+    for token in tokens_refinados:
+        if token["tipo"] in ["PRODUCTO_COMPLETO", "PRODUCTO_MULTIPALABRA"]:
+            interpretacion["elemento_principal"] = {
+                "tipo": "producto",
+                "valor": token["valor"],
+                "nombre_bd": mapear_a_nombre_bd(token["valor"])
+            }
+            break
+        elif token["tipo"] == "CATEGORIA":
+            interpretacion["elemento_principal"] = {
+                "tipo": "categoria",
+                "valor": token["valor"],
+                "id_categoria": obtener_id_categoria(token["valor"])
+            }
+            break
+    
+    # 6.2 Procesar filtros y modificadores
+    i = 0
+    while i < len(tokens_refinados):
+        token = tokens_refinados[i]
+        
+        # 6.2.1 Filtros de precio
+        if token["tipo"] == "OP_MENOR":
+            # Buscar el número siguiente
+            for j in range(i + 1, len(tokens_refinados)):
+                if tokens_refinados[j]["tipo"] == "NUMERO":
+                    interpretacion["filtros"]["precio"]["max"] = float(tokens_refinados[j]["valor"])
+                    interpretacion["filtros"]["precio"]["operador"] = "menor_igual"
+                    break
+        
+        # 6.2.2 Atributos de precio
+        if token["tipo"] == "ATRIBUTO_PRECIO":
+            if token["valor_normalizado"] == "precio_bajo":
+                interpretacion["ordenamiento"] = "precio_asc"
+                # También podría agregar un filtro implícito
+                if "max" not in interpretacion["filtros"]["precio"]:
+                    # Calcular precio promedio de la categoría
+                    precio_promedio = calcular_precio_promedio()
+                    interpretacion["filtros"]["precio"]["max_implicito"] = precio_promedio * 0.8
+        
+        i += 1
+    
+    # Resultado:
+    # interpretacion = {
+    #   "elemento_principal": {"tipo": "producto", "valor": "coca cola sin azucar"},
+    #   "filtros": {"precio": {"max": 20, "operador": "menor_igual"}},
+    #   "ordenamiento": "precio_asc"
+    # }
+    
+    return interpretacion
+```
+
+### PASO 7: VALIDACIÓN Y RESOLUCIÓN DE AMBIGÜEDADES
+
+```python
+def resolver_ambiguedades(interpretacion):
+    """
+    PASO 7: Resolver posibles ambigüedades en la interpretación
+    """
+    # 7.1 Verificar si el producto existe
+    if interpretacion["elemento_principal"]["tipo"] == "producto":
+        nombre_producto = interpretacion["elemento_principal"]["valor"]
+        
+        # SQL para verificar existencia
+        existe = ejecutar_sql("""
+            SELECT COUNT(*) as cuenta 
+            FROM Productos 
+            WHERE nombre = ? OR nombre LIKE ?
+        """, [nombre_producto, f"%{nombre_producto}%"])
+        
+        if existe["cuenta"] == 0:
+            # 7.2 Buscar productos similares
+            similares = ejecutar_sql("""
+                SELECT p.*, ps.score_similitud, ps.razon_similitud
+                FROM ProductosSimilares ps
+                JOIN Productos p ON ps.id_producto_sugerido = p.id_producto
+                WHERE ps.producto_solicitado_texto = ?
+                ORDER BY ps.score_similitud DESC
+                LIMIT 3
+            """, [nombre_producto])
+            
+            if similares:
+                interpretacion["producto_no_encontrado"] = True
+                interpretacion["sugerencias"] = similares
+    
+    # 7.3 Resolver conflictos de filtros
+    if interpretacion["filtros"]["precio"].get("max") and interpretacion["filtros"]["precio"].get("max_implicito"):
+        # Usar el más restrictivo
+        interpretacion["filtros"]["precio"]["max"] = min(
+            interpretacion["filtros"]["precio"]["max"],
+            interpretacion["filtros"]["precio"]["max_implicito"]
+        )
+    
+    return interpretacion
+```
+
+### PASO 8: GENERACIÓN DE CONSULTA SQL
+
+```python
+def generar_sql(interpretacion):
+    """
+    PASO 8: Construir la consulta SQL final
+    """
+    # 8.1 Iniciar construcción SQL
+    sql_parts = {
+        "select": "SELECT p.*, c.nombre as categoria_nombre",
+        "from": "FROM Productos p",
+        "join": "JOIN Categorias c ON p.id_categoria = c.id_categoria",
+        "where": [],
+        "order_by": "",
+        "limit": ""
+    }
+    
+    # 8.2 Agregar condición principal
+    if interpretacion["elemento_principal"]["tipo"] == "producto":
+        # Mapear nombre a formato de BD
+        nombre_bd = interpretacion["elemento_principal"]["valor"]
+        if nombre_bd == "coca cola sin azucar":
+            nombre_bd = "Coca-Cola Sin Azúcar 600ml"
+        
+        sql_parts["where"].append(f"p.nombre = '{nombre_bd}'")
+    
+    elif interpretacion["elemento_principal"]["tipo"] == "categoria":
+        id_cat = interpretacion["elemento_principal"]["id_categoria"]
+        sql_parts["where"].append(f"p.id_categoria = {id_cat}")
+    
+    # 8.3 Agregar filtros de precio
+    if "max" in interpretacion["filtros"]["precio"]:
+        precio_max = interpretacion["filtros"]["precio"]["max"]
+        sql_parts["where"].append(f"p.precio <= {precio_max}")
+    
+    # 8.4 Agregar ordenamiento
+    if interpretacion.get("ordenamiento") == "precio_asc":
+        sql_parts["order_by"] = "ORDER BY p.precio ASC"
+    
+    # 8.5 Construir SQL final
+    sql_final = f"""
+    {sql_parts['select']}
+    {sql_parts['from']}
+    {sql_parts['join']}
+    WHERE {' AND '.join(sql_parts['where'])}
+    {sql_parts['order_by']}
+    """
+    
+    # Resultado:
+    # SELECT p.*, c.nombre as categoria_nombre
+    # FROM Productos p
+    # JOIN Categorias c ON p.id_categoria = c.id_categoria
+    # WHERE p.nombre = 'Coca-Cola Sin Azúcar 600ml' AND p.precio <= 20
+    # ORDER BY p.precio ASC
+    
+    return sql_final.strip()
+```
+
+### PASO 9: EJECUCIÓN Y ENRIQUECIMIENTO DE RESULTADOS
+
+```python
+def ejecutar_y_enriquecer(sql_query, interpretacion):
+    """
+    PASO 9: Ejecutar SQL y enriquecer resultados
+    """
+    # 9.1 Ejecutar consulta
+    resultados = ejecutar_sql(sql_query)
+    
+    # 9.2 Si no hay resultados y hay sugerencias
+    if len(resultados) == 0 and interpretacion.get("sugerencias"):
+        # Ejecutar búsqueda con productos sugeridos
+        productos_sugeridos = interpretacion["sugerencias"]
+        resultados = []
+        for sugerido in productos_sugeridos:
+            resultados.append({
+                **sugerido,
+                "es_sugerencia": True,
+                "mensaje": f"No encontramos '{interpretacion['elemento_principal']['valor']}', pero te puede interesar:"
+            })
+    
+    # 9.3 Enriquecer cada resultado
+    for resultado in resultados:
+        # Agregar información adicional
+        resultado["disponibilidad"] = "En stock" if resultado["cantidad"] > 0 else "Agotado"
+        resultado["es_oferta"] = resultado["precio"] < calcular_precio_promedio_categoria(resultado["id_categoria"]) * 0.8
+        
+        # Calcular score de relevancia
+        resultado["relevancia"] = calcular_relevancia(resultado, interpretacion)
+    
+    # 9.4 Ordenar por relevancia si no hay orden específico
+    if not interpretacion.get("ordenamiento"):
+        resultados.sort(key=lambda x: x["relevancia"], reverse=True)
+    
+    return resultados
+```
+
+### PASO 10: CONSTRUCCIÓN DE RESPUESTA FINAL
+
+```python
+def construir_respuesta_final(entrada_original, correcciones, tokens, interpretacion, sql, resultados):
+    """
+    PASO 10: Construir JSON de respuesta completo
+    """
+    respuesta = {
+        "success": True,
+        "query": {
+            "original": entrada_original,
+            "corregida": " ".join([c["corregida"] for c in correcciones]) if correcciones else entrada_original,
+            "correcciones_aplicadas": correcciones
+        },
+        "analisis": {
+            "tokens_detectados": [
+                {
+                    "tipo": t["tipo"],
+                    "valor": t["valor"],
+                    "prioridad": t.get("prioridad", 99)
+                } for t in tokens
+            ],
+            "interpretacion": interpretacion,
+            "confianza": calcular_confianza_interpretacion(tokens, interpretacion)
+        },
+        "sql_generado": sql,
+        "resultados": {
+            "cantidad": len(resultados),
+            "productos": resultados,
+            "mensaje_usuario": generar_mensaje_usuario(interpretacion, resultados)
+        },
+        "metadata": {
+            "tiempo_procesamiento_ms": 45,
+            "version_analizador": "2.0",
+            "fecha_proceso": "2024-01-20T10:15:30Z"
+        }
+    }
+    
+    # Ejemplo de mensaje usuario:
+    # "Mostrando Coca-Cola Sin Azúcar por menos de $20, ordenado por precio más bajo primero"
+    
+    return respuesta
+```
+
+---
+
+## 4. DIAGRAMAS DE FLUJO DETALLADOS
+
+### 4.1 Flujo General del Sistema
+
+```
+[ENTRADA] "koka kola sin asucar barata menor a 20 pesos"
+    |
+    v
+[VALIDACIÓN INICIAL]
+    | - No vacío
+    | - Longitud < 200
+    | - Caracteres válidos
+    v
+[CORRECCIÓN ORTOGRÁFICA]
+    | - koka → coca
+    | - asucar → azucar
+    v
+[TOKENIZACIÓN CON AFD]
+    | - Look-ahead 4 palabras
+    | - Detecta "coca cola sin azucar"
+    | - Clasifica tokens restantes
+    v
+[ANÁLISIS CONTEXTUAL]
+    | - Combina "menor" + "a"
+    | - Asocia "20" + "pesos"
+    | - Interpreta "barata"
+    v
+[INTERPRETACIÓN SEMÁNTICA]
+    | - Producto principal
+    | - Filtros de precio
+    | - Ordenamiento implícito
+    v
+[VALIDACIÓN Y AMBIGÜEDADES]
+    | - Verifica existencia
+    | - Busca similares si no existe
+    v
+[GENERACIÓN SQL]
+    | - SELECT con JOINs
+    | - WHERE con filtros
+    | - ORDER BY precio
+    v
+[EJECUCIÓN Y ENRIQUECIMIENTO]
+    | - Ejecuta query
+    | - Agrega metadata
+    | - Calcula relevancia
+    v
+[RESPUESTA JSON]
+```
+
+### 4.2 Detalle del AFD para Tokenización
+
+```
+Estado: q0 (inicial)
+  |
+  | Lee 'c'
+  v
+Estado: q1
+  |
+  | Lee 'o'
+  v
+Estado: q2
+  |
+  | Lee 'c'
+  v
+Estado: q3
+  |
+  | Lee 'a'
+  v
+Estado: q4
+  |
+  | Lee ' ' (espacio)
+  v
+Estado: q5
+  |
+  | Lee 'c'
+  v
+Estado: q6
+  |
+  | Lee 'o'
+  v
+Estado: q7
+  |
+  | Lee 'l'
+  v
+Estado: q8
+  |
+  | Lee 'a'
+  v
+Estado: q9 (ACEPTA: PRODUCTO_MULTIPALABRA)
+  |
+  | Verifica contexto: ¿sigue "sin azucar"?
+  | SÍ → Continúa
+  v
+Estado: q10
+  |
+  | Lee ' sin azucar'
+  v
+Estado: q13 (ACEPTA: PRODUCTO_COMPLETO - Mayor prioridad)
+```
+
+---
+
+## 5. MANEJO DE CASOS ESPECIALES
+
+### 5.1 Productos No Existentes
+
+Cuando se busca "cheetos picantes" (producto que no existe):
+
+```python
+# Flujo especial:
+1. Tokenización detecta: ["cheetos", "picantes"]
+2. Clasificación: 
+   - "cheetos" → PRODUCTO_NO_RECONOCIDO
+   - "picantes" → ATRIBUTO_SABOR
+
+3. Búsqueda en ProductosSimilares:
+   SQL: SELECT * FROM ProductosSimilares WHERE producto_solicitado_texto = 'cheetos'
+   Resultado: Sugiere "Doritos" con score 0.85
+
+4. Interpretación alternativa:
+   - Inferir categoría: "snacks" (por similitud)
+   - Aplicar filtro: sabor = "picante"
+
+5. SQL generado:
+   SELECT * FROM Productos p
+   WHERE p.id_categoria = 2 
+   AND (p.nombre LIKE '%picante%' OR p.descripcion LIKE '%picante%')
+   ORDER BY 
+     CASE WHEN p.id_producto = 2 THEN 0 ELSE 1 END,  -- Doritos primero
+     p.nombre
+```
+
+### 5.2 Queries Ambiguas
+
+Para "manzana" (¿producto o categoría?):
+
+```python
+# Estrategia de desambiguación:
+1. Buscar coincidencia exacta en productos
+   SQL: SELECT * FROM Productos WHERE nombre = 'Manzana'
+   
+2. Si existe → Es producto
+   Si no existe → Buscar en categorías relacionadas
+   
+3. Aplicar scoring:
+   - Coincidencia exacta producto: 1.0
+   - Producto parcial: 0.8
+   - Categoría relacionada: 0.6
+   
+4. Tomar la de mayor score
+```
+
+---
+
+## 6. MÉTRICAS Y LOGGING
+
+### 6.1 Información Registrada en Cada Paso
 
 ```json
 {
-  "timestamp": "2025-01-20T10:15:30Z",
-  "request_id": "req_abc123",
-  "user_id": "user_456",
-  "query": {
-    "original": "votana brata picabte",
-    "corrected": "botana barata picante"
+  "request_id": "req_12345",
+  "timestamp": "2024-01-20T10:15:30Z",
+  "pasos": {
+    "validacion": {
+      "duracion_ms": 1,
+      "resultado": "ok"
+    },
+    "correccion": {
+      "duracion_ms": 5,
+      "correcciones": 2,
+      "palabras_corregidas": ["koka", "asucar"]
+    },
+    "tokenizacion": {
+      "duracion_ms": 12,
+      "tokens_generados": 6,
+      "producto_detectado": "PRODUCTO_COMPLETO"
+    },
+    "analisis_contextual": {
+      "duracion_ms": 3,
+      "reglas_aplicadas": ["combinar_operador", "asociar_precio"]
+    },
+    "interpretacion": {
+      "duracion_ms": 8,
+      "tipo": "busqueda_producto_con_filtros",
+      "confianza": 0.92
+    },
+    "generacion_sql": {
+      "duracion_ms": 2,
+      "complejidad": "media"
+    },
+    "ejecucion": {
+      "duracion_ms": 15,
+      "resultados": 1
+    }
   },
-  "processing": {
-    "correction_time_ms": 12,
-    "tokenization_time_ms": 8,
-    "analysis_time_ms": 15,
-    "sql_execution_time_ms": 10,
-    "total_time_ms": 45
-  },
-  "result": {
-    "products_found": 5,
-    "recommendations_generated": 3,
-    "confidence_score": 0.85
-  }
+  "total_ms": 46
 }
 ```
 
-## 8. CONCLUSIONES Y TRABAJO FUTURO
-
-### 8.1 Logros del Sistema
-- ✅ Resolución efectiva de ambigüedades mediante AFD multi-nivel
-- ✅ Corrección ortográfica con alta precisión para español
-- ✅ Sistema de recomendaciones inteligente
-- ✅ Integración transparente con LYNX
-- ✅ Performance optimizado con cache
-
-### 8.2 Mejoras Futuras
-1. **Machine Learning**: Entrenar modelo específico con queries reales
-2. **Análisis de Sentimientos**: Detectar preferencias implícitas
-3. **Multiidioma**: Soporte para inglés y lenguas indígenas
-4. **Voice Input**: Integración con reconocimiento de voz
-5. **Contexto Histórico**: Personalización basada en compras anteriores
-
-### 8.3 Impacto en el Negocio
-- **Mejora UX**: 85% de usuarios prefieren búsqueda natural
-- **Incremento Ventas**: 23% más conversión con recomendaciones
-- **Reducción Errores**: 90% menos búsquedas sin resultados
-- **Satisfacción**: NPS aumentó 15 puntos
-
 ---
 
-**Documento preparado por:** Equipo de Ingeniería LYNX  
-**Revisión técnica:** Departamento de Lenguajes y Autómatas  
-**Última actualización:** Enero 2025
+## 7. CONCLUSIÓN
+
+Este documento detalla cada operación que realiza el sistema LCLN:
+
+1. **Validación**: Protege contra entradas maliciosas
+2. **Corrección**: Maneja errores ortográficos comunes
+3. **Tokenización**: Usa AFD con look-ahead para máxima precisión
+4. **Análisis contextual**: Refina tokens según su contexto
+5. **Interpretación**: Construye significado semántico
+6. **Validación**: Resuelve ambigüedades
+7. **SQL**: Genera consultas optimizadas
+8. **Ejecución**: Enriquece resultados
+9. **Respuesta**: Estructura JSON completa
+
+El sistema es robusto, maneja casos edge y proporciona sugerencias inteligentes cuando no encuentra coincidencias exactas.

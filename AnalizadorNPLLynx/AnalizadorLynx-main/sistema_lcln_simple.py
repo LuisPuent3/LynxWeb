@@ -161,6 +161,9 @@ class SistemaLCLNSimplificado:
                 class ConfiguracionSimple:
                     def __init__(self, cache_productos, cache_categorias):
                         self.bd_escalable = AdaptadorSimple(cache_productos, cache_categorias)
+                    
+                    def obtener_estadisticas(self):
+                        return self.bd_escalable.obtener_estadisticas()
                 
                 # Inicializar AFD
                 config = ConfiguracionSimple(self._cache_productos, self._cache_categorias)
