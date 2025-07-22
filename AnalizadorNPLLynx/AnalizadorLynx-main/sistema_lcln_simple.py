@@ -487,6 +487,7 @@ class SistemaLCLNSimplificado:
     
     def _analizar_semanticamente(self, consulta: str) -> Dict:
         """Análisis semántico avanzado para detectar patrones complejos como 'bebidas sin azúcar'"""
+        import re  # Import for regex patterns
         
         # Diccionario de categorías semánticas expandidas
         categorias_semanticas = {
@@ -587,6 +588,28 @@ class SistemaLCLNSimplificado:
                 resultado['productos_semanticos_sugeridos'] = ['agua', 'agua natural', 'agua mineral']
                 resultado['expansion_consulta'] = 'jerga_agua'
             print(f"Análisis semántico: jerga coloquial detectada")
+            
+        # 7. LÓGICA ESPECIAL: "sin picante" (papas/snacks que NO son picantes)
+        elif re.search(r'\b(?:papas?|snacks?|botanas?)\s+sin\s+(?:picante|chile|flama|fuego)', consulta.lower()):
+            resultado['categoria_detectada'] = 'snacks'
+            resultado['modificadores_detectados'].append('sin_picante')
+            resultado['productos_semanticos_sugeridos'] = [
+                'papas', 'papas originales', 'papas clásicas', 'papas saladas', 'cheetos', 'fritos'
+            ]
+            resultado['expansion_consulta'] = 'snacks_sin_picante'
+            print(f"Análisis semántico: snacks sin picante detectado")
+        
+        # 8. LÓGICA ESPECIAL: detección de patrones "sin X" más generales
+        elif re.search(r'\bsin\s+(?:picante|chile|flama|fuego)', consulta.lower()):
+            # Si menciona papas/snacks Y "sin picante"
+            if any(palabra in consulta.lower() for palabra in ['papas', 'papa', 'snack', 'snacks', 'botana', 'botanas']):
+                resultado['categoria_detectada'] = 'snacks'
+                resultado['modificadores_detectados'].append('sin_picante')
+                resultado['productos_semanticos_sugeridos'] = [
+                    'papas', 'papas originales', 'papas clásicas', 'papas saladas', 'cheetos'
+                ]
+                resultado['expansion_consulta'] = 'snacks_sin_picante_general'
+                print(f"Análisis semántico: productos sin picante detectado")
         
         return resultado
     
@@ -1238,16 +1261,29 @@ class SistemaLCLNSimplificado:
                     if not nombre_lower.startswith('agua'):
                         continue
                 
-                # Para coca cola: SOLO la versión sin azúcar
+                # Para coca cola: Diferentes lógicas según el contexto
                 elif 'coca' in producto_sugerido_lower:
-                    if not ('coca' in nombre_lower and any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])):
-                        continue
+                    # Si estamos buscando bebidas CON azúcar, excluir versiones sin azúcar
+                    if 'con_azucar' in modificadores:
+                        if not ('coca' in nombre_lower and not any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])):
+                            continue
+                    # Si estamos buscando bebidas SIN azúcar, SOLO las versiones sin azúcar
+                    else:
+                        if not ('coca' in nombre_lower and any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])):
+                            continue
                         
-                # Para té: SOLO tés explícitamente sin azúcar
+                # Para té: Diferentes lógicas según el contexto
                 elif 'té' in producto_sugerido_lower or 'te' in producto_sugerido_lower:
-                    if not (('té' in nombre_lower or 'te' in nombre_lower) and 
-                           any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])):
-                        continue
+                    # Si estamos buscando bebidas CON azúcar, incluir tés CON azúcar
+                    if 'con_azucar' in modificadores:
+                        if not (('té' in nombre_lower or 'te' in nombre_lower) and 
+                               not any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])):
+                            continue
+                    # Si estamos buscando bebidas SIN azúcar, SOLO tés sin azúcar
+                    else:
+                        if not (('té' in nombre_lower or 'te' in nombre_lower) and 
+                               any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])):
+                            continue
                 
                 # Coincidencia general más estricta
                 elif not (producto_sugerido_lower in nombre_lower or 
@@ -1341,6 +1377,48 @@ class SistemaLCLNSimplificado:
                                 productos_encontrados_directos.append(datos_prod)
                                 productos_ids_agregados.add(datos_prod['id'])
                                 print(f"  Bebida con azúcar: {datos_prod['nombre']}")
+        
+        # NUEVA ESTRATEGIA 2C: Buscar snacks SIN picante (papas normales, etc.)
+        elif categoria == 'snacks' and 'sin_picante' in modificadores:
+            categoria_id = 2  # ID de snacks
+            
+            # Buscar todos los snacks que NO sean picantes
+            for nombre_prod, datos_prod in self._cache_productos.items():
+                if datos_prod.get('categoria_id') == categoria_id or datos_prod.get('id_categoria') == categoria_id:
+                    nombre_lower = nombre_prod.lower()
+                    
+                    # Criterios para "snacks sin picante":
+                    # INCLUSIONES: snacks básicos/normales
+                    es_snack_normal = (
+                        # Papas básicas (sin palabras picantes)
+                        ('papa' in nombre_lower and not any(palabra in nombre_lower for palabra in ['picante', 'flama', 'dinamita', 'fuego', 'chile', 'ardiente'])) or
+                        # Cheetos originales (no flamin hot)
+                        ('cheetos' in nombre_lower and not any(palabra in nombre_lower for palabra in ['flama', 'flamin', 'hot', 'picante'])) or
+                        # Fritos básicos
+                        ('fritos' in nombre_lower and not any(palabra in nombre_lower for palabra in ['picante', 'chile', 'flama'])) or
+                        # Otros snacks que no contengan términos picantes
+                        (any(palabra in nombre_lower for palabra in ['galleta', 'oreo', 'emperador']) and 
+                         not any(palabra in nombre_lower for palabra in ['picante', 'flama', 'dinamita', 'fuego', 'chile']))
+                    )
+                    
+                    # EXCLUSIONES: productos explícitamente picantes
+                    es_picante = (
+                        any(palabra in nombre_lower for palabra in ['picante', 'flama', 'flamas', 'dinamita', 'fuego', 'chile', 'ardiente', 'hot']) or
+                        'crujitos fuego' in nombre_lower or
+                        'doritos dinamita' in nombre_lower or
+                        'susalia flama' in nombre_lower
+                    )
+                    
+                    # Solo incluir si es snack normal Y NO es picante
+                    es_snack_sin_picante = es_snack_normal and not es_picante
+                    
+                    if es_snack_sin_picante:
+                        if not precio_max or datos_prod['precio'] <= precio_max:
+                            # Evitar duplicados
+                            if datos_prod['id'] not in productos_ids_agregados:
+                                productos_encontrados_directos.append(datos_prod)
+                                productos_ids_agregados.add(datos_prod['id'])
+                                print(f"  Snack sin picante: {datos_prod['nombre']}")
         
         # ESTRATEGIA 3: Si no encuentra suficientes, expandir búsqueda
         if len(productos_encontrados_directos) < 3:

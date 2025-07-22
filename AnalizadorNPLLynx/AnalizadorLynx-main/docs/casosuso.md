@@ -213,15 +213,3 @@ Límite: Máximo 5 productos por búsqueda++
   - "crujitos fuego 59g" 🌶️
   - "susalia flama 200g" 🌶️
 
-● Update Todos
-  ⎿  ☒ Test the improved AFD operators with 'bebidas menores a 20' query      
-     ☒ Fix AFD integration issue - system falling back to simplified 
-       analysis instead of using AFD operators
-     ☒ Fix category + price filtering logic - bebidas menores a 20 should     
-       return beverages, not snacks
-     ☒ Add synonyms for 'picante': flama, flamas, picoso, ardiente
-     ☐ Implement price range support: 'mayor a X pero menor a Y'
-     ☐ Create 'bebidas con azucar' semantic category
-     ☐ Improve spell checker for words like 'pixnatw' → 'picante'
-  ⎿  Claude usage limit reached. Your limit will reset at 3am
-     (America/Mexico_City).
