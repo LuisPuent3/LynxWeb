@@ -33,6 +33,33 @@ async function test() {
         console.error('❌ Error:', error.message);
     }
     
+    // Prueba de búsqueda semántica inteligente
+    const { BusquedaSemanticaLCLN } = require('./semantic_search_engine');
+    const buscador = new BusquedaSemanticaLCLN();
+    const queries = [
+        'chettos picantes baratos',
+        'sin picante barato',
+        'votana bara',
+        'fruta fresca',
+        'bebidas sin azucar'
+    ];
+    for (const query of queries) {
+        console.log(`\n🔎 Prueba búsqueda semántica: "${query}"`);
+        const resultado = await buscador.buscarProductosSemantico(query);
+        if (resultado.productos.length > 0) {
+            resultado.productos.slice(0, 3).forEach((p, i) => {
+                console.log(`  ${i+1}. ${p.emoji || '📦'} ${p.nombre} - $${p.precio} (${p.categoria}) [${p.coincidencias.join(', ')}]`);
+            });
+        } else {
+            console.log('  ⚠️ Sin resultados');
+        }
+        if (resultado.analisis?.contradicciones?.length > 0) {
+            resultado.analisis.contradicciones.forEach(cont => {
+                console.log(`  ⚠️ ${cont.mensaje} | 💡 ${cont.sugerencia}`);
+            });
+        }
+    }
+    
     process.exit(0);
 }
 
