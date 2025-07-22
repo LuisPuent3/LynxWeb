@@ -49,7 +49,7 @@ class SistemaLCLNSimplificado:
         if not self._necesita_actualizar_cache():
             return
             
-        print("🔄 Actualizando cache dinámico desde MySQL...")
+        print("Actualizando cache dinámico desde MySQL...")
         conn = mysql.connector.connect(**self.mysql_config)
         cursor = conn.cursor(dictionary=True)
         
@@ -110,7 +110,7 @@ class SistemaLCLNSimplificado:
                 })
             
             self._cache_timestamp = datetime.now()
-            print(f"✅ Cache actualizado: {len(self._cache_productos)} productos, {len(self._cache_categorias)} categorías, {len(self._cache_sinonimos)} sinónimos")
+            print(f"Cache actualizado: {len(self._cache_productos)} productos, {len(self._cache_categorias)} categorías, {len(self._cache_sinonimos)} sinónimos")
             
             # Resetear analizador léxico para que use nuevos datos
             self.analizador_lexico = None
@@ -123,7 +123,7 @@ class SistemaLCLNSimplificado:
         """Inicializar el analizador léxico con los datos actuales del cache"""
         if self.analizador_lexico is None:
             try:
-                print("🧠 Inicializando Analizador Léxico (AFD) con datos actuales...")
+                print("Inicializando Analizador Léxico (AFD) con datos actuales...")
                 
                 # Preparar datos para el AFD
                 productos_completos = []
@@ -169,7 +169,7 @@ class SistemaLCLNSimplificado:
                 config = ConfiguracionSimple(self._cache_productos, self._cache_categorias)
                 self.analizador_lexico = AnalizadorLexicoLYNX(config)
                 
-                print(f"✅ AFD inicializado:")
+                print(f"AFD inicializado:")
                 print(f"    - Productos completos (≥3 palabras): {len(productos_completos)}")
                 print(f"    - Productos multi-palabra (2 palabras): {len(productos_multi)}")
                 print(f"    - Total en cache: {len(self._cache_productos)}")
@@ -177,7 +177,7 @@ class SistemaLCLNSimplificado:
                 print(f"    - Sinónimos disponibles: {len(self._cache_sinonimos)}")
                 
             except Exception as e:
-                print(f"⚠️ Error inicializando AFD: {e}")
+                print(f"Error inicializando AFD: {e}")
                 print(f"   Continuando con sistema de fallback...")
                 self.analizador_lexico = None
     
@@ -191,7 +191,7 @@ class SistemaLCLNSimplificado:
         resultado_correcciones = self.corrector.corregir_consulta(consulta)
         consulta_corregida = resultado_correcciones.get('corrected_query', consulta)
         
-        # Mapear botana → snacks para búsquedas (preservar estado de correcciones)
+        # Mapear botana  ->  snacks para búsquedas (preservar estado de correcciones)
         if 'botana' in consulta_corregida.lower():
             consulta_corregida = consulta_corregida.replace('botana', 'snacks').replace('botanas', 'snacks')
             # Preservar el estado original de correcciones aplicadas
@@ -207,6 +207,9 @@ class SistemaLCLNSimplificado:
         analisis = self._analizar_consulta_con_afd(consulta)
           # Búsqueda con múltiples estrategias
         productos = self._ejecutar_busqueda_estrategias(analisis, limit)
+        
+        # Eliminar duplicados por ID
+        productos = self._eliminar_duplicados(productos)
         
         tiempo_proceso = (time.time() - inicio) * 1000
         
@@ -319,7 +322,7 @@ class SistemaLCLNSimplificado:
                 if resultado_afd and resultado_afd.get('success', False):
                     tokens = resultado_afd.get('tokens', [])
                     
-                    print(f"🧠 AFD activado - {len(tokens)} tokens detectados")
+                    print(f"AFD activado - {len(tokens)} tokens detectados")
                     
                     # Procesar tokens del AFD para extraer información
                     producto_detectado = None
@@ -357,7 +360,7 @@ class SistemaLCLNSimplificado:
                     
                     # Si el AFD encontró un producto específico
                     if producto_detectado:
-                        print(f"🎯 AFD encontró producto: {producto_detectado['nombre']}")
+                        print(f"AFD encontró producto: {producto_detectado['nombre']}")
                         
                         if precio_max and producto_detectado['precio'] > precio_max:
                             return {
@@ -382,7 +385,7 @@ class SistemaLCLNSimplificado:
                     
                     # Si el AFD encontró una categoría
                     elif categoria_detectada:
-                        print(f"🎯 AFD encontró categoría: {categoria_detectada['nombre']}")
+                        print(f"AFD encontró categoría: {categoria_detectada['nombre']}")
                         return {
                             'tipo_busqueda': 'categoria',
                             'categoria': categoria_detectada,
@@ -394,7 +397,7 @@ class SistemaLCLNSimplificado:
                     
                     # Si el AFD encontró atributos complejos
                     elif atributos_detectados:
-                        print(f"🎯 AFD encontró atributos: {', '.join(atributos_detectados)}")
+                        print(f"AFD encontró atributos: {', '.join(atributos_detectados)}")
                         return {
                             'tipo_busqueda': 'atributos',
                             'categoria': None,
@@ -405,11 +408,30 @@ class SistemaLCLNSimplificado:
                         }
                     
         except Exception as e:
-            print(f"⚠️ Error en AFD (usando fallback): {e}")
+            print(f"Error en AFD (usando fallback): {e}")
         
         # FALLBACK: Si el AFD falla o no encuentra nada, usar nuestro análisis
-        print("🔧 Usando análisis simplificado como fallback")
+        print("Usando análisis simplificado como fallback")
         return self._analizar_consulta_fallback(consulta)
+    
+    def _eliminar_duplicados(self, productos: List[Dict]) -> List[Dict]:
+        """Eliminar productos duplicados por ID manteniendo el de mayor score"""
+        productos_unicos = {}
+        
+        for producto in productos:
+            producto_id = producto.get('id_producto') or producto.get('id')
+            
+            if producto_id not in productos_unicos:
+                productos_unicos[producto_id] = producto
+            else:
+                # Mantener el producto con mayor match_score
+                score_actual = producto.get('match_score', 0)
+                score_existente = productos_unicos[producto_id].get('match_score', 0)
+                
+                if score_actual > score_existente:
+                    productos_unicos[producto_id] = producto
+        
+        return list(productos_unicos.values())
     
     def _analizar_consulta_fallback(self, consulta: str) -> Dict:
         """Análisis inteligente mejorado como sistema principal"""
@@ -445,7 +467,7 @@ class SistemaLCLNSimplificado:
             productos_categoria = []
             categoria_id = 1 if categoria_detectada == 'bebidas' else 2  # bebidas=1, snacks=2
             
-            print(f"🎯 Búsqueda semántica: {categoria_detectada} + {atributo_detectado}")
+            print(f"Búsqueda semántica: {categoria_detectada} + {atributo_detectado}")
             
             for nombre_prod, datos_prod in self._cache_productos.items():
                 if datos_prod.get('categoria_id') == categoria_id:
@@ -479,7 +501,7 @@ class SistemaLCLNSimplificado:
                 if precio_max:
                     productos_categoria = [p for p in productos_categoria if p['precio'] <= precio_max]
                 
-                print(f"✅ Encontrados {len(productos_categoria)} productos en {categoria_detectada} con atributo {atributo_detectado}")
+                print(f"Encontrados {len(productos_categoria)} productos en {categoria_detectada} con atributo {atributo_detectado}")
                 
                 return {
                     'tipo_busqueda': 'categoria_con_atributos',
@@ -501,7 +523,7 @@ class SistemaLCLNSimplificado:
                 # Encontrar el producto completo por ID
                 for nombre_prod, datos_prod in self._cache_productos.items():
                     if datos_prod['id'] == producto_id:
-                        print(f"✅ Producto encontrado por sinónimo: '{sinonimo}' → {datos_prod['nombre']}")
+                        print(f"Producto encontrado por sinónimo: '{sinonimo}'  ->  {datos_prod['nombre']}")
                         
                         # Si hay filtro de precio, verificar si el producto lo cumple
                         if precio_max and datos_prod['precio'] > precio_max:
@@ -558,7 +580,7 @@ class SistemaLCLNSimplificado:
                                 if not any(p['id'] == datos_prod['id'] for p in productos_coincidentes):
                                     if not producto_exacto or producto_exacto['id'] != datos_prod['id']:
                                         productos_coincidentes.append(datos_prod)
-                                        print(f"✅ Coincidencia por sinónimo '{sinonimo}': {datos_prod['nombre']}")
+                                        print(f"Coincidencia por sinónimo '{sinonimo}': {datos_prod['nombre']}")
                                 break
             
             # Si encontramos múltiples productos, devolver todos con prioridad al exacto
@@ -566,13 +588,13 @@ class SistemaLCLNSimplificado:
                 productos_finales = []
                 if producto_exacto:
                     productos_finales.append(producto_exacto)
-                    print(f"✅ Coincidencia exacta: {producto_exacto['nombre']}")
+                    print(f"Coincidencia exacta: {producto_exacto['nombre']}")
                 
                 # Agregar productos parciales que no sean el exacto
                 for prod in productos_coincidentes:
                     if not producto_exacto or prod['id'] != producto_exacto['id']:
                         productos_finales.append(prod)
-                        print(f"✅ Coincidencia parcial: {prod['nombre']}")
+                        print(f"Coincidencia parcial: {prod['nombre']}")
                 
                 # Aplicar filtro de precio si existe
                 if precio_max:
@@ -614,7 +636,7 @@ class SistemaLCLNSimplificado:
             productos_encontrados.sort(key=lambda x: x[1], reverse=True)
             mejor_producto = productos_encontrados[0][0]
             
-            print(f"✅ Producto encontrado por búsqueda parcial: {mejor_producto['nombre']}")
+            print(f"Producto encontrado por búsqueda parcial: {mejor_producto['nombre']}")
             
             # Verificar filtro de precio si existe
             if precio_max and mejor_producto['precio'] > precio_max:
@@ -683,7 +705,7 @@ class SistemaLCLNSimplificado:
                         productos_finales = [p for p in productos_finales if p['precio'] <= precio_max]
                     
                     if productos_finales:
-                        print(f"🔍 Búsqueda semántica para '{palabra}': {len(productos_finales)} productos (mejor score: {mejor_score})")
+                        print(f"Búsqueda semántica para '{palabra}': {len(productos_finales)} productos (mejor score: {mejor_score})")
                         return {
                             'tipo_busqueda': 'busqueda_semantica',
                             'productos_encontrados': productos_finales,
@@ -696,7 +718,7 @@ class SistemaLCLNSimplificado:
         # PASO 3: Detectar categoría
         for nombre_categoria, datos_categoria in self._cache_categorias.items():
             if nombre_categoria in consulta:
-                print(f"✅ Categoría detectada: {datos_categoria['nombre']}")
+                print(f"Categoría detectada: {datos_categoria['nombre']}")
                 return {
                     'tipo_busqueda': 'categoria',
                     'categoria': datos_categoria,
@@ -707,7 +729,7 @@ class SistemaLCLNSimplificado:
         
         # PASO 4: Detectar solo filtros de precio
         if precio_max:
-            print(f"✅ Solo filtro de precio detectado: ≤ ${precio_max}")
+            print(f"Solo filtro de precio detectado: ≤ ${precio_max}")
             return {
                 'tipo_busqueda': 'precio',
                 'categoria': None,
@@ -735,7 +757,7 @@ class SistemaLCLNSimplificado:
             
         # Si detectamos atributos, hacer búsqueda por atributos
         if atributos_detectados:
-            print(f"✅ Atributos detectados: {', '.join(atributos_detectados)}")
+            print(f"Atributos detectados: {', '.join(atributos_detectados)}")
             return {
                 'tipo_busqueda': 'atributos',
                 'categoria': None,
@@ -746,7 +768,7 @@ class SistemaLCLNSimplificado:
             }
         
         # PASO 6: Búsqueda genérica por palabras clave
-        print(f"✅ Búsqueda genérica para: '{consulta}'")
+        print(f"Búsqueda genérica para: '{consulta}'")
         return {
             'tipo_busqueda': 'generica',
             'categoria': None,
@@ -773,7 +795,7 @@ class SistemaLCLNSimplificado:
             match = re.search(patron, consulta, re.IGNORECASE)
             if match:
                 precio = float(match.group(1))
-                print(f"🔍 Filtro precio detectado (operador): ≤ ${precio}")
+                print(f"Filtro precio detectado (operador): ≤ ${precio}")
                 return precio
         
         # Estrategia 2: Números seguidos de "pesos"
@@ -782,22 +804,22 @@ class SistemaLCLNSimplificado:
             precio = float(match.group(1))
             # Si hay palabras como "menor", "menos", "hasta" antes del número
             if any(palabra in consulta for palabra in ['menor', 'menos', 'hasta', 'máximo', 'max', 'barato', 'economico']):
-                print(f"🔍 Filtro precio detectado (pesos): ≤ ${precio}")
+                print(f"Filtro precio detectado (pesos): ≤ ${precio}")
                 return precio
         
         # Estrategia 3: Adjetivos de precio
         if any(palabra in consulta for palabra in ['barato', 'baratos', 'barata', 'baratas', 'economico', 'economica']):
-            print(f"🔍 Filtro precio detectado (adjetivo): ≤ $20.0")
+            print(f"Filtro precio detectado (adjetivo): ≤ $20.0")
             return 20.0
         elif any(palabra in consulta for palabra in ['caro', 'caros', 'cara', 'caras', 'premium']):
-            print(f"🔍 Filtro precio detectado (caro): ≥ $50.0")
+            print(f"Filtro precio detectado (caro): ≥ $50.0")
             return 100.0  # Productos caros hasta $100
         
         # Estrategia 4: Contexto de números sueltos con palabras clave
         numeros = re.findall(r'\d+(?:\.\d+)?', consulta)
         if numeros and any(palabra in consulta for palabra in ['menor', 'menos', 'bajo', 'hasta', 'máximo', 'max']):
             precio = float(numeros[-1])  # Tomar el último número
-            print(f"🔍 Filtro precio detectado (contexto): ≤ ${precio}")
+            print(f"Filtro precio detectado (contexto): ≤ ${precio}")
             return precio
         
         return None
@@ -873,7 +895,7 @@ class SistemaLCLNSimplificado:
         """Buscar productos por atributos detectados - mejorado para negaciones"""
         productos = []
         
-        print(f"🔍 Buscando por atributos: {', '.join(atributos)}")
+        print(f"Buscando por atributos: {', '.join(atributos)}")
         
         # Detectar si hay negación
         tiene_negacion = 'sin' in atributos
@@ -925,7 +947,7 @@ class SistemaLCLNSimplificado:
         
         # Si no encuentra productos específicos, hacer búsqueda más amplia
         if not productos and not tiene_negacion:
-            print("🔄 Expandiendo búsqueda por palabras clave...")
+            print("Expandiendo búsqueda por palabras clave...")
             for atributo in atributos_sin_negacion:
                 for producto in self._cache_productos.values():
                     if atributo.lower() in producto['nombre'].lower():
@@ -1019,7 +1041,7 @@ if __name__ == "__main__":
     ]
     
     for consulta in consultas_prueba:
-        print(f"\n🔍 Consulta: '{consulta}'")
+        print(f"\nConsulta: '{consulta}'")
         resultado = sistema_lcln_simple.buscar_productos_inteligente(consulta)
         
         print(f"   Estrategia: {resultado['interpretation']['estrategia_usada']}")
@@ -1028,4 +1050,4 @@ if __name__ == "__main__":
         for prod in resultado['recommendations'][:3]:
             print(f"     - {prod['nombre']} ${prod['precio']} (imagen: {prod['imagen']})")
     
-    print(f"\n✅ Sistema LCLN simplificado funcionando con imágenes incluidas")
+    print(f"\nSistema LCLN simplificado funcionando con imágenes incluidas")

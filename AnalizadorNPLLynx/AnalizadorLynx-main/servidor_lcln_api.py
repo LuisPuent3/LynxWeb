@@ -18,17 +18,17 @@ sistema_lcln = SistemaLCLNSimplificado()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    print("🚀 Inicializando Sistema LCLN API...")
+    print("Inicializando Sistema LCLN API...")
     try:
         # El sistema se inicializa automáticamente en la primera búsqueda
-        print("✅ Sistema LCLN API listo")
+        print("Sistema LCLN API listo")
     except Exception as e:
-        print(f"❌ Error inicializando: {e}")
+        print(f"Error inicializando: {e}")
     
     yield
     
     # Shutdown
-    print("🛑 Cerrando Sistema LCLN API...")
+    print("Cerrando Sistema LCLN API...")
 
 # Inicializar FastAPI
 app = FastAPI(
@@ -123,7 +123,7 @@ async def search_products(request: SearchRequest):
                 detail="Query parameter is required and cannot be empty"
             )
 
-        print(f"🔍 [API] Procesando consulta: '{request.query}'")
+        print(f"[API] Procesando consulta: '{request.query}'")
         
         # Ejecutar búsqueda usando el sistema LCLN
         resultado = sistema_lcln.buscar_productos_inteligente(
@@ -131,7 +131,7 @@ async def search_products(request: SearchRequest):
             request.limit
         )
         
-        print(f"✅ [API] Búsqueda completada: {resultado['products_found']} productos en {resultado['processing_time_ms']:.1f}ms")
+        print(f"[API] Búsqueda completada: {resultado['products_found']} productos en {resultado['processing_time_ms']:.1f}ms")
         
         return SearchResponse(
             success=resultado['success'],
@@ -148,7 +148,7 @@ async def search_products(request: SearchRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ [API] Error en búsqueda: {e}")
+        print(f"[API] Error en búsqueda: {e}")
         raise HTTPException(
             status_code=500,
             detail={
@@ -180,7 +180,7 @@ async def cache_statistics():
         )
 
 if __name__ == "__main__":
-    print("🌟 Iniciando Servidor LCLN API en puerto 8004...")
+    print("Iniciando Servidor LCLN API en puerto 8004...")
     uvicorn.run(
         "servidor_lcln_api:app",
         host="127.0.0.1",

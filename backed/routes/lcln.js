@@ -3,7 +3,7 @@ const router = express.Router();
 const axios = require('axios');
 
 // Configuración del servicio LCLN
-const LCLN_SERVICE_URL = 'http://127.0.0.1:8007'; // Puerto del servicio LCLN AFD limpio
+const LCLN_SERVICE_URL = 'http://127.0.0.1:8004'; // Puerto del servidor_lcln_api.py
 
 /**
  * @route POST /api/lcln/search
@@ -25,7 +25,7 @@ router.post('/search', async (req, res) => {
 
     try {
       // Llamar al servicio LCLN Python
-      const response = await axios.post(`${LCLN_SERVICE_URL}/api/nlp/analyze`, {
+      const response = await axios.post(`${LCLN_SERVICE_URL}/search`, {
         query: query.trim(),
         limit: limit
       }, {
@@ -93,7 +93,7 @@ router.post('/search', async (req, res) => {
  */
 router.get('/status', async (req, res) => {
   try {
-    const response = await axios.get(`${LCLN_SERVICE_URL}/api/health`, {
+    const response = await axios.get(`${LCLN_SERVICE_URL}/health`, {
       timeout: 5000
     });
     
