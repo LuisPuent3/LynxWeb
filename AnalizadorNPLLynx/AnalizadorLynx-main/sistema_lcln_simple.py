@@ -22,7 +22,7 @@ class SistemaLCLNSimplificado:
             'host': 'localhost',
             'database': 'lynxshop',
             'user': 'root',
-            'password': '12345678',
+            'password': '12345678',  # Contraseña XAMPP correcta
             'charset': 'utf8mb4'
         }
           # Cache dinámico
@@ -169,10 +169,16 @@ class SistemaLCLNSimplificado:
                 config = ConfiguracionSimple(self._cache_productos, self._cache_categorias)
                 self.analizador_lexico = AnalizadorLexicoLYNX(config)
                 
-                print(f"✅ AFD inicializado: {len(productos_completos)} productos completos, {len(productos_multi)} productos multi-palabra")
+                print(f"✅ AFD inicializado:")
+                print(f"    - Productos completos (≥3 palabras): {len(productos_completos)}")
+                print(f"    - Productos multi-palabra (2 palabras): {len(productos_multi)}")
+                print(f"    - Total en cache: {len(self._cache_productos)}")
+                print(f"    - Categorías disponibles: {len(self._cache_categorias)}")
+                print(f"    - Sinónimos disponibles: {len(self._cache_sinonimos)}")
                 
             except Exception as e:
                 print(f"⚠️ Error inicializando AFD: {e}")
+                print(f"   Continuando con sistema de fallback...")
                 self.analizador_lexico = None
     
     def buscar_productos_inteligente(self, consulta: str, limit: int = 20) -> Dict:
@@ -270,12 +276,31 @@ class SistemaLCLNSimplificado:
         elif estrategia == 'sinonimo_directo':
             return f"Encontrado 1 producto por sinónimo"
             
+        elif estrategia == 'coincidencia_exacta':
+            return f"Producto encontrado por coincidencia exacta"
+            
+        elif estrategia == 'coincidencia_exacta_multiple':
+            termino = analisis.get('termino_busqueda', 'término')
+            precio_str = f" con precio ≤ ${precio_max:.0f}" if precio_max else ""
+            return f"Encontrados {len(productos)} productos relacionados con '{termino}'{precio_str}"
+            
         elif estrategia == 'filtro_precio':
             return f"Encontrados {len(productos)} productos ≤ ${precio_max:.0f}"
             
         elif estrategia == 'categoria_con_filtros' and precio_max:
             categoria = analisis.get('categoria', {}).get('nombre', 'categoría')
             return f"Encontrados {len(productos)} productos de {categoria} ≤ ${precio_max:.0f}"
+            
+        elif estrategia == 'categoria_semantica_con_atributos':
+            categoria = analisis.get('categoria', 'categoría')
+            atributo = analisis.get('atributo', 'atributo')
+            precio_str = f" ≤ ${precio_max:.0f}" if precio_max else ""
+            return f"Encontrados {len(productos)} productos {categoria} {atributo}{precio_str} (búsqueda semántica)"
+            
+        elif estrategia == 'busqueda_por_palabra_clave_semantica':
+            termino = analisis.get('termino_busqueda', 'término')
+            precio_str = f" con precio ≤ ${precio_max:.0f}" if precio_max else ""
+            return f"Encontrados {len(productos)} productos que coinciden con '{termino}'{precio_str} (análisis semántico)"
             
         else:
             return f"Encontrados {len(productos)} productos dinámicamente"
@@ -392,6 +417,80 @@ class SistemaLCLNSimplificado:
         # Detectar filtros de precio PRIMERO
         precio_max = self._extraer_filtro_precio(consulta)
         
+        # PASO 0.5: DETECTAR CATEGORÍA + ATRIBUTO ANTES DE SINÓNIMOS
+        # Analizar si tenemos estructura: CATEGORIA + ATRIBUTO
+        palabras = consulta.split()
+        categoria_detectada = None
+        atributo_detectado = None
+        
+        for palabra in palabras:
+            # Detectar categorías
+            if palabra in ['bebidas', 'bebida', 'drinks']:
+                categoria_detectada = 'bebidas'
+            elif palabra in ['snacks', 'snack', 'botanas', 'botana']:
+                categoria_detectada = 'snacks'
+            
+            # Detectar atributos específicos
+            if 'sin' in palabras and any(a in palabras for a in ['azucar', 'azúcar']):
+                atributo_detectado = 'sin_azucar'
+            elif palabra in ['dulces', 'dulce', 'sweet']:
+                atributo_detectado = 'dulce'
+            elif palabra in ['salados', 'salado', 'sal']:
+                atributo_detectado = 'salado'
+            elif palabra in ['picantes', 'picante', 'fuego', 'hot']:
+                atributo_detectado = 'picante'
+        
+        # Si detectamos categoría + atributo, buscar en esa categoría CON PRIORIDAD
+        if categoria_detectada and atributo_detectado:
+            productos_categoria = []
+            categoria_id = 1 if categoria_detectada == 'bebidas' else 2  # bebidas=1, snacks=2
+            
+            print(f"🎯 Búsqueda semántica: {categoria_detectada} + {atributo_detectado}")
+            
+            for nombre_prod, datos_prod in self._cache_productos.items():
+                if datos_prod.get('categoria_id') == categoria_id:
+                    # Aplicar filtro de atributo
+                    incluir_producto = False
+                    
+                    if atributo_detectado == 'sin_azucar':
+                        if 'sin azúcar' in nombre_prod.lower() or 'sin azucar' in nombre_prod.lower():
+                            incluir_producto = True
+                    elif atributo_detectado == 'dulce':
+                        # Palabras que indican dulce en snacks
+                        palabras_dulces = ['chocolate', 'dulce', 'galleta', 'emperador', 'rancheritos', 'senzo']
+                        if any(dulce in nombre_prod.lower() for dulce in palabras_dulces):
+                            incluir_producto = True
+                    elif atributo_detectado == 'salado':
+                        # Palabras que indican salado
+                        palabras_saladas = ['sal', 'crujitos', 'fritos', 'limón', 'limon']
+                        if any(salado in nombre_prod.lower() for salado in palabras_saladas):
+                            incluir_producto = True
+                    elif atributo_detectado == 'picante':
+                        # Palabras que indican picante
+                        palabras_picantes = ['fuego', 'hot', 'picante', 'chile', 'crujitos fuego']
+                        if any(picante in nombre_prod.lower() for picante in palabras_picantes):
+                            incluir_producto = True
+                    
+                    if incluir_producto:
+                        productos_categoria.append(datos_prod)
+            
+            if productos_categoria:
+                # Aplicar filtro de precio si existe
+                if precio_max:
+                    productos_categoria = [p for p in productos_categoria if p['precio'] <= precio_max]
+                
+                print(f"✅ Encontrados {len(productos_categoria)} productos en {categoria_detectada} con atributo {atributo_detectado}")
+                
+                return {
+                    'tipo_busqueda': 'categoria_con_atributos',
+                    'productos_encontrados': productos_categoria,
+                    'termino_busqueda': consulta,
+                    'categoria': categoria_detectada,
+                    'atributo': atributo_detectado,
+                    'precio_max': precio_max,
+                    'estrategia_usada': 'categoria_semantica_con_atributos'
+                }
+
         # PASO 1: Verificar sinónimos directamente (MÁXIMA PRIORIDAD)
         for sinonimo, productos_sinonimo in self._cache_sinonimos.items():
             if sinonimo in consulta:
@@ -425,6 +524,70 @@ class SistemaLCLNSimplificado:
                             'precio_max': precio_max,
                             'estrategia_usada': 'sinonimo_directo'
                         }
+        
+        # PASO 1.5: BÚSQUEDA MEJORADA PARA PALABRAS SIMPLES 
+        # Para casos como "limón" - buscar TODOS los productos relacionados, no solo coincidencia exacta
+        if len(consulta.split()) == 1:  # Solo una palabra
+            palabra = consulta.strip()
+            productos_coincidentes = []
+            producto_exacto = None
+            
+            # Buscar tanto coincidencia exacta como parcial
+            for nombre_prod, datos_prod in self._cache_productos.items():
+                nombre_lower = nombre_prod.lower()
+                # Coincidencia exacta (mayor prioridad)
+                if palabra == nombre_lower.strip():
+                    producto_exacto = datos_prod
+                # Coincidencia parcial (contiene la palabra)
+                elif palabra in nombre_lower:
+                    productos_coincidentes.append(datos_prod)
+            
+            # También buscar en sinónimos para coincidencias adicionales
+            for sinonimo, productos_sinonimo in self._cache_sinonimos.items():
+                # Coincidencias más flexibles: sin acentos y variaciones
+                if (palabra in sinonimo.lower() or 
+                    sinonimo.lower() in palabra or
+                    (palabra == 'limon' and 'limon' in sinonimo.lower()) or
+                    (palabra == 'limón' and 'limon' in sinonimo.lower())):
+                    # Encontrar el producto completo por ID
+                    for prod_info in productos_sinonimo:
+                        producto_id = prod_info['producto_id']
+                        for nombre_prod, datos_prod in self._cache_productos.items():
+                            if datos_prod['id'] == producto_id:
+                                # Evitar duplicados
+                                if not any(p['id'] == datos_prod['id'] for p in productos_coincidentes):
+                                    if not producto_exacto or producto_exacto['id'] != datos_prod['id']:
+                                        productos_coincidentes.append(datos_prod)
+                                        print(f"✅ Coincidencia por sinónimo '{sinonimo}': {datos_prod['nombre']}")
+                                break
+            
+            # Si encontramos múltiples productos, devolver todos con prioridad al exacto
+            if producto_exacto or productos_coincidentes:
+                productos_finales = []
+                if producto_exacto:
+                    productos_finales.append(producto_exacto)
+                    print(f"✅ Coincidencia exacta: {producto_exacto['nombre']}")
+                
+                # Agregar productos parciales que no sean el exacto
+                for prod in productos_coincidentes:
+                    if not producto_exacto or prod['id'] != producto_exacto['id']:
+                        productos_finales.append(prod)
+                        print(f"✅ Coincidencia parcial: {prod['nombre']}")
+                
+                # Aplicar filtro de precio si existe
+                if precio_max:
+                    productos_finales = [p for p in productos_finales if p['precio'] <= precio_max]
+                
+                if productos_finales:
+                    estrategia = 'coincidencia_exacta_multiple' if len(productos_finales) > 1 else 'coincidencia_exacta'
+                    return {
+                        'tipo_busqueda': 'productos_multiple_exacta',
+                        'productos_encontrados': productos_finales,
+                        'termino_busqueda': palabra,
+                        'categoria': None,
+                        'precio_max': precio_max,
+                        'estrategia_usada': estrategia
+                    }
         
         # PASO 2: Detectar producto específico por nombre parcial
         productos_encontrados = []
@@ -474,6 +637,62 @@ class SistemaLCLNSimplificado:
                 'estrategia_usada': 'producto_especifico'
             }
         
+        # PASO 2.5: BÚSQUEDA SEMÁNTICA POR PALABRAS CLAVE ANTES DE CATEGORÍAS
+        # Para casos como "limón" que puede ser fruta O ingrediente en snack
+        palabras_consulta = consulta.split()
+        
+        for palabra in palabras_consulta:
+            if len(palabra) > 3:  # Solo palabras significativas
+                productos_coincidentes = []
+                scores_coincidencia = []
+                
+                # Buscar en todos los productos
+                for nombre_prod, datos_prod in self._cache_productos.items():
+                    score = 0
+                    nombre_lower = nombre_prod.lower()
+                    palabra_lower = palabra.lower()
+                    
+                    # Diferentes tipos de coincidencias con diferentes scores
+                    if palabra_lower == nombre_lower:  # Coincidencia exacta
+                        score = 100
+                    elif palabra_lower in nombre_lower:  # Contiene la palabra
+                        # Bonus si la palabra está al inicio (ej: "Limón Verde" vs "Fritos Limón")
+                        if nombre_lower.startswith(palabra_lower):
+                            score = 80
+                        else:
+                            score = 60
+                    elif any(part in palabra_lower for part in nombre_lower.split()):  # Coincidencia parcial
+                        score = 40
+                    
+                    if score > 0:
+                        productos_coincidentes.append(datos_prod)
+                        scores_coincidencia.append(score)
+                
+                # Si encontramos múltiples productos, priorizar por score
+                if len(productos_coincidentes) > 1:
+                    # Combinar productos con scores
+                    productos_con_score = list(zip(productos_coincidentes, scores_coincidencia))
+                    productos_con_score.sort(key=lambda x: x[1], reverse=True)
+                    
+                    # Si el mejor score es significativamente mejor (diferencia > 20), priorizarlo
+                    mejor_score = productos_con_score[0][1]
+                    productos_finales = [p[0] for p in productos_con_score if p[1] >= mejor_score - 20]
+                    
+                    # Aplicar filtro de precio si existe
+                    if precio_max:
+                        productos_finales = [p for p in productos_finales if p['precio'] <= precio_max]
+                    
+                    if productos_finales:
+                        print(f"🔍 Búsqueda semántica para '{palabra}': {len(productos_finales)} productos (mejor score: {mejor_score})")
+                        return {
+                            'tipo_busqueda': 'busqueda_semantica',
+                            'productos_encontrados': productos_finales,
+                            'termino_busqueda': palabra,
+                            'categoria': None,
+                            'precio_max': precio_max,
+                            'estrategia_usada': 'busqueda_por_palabra_clave_semantica'
+                        }
+
         # PASO 3: Detectar categoría
         for nombre_categoria, datos_categoria in self._cache_categorias.items():
             if nombre_categoria in consulta:
@@ -589,6 +808,11 @@ class SistemaLCLNSimplificado:
         if analisis['tipo_busqueda'] == 'producto_especifico':
             return [self._formatear_producto(analisis['producto_encontrado'])]
         
+        elif analisis['tipo_busqueda'] == 'productos_multiple_exacta':
+            # Nueva estrategia: múltiples productos para una palabra (ej: "limón")
+            productos_encontrados = analisis.get('productos_encontrados', [])
+            return [self._formatear_producto(prod) for prod in productos_encontrados[:limit]]
+        
         elif analisis['tipo_busqueda'] == 'producto_con_filtro_precio_no_cumplido':
             # El producto específico no cumple el filtro de precio
             # Buscar productos alternativos que sí lo cumplan
@@ -630,6 +854,17 @@ class SistemaLCLNSimplificado:
                 limit
             )
         
+        elif analisis['tipo_busqueda'] == 'categoria_con_atributos':
+            # Nueva estrategia mejorada: categoría + atributos específicos
+            productos_categoria = analisis.get('productos_encontrados', [])
+            # Los productos ya están filtrados por la lógica semántica
+            return [self._formatear_producto(prod) for prod in productos_categoria[:limit]]
+        
+        elif analisis['tipo_busqueda'] == 'busqueda_semantica':
+            # Nueva estrategia: búsqueda semántica por palabras clave
+            productos_semanticos = analisis.get('productos_encontrados', [])
+            return [self._formatear_producto(prod) for prod in productos_semanticos[:limit]]
+
         else:
             # Búsqueda genérica - buscar en nombres de productos
             return self._buscar_generica(analisis['termino_busqueda'], limit)
