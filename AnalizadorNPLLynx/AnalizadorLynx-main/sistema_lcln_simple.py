@@ -125,37 +125,75 @@ class SistemaLCLNSimplificado:
             try:
                 print("Inicializando Analizador Léxico (AFD) con datos actuales...")
                 
-                # Preparar datos para el AFD
+                # Preparar datos para el AFD - Cargar TODOS los productos dinámicamente
                 productos_completos = []
                 productos_multi = []
+                productos_simples = []
                 
-                # Agregar productos desde cache
+                print(f"Cargando productos desde cache: {len(self._cache_productos)} productos")
+                
+                # Agregar productos desde cache - mejorado para incluir todos los productos
                 for nombre, datos in self._cache_productos.items():
                     palabras = nombre.split()
                     if len(palabras) >= 3:
                         productos_completos.append(nombre)
                     elif len(palabras) >= 2:
                         productos_multi.append(nombre)
+                    else:
+                        # También incluir productos de una palabra para completitud
+                        productos_simples.append(nombre)
+                
+                print(f"Productos completos (3+ palabras): {len(productos_completos)}")
+                print(f"Productos multi (2 palabras): {len(productos_multi)}")
+                print(f"Productos simples (1 palabra): {len(productos_simples)}")
                 
                 # Agregar sinónimos desde cache
                 for sinonimo in self._cache_sinonimos.keys():
                     palabras = sinonimo.split()
-                    if len(palabras) >= 3:
+                    if len(palabras) >= 3 and sinonimo not in productos_completos:
                         productos_completos.append(sinonimo)
-                    elif len(palabras) >= 2:
+                    elif len(palabras) >= 2 and sinonimo not in productos_multi:
                         productos_multi.append(sinonimo)
+                    elif len(palabras) == 1 and sinonimo not in productos_simples:
+                        productos_simples.append(sinonimo)
+                
+                print(f"Después de agregar sinónimos:")
+                print(f"  - Productos completos: {len(productos_completos)}")  
+                print(f"  - Productos multi: {len(productos_multi)}")
+                print(f"  - Productos simples: {len(productos_simples)}")
+                
+                # Debug: mostrar algunos ejemplos
+                if productos_completos:
+                    print(f"Ejemplos productos completos: {productos_completos[:3]}")
+                if productos_multi:
+                    print(f"Ejemplos productos multi: {productos_multi[:3]}")
+                if productos_simples:
+                    print(f"Ejemplos productos simples: {productos_simples[:3]}")
                 
                 # Crear adaptador compatible
                 class AdaptadorSimple:
                     def __init__(self, cache_productos, cache_categorias):
                         self.productos_completos = productos_completos
                         self.productos_multi = productos_multi
+                        self.productos_simples = productos_simples
                         self.categorias = list(cache_categorias.keys())
                         self.unidades = ['pesos', 'peso', 'ml', 'g', 'kg', 'l']
                         self.cache_productos = cache_productos
                     
                     def obtener_estadisticas(self):
                         return {'productos_total': len(self.cache_productos)}
+                    
+                    def obtener_todos_productos(self):
+                        """Método necesario para AdaptadorBaseDatos"""
+                        productos_lista = []
+                        for nombre, datos in self.cache_productos.items():
+                            productos_lista.append({
+                                'nombre': nombre,
+                                'categoria': datos.get('categoria', 'General'),
+                                'precio': datos.get('precio', 0),
+                                'id': datos.get('id', 0)
+                            })
+                        return productos_lista
                 
                 # Configuración simplificada
                 class ConfiguracionSimple:
@@ -170,7 +208,7 @@ class SistemaLCLNSimplificado:
                 self.analizador_lexico = AnalizadorLexicoLYNX(config)
                 
                 print(f"AFD inicializado:")
-                print(f"    - Productos completos (≥3 palabras): {len(productos_completos)}")
+                print(f"    - Productos completos (>=3 palabras): {len(productos_completos)}")
                 print(f"    - Productos multi-palabra (2 palabras): {len(productos_multi)}")
                 print(f"    - Total en cache: {len(self._cache_productos)}")
                 print(f"    - Categorías disponibles: {len(self._cache_categorias)}")
@@ -259,6 +297,13 @@ class SistemaLCLNSimplificado:
             producto_original = analisis['producto_encontrado']
             return f"'{producto_original['nombre']}' cuesta ${producto_original['precio']:.0f} (más de ${precio_max:.0f}). Te mostramos {len(productos)} alternativas más baratas"
             
+        elif estrategia == 'semantica_bebidas_sin_azucar':
+            precio_str = f" ≤ ${precio_max:.0f}" if precio_max else ""
+            if len(productos) > 1:
+                return f"Encontradas {len(productos)} bebidas sin azúcar (incluyendo aguas){precio_str}"
+            else:
+                return f"Encontrada {len(productos)} bebida sin azúcar{precio_str}"
+        
         elif estrategia.startswith('afd_'):
             if 'atributos' in estrategia:
                 attrs_str = ', '.join(atributos) if atributos else 'atributos específicos'
@@ -433,11 +478,117 @@ class SistemaLCLNSimplificado:
         
         return list(productos_unicos.values())
     
+    def _analizar_semanticamente(self, consulta: str) -> Dict:
+        """Análisis semántico avanzado para detectar patrones complejos como 'bebidas sin azúcar'"""
+        
+        # Diccionario de categorías semánticas expandidas
+        categorias_semanticas = {
+            'bebidas': {
+                'palabras_clave': ['bebida', 'bebidas', 'liquido', 'refresco', 'agua', 'jugo', 'té', 'te', 'cola'],
+                'productos_sin_azucar': [
+                    'agua', 'agua natural', 'agua mineral', 'agua purificada',
+                    'coca cola zero', 'coca zero', 'pepsi zero', 'sprite zero',
+                    'agua con gas', 'agua saborizada',
+                    'red bull sin azucar', 'powerade zero', 'gatorade zero'
+                ],
+                'atributos_sin_azucar': ['sin azucar', 'zero', 'light', 'diet', 'natural', 'pura']
+            },
+            'snacks': {
+                'palabras_clave': ['snack', 'snacks', 'botana', 'botanas', 'papitas', 'chips'],
+                'productos_sin_azucar': [],
+                'atributos_sin_azucar': ['sin sal', 'light', 'horneado', 'natural']
+            }
+        }
+        
+        # Detectar negaciones y modificadores
+        modificadores = {
+            'sin_azucar': ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'],
+            'sin_sal': ['sin sal', 'light'],
+            'natural': ['natural', 'organico', 'orgánico', 'puro', 'pura'],
+            'frio': ['frio', 'frío', 'helado', 'congelado'],
+            'caliente': ['caliente', 'tibio']
+        }
+        
+        resultado = {
+            'categoria_detectada': None,
+            'modificadores_detectados': [],
+            'productos_semanticos_sugeridos': [],
+            'expansion_consulta': None
+        }
+        
+        # 1. Detectar categoría principal
+        for categoria, config in categorias_semanticas.items():
+            if any(palabra in consulta.lower() for palabra in config['palabras_clave']):
+                resultado['categoria_detectada'] = categoria
+                break
+        
+        # 2. Detectar modificadores
+        for modificador, variantes in modificadores.items():
+            if any(variante in consulta.lower() for variante in variantes):
+                resultado['modificadores_detectados'].append(modificador)
+        
+        # 3. LÓGICA ESPECIAL: "bebidas sin azúcar" debe incluir aguas
+        if (resultado['categoria_detectada'] == 'bebidas' and 
+            'sin_azucar' in resultado['modificadores_detectados']):
+            
+            resultado['productos_semanticos_sugeridos'] = categorias_semanticas['bebidas']['productos_sin_azucar']
+            resultado['expansion_consulta'] = 'bebidas_sin_azucar_incluye_aguas'
+            
+            print(f"Análisis semántico: bebidas sin azúcar detectado, incluyendo aguas")
+            
+        # 4. LÓGICA ESPECIAL: consultas de hidratación
+        elif any(palabra in consulta.lower() for palabra in ['hidratacion', 'hidratante', 'sed', 'refrescante']):
+            resultado['categoria_detectada'] = 'bebidas'
+            resultado['modificadores_detectados'].append('hidratante')
+            resultado['productos_semanticos_sugeridos'] = [
+                'agua', 'agua mineral', 'agua natural', 'powerade', 'gatorade', 'agua saborizada'
+            ]
+            resultado['expansion_consulta'] = 'necesidad_hidratacion'
+            print(f"Análisis semántico: necesidad de hidratación detectada")
+            
+        # 5. LÓGICA ESPECIAL: consultas saludables
+        elif any(palabra in consulta.lower() for palabra in ['saludable', 'sano', 'dieta', 'fitness', 'cero calorias']):
+            resultado['categoria_detectada'] = 'bebidas'
+            resultado['modificadores_detectados'].append('saludable')
+            resultado['productos_semanticos_sugeridos'] = [
+                'agua', 'té verde', 'té negro', 'agua mineral', 'frutas frescas'
+            ]
+            resultado['expansion_consulta'] = 'opciones_saludables'
+            print(f"Análisis semántico: opción saludable detectada")
+            
+        # 6. LÓGICA ESPECIAL: jerga coloquial (chesco, agüita)
+        elif any(palabra in consulta.lower() for palabra in ['chesco', 'chescos', 'aguita', 'agüita']):
+            resultado['categoria_detectada'] = 'bebidas'
+            if 'chesco' in consulta.lower() or 'chescos' in consulta.lower():
+                resultado['productos_semanticos_sugeridos'] = ['coca cola', 'pepsi', 'sprite', 'fanta']
+                resultado['expansion_consulta'] = 'jerga_refrescos'
+            else:  # agüita
+                resultado['productos_semanticos_sugeridos'] = ['agua', 'agua natural', 'agua mineral']
+                resultado['expansion_consulta'] = 'jerga_agua'
+            print(f"Análisis semántico: jerga coloquial detectada")
+        
+        return resultado
+    
     def _analizar_consulta_fallback(self, consulta: str) -> Dict:
         """Análisis inteligente mejorado como sistema principal"""
         
         # Detectar filtros de precio PRIMERO
         precio_max = self._extraer_filtro_precio(consulta)
+        
+        # NUEVA FUNCIONALIDAD: Análisis semántico avanzado
+        analisis_semantico = self._analizar_semanticamente(consulta)
+        
+        # Si hay análisis semántico específico, priorizarlo
+        if analisis_semantico.get('expansion_consulta'):
+            return {
+                'tipo_busqueda': 'busqueda_semantica_avanzada',
+                'categoria': analisis_semantico['categoria_detectada'],
+                'modificadores': analisis_semantico['modificadores_detectados'],
+                'productos_sugeridos': analisis_semantico['productos_semanticos_sugeridos'],
+                'termino_busqueda': consulta,
+                'precio_max': precio_max,
+                'estrategia_usada': f"semantica_{analisis_semantico['expansion_consulta']}"
+            }
         
         # PASO 0.5: DETECTAR CATEGORÍA + ATRIBUTO ANTES DE SINÓNIMOS
         # Analizar si tenemos estructura: CATEGORIA + ATRIBUTO
@@ -809,10 +960,10 @@ class SistemaLCLNSimplificado:
         
         # Estrategia 3: Adjetivos de precio
         if any(palabra in consulta for palabra in ['barato', 'baratos', 'barata', 'baratas', 'economico', 'economica']):
-            print(f"Filtro precio detectado (adjetivo): ≤ $20.0")
+            print(f"Filtro precio detectado (adjetivo): <= $20.0")
             return 20.0
         elif any(palabra in consulta for palabra in ['caro', 'caros', 'cara', 'caras', 'premium']):
-            print(f"Filtro precio detectado (caro): ≥ $50.0")
+            print(f"Filtro precio detectado (caro): >= $50.0")
             return 100.0  # Productos caros hasta $100
         
         # Estrategia 4: Contexto de números sueltos con palabras clave
@@ -886,6 +1037,16 @@ class SistemaLCLNSimplificado:
             # Nueva estrategia: búsqueda semántica por palabras clave
             productos_semanticos = analisis.get('productos_encontrados', [])
             return [self._formatear_producto(prod) for prod in productos_semanticos[:limit]]
+        
+        elif analisis['tipo_busqueda'] == 'busqueda_semantica_avanzada':
+            # NUEVA ESTRATEGIA: Búsqueda semántica avanzada (ej: bebidas sin azúcar incluyendo aguas)
+            return self._buscar_semantica_avanzada(
+                analisis.get('categoria'),
+                analisis.get('modificadores', []),
+                analisis.get('productos_sugeridos', []),
+                analisis.get('precio_max'),
+                limit
+            )
 
         else:
             # Búsqueda genérica - buscar en nombres de productos
@@ -959,6 +1120,133 @@ class SistemaLCLNSimplificado:
         # Ordenar por precio y limitar
         productos.sort(key=lambda x: x['precio'])
         return productos[:limit]
+    
+    def _buscar_semantica_avanzada(self, categoria: str, modificadores: List[str], productos_sugeridos: List[str], precio_max: Optional[float], limit: int) -> List[Dict]:
+        """Búsqueda semántica avanzada que incluye expansión inteligente"""
+        productos = []
+        
+        print(f"Búsqueda semántica avanzada: {categoria} con modificadores {modificadores}")
+        
+        # ESTRATEGIA 1: Buscar productos específicamente sugeridos por el análisis semántico
+        productos_encontrados_directos = []
+        productos_ids_agregados = set()  # Usar set para deduplicación O(1)
+        
+        for producto_sugerido in productos_sugeridos:
+            for nombre_prod, datos_prod in self._cache_productos.items():
+                # Evitar duplicados desde el inicio
+                if datos_prod['id'] in productos_ids_agregados:
+                    continue
+                    
+                # FILTRO ESTRICTO: Solo bebidas para búsqueda de bebidas sin azúcar
+                if categoria == 'bebidas':
+                    # Verificar que sea realmente una bebida (categoría 1)
+                    if datos_prod.get('categoria_id') != 1 and datos_prod.get('id_categoria') != 1:
+                        continue  # Skip productos que no sean bebidas
+                
+                # Buscar coincidencias MÁS ESTRICTAS con los productos sugeridos
+                nombre_lower = nombre_prod.lower()
+                producto_sugerido_lower = producto_sugerido.lower()
+                
+                # Para agua: coincidencia exacta de la palabra "agua"
+                if producto_sugerido_lower.startswith('agua'):
+                    if not nombre_lower.startswith('agua'):
+                        continue
+                
+                # Para coca cola: SOLO la versión sin azúcar
+                elif 'coca' in producto_sugerido_lower:
+                    if not ('coca' in nombre_lower and any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])):
+                        continue
+                        
+                # Para té: SOLO tés explícitamente sin azúcar
+                elif 'té' in producto_sugerido_lower or 'te' in producto_sugerido_lower:
+                    if not (('té' in nombre_lower or 'te' in nombre_lower) and 
+                           any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])):
+                        continue
+                
+                # Coincidencia general más estricta
+                elif not (producto_sugerido_lower in nombre_lower or 
+                         all(palabra in nombre_lower for palabra in producto_sugerido_lower.split() if len(palabra) > 2)):
+                    continue
+                    
+                if not precio_max or datos_prod['precio'] <= precio_max:
+                    productos_encontrados_directos.append(datos_prod)
+                    productos_ids_agregados.add(datos_prod['id'])
+                    print(f"  Producto semántico directo: {datos_prod['nombre']}")
+        
+        # ESTRATEGIA 2: Buscar en categoría específica con filtros semánticos
+        if categoria == 'bebidas' and 'sin_azucar' in modificadores:
+            categoria_id = 1  # ID de bebidas
+            
+            # Buscar todos los productos de bebidas que cumplan criterios semánticos
+            for nombre_prod, datos_prod in self._cache_productos.items():
+                if datos_prod.get('categoria_id') == categoria_id or datos_prod.get('id_categoria') == categoria_id:
+                    nombre_lower = nombre_prod.lower()
+                    
+                    # Criterios ESTRICTOS para "bebidas sin azúcar":
+                    es_sin_azucar = (
+                        # Aguas (naturalmente sin azúcar)
+                        nombre_lower.startswith('agua') or
+                        # Productos explícitamente sin azúcar
+                        'sin azucar' in nombre_lower or
+                        'sin azúcar' in nombre_lower or
+                        'zero' in nombre_lower or
+                        'light' in nombre_lower or
+                        'diet' in nombre_lower
+                    )
+                    
+                    # EXCLUSIONES: productos que SÍ tienen azúcar
+                    tiene_azucar = (
+                        # Fuze Tea y otros tés endulzados (sin "sin azúcar" explícito)
+                        ('fuze' in nombre_lower and 'sin azucar' not in nombre_lower and 'zero' not in nombre_lower) or
+                        ('té' in nombre_lower and 'sin azucar' not in nombre_lower and 'zero' not in nombre_lower and 'diet' not in nombre_lower) or
+                        ('te' in nombre_lower and 'sin azucar' not in nombre_lower and 'zero' not in nombre_lower and 'diet' not in nombre_lower) or
+                        # Coca-Cola regular (sin "sin azúcar", "zero", "light", "diet")
+                        ('coca' in nombre_lower and not any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])) or
+                        # Jugos y refrescos regulares (tienen azúcar)
+                        (any(palabra in nombre_lower for palabra in ['jugo', 'boing', 'jumex', 'sprite', 'fanta', 'limonada', 'naranjada']) and 
+                         not any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet']))
+                    )
+                    
+                    # Solo incluir si es sin azúcar Y NO tiene azúcar
+                    es_sin_azucar = es_sin_azucar and not tiene_azucar
+                    
+                    if es_sin_azucar:
+                        if not precio_max or datos_prod['precio'] <= precio_max:
+                            # Evitar duplicados usando el set eficiente
+                            if datos_prod['id'] not in productos_ids_agregados:
+                                productos_encontrados_directos.append(datos_prod)
+                                productos_ids_agregados.add(datos_prod['id'])
+                                print(f"  Bebida sin azúcar: {datos_prod['nombre']}")
+        
+        # ESTRATEGIA 3: Si no encuentra suficientes, expandir búsqueda
+        if len(productos_encontrados_directos) < 3:
+            print("  Expandiendo búsqueda semántica...")
+            
+            # Buscar sinónimos relacionados con los modificadores
+            for sinonimo, productos_sinonimo in self._cache_sinonimos.items():
+                if any(mod in sinonimo for mod in ['agua', 'natural', 'zero', 'light']):
+                    for prod_info in productos_sinonimo:
+                        producto_id = prod_info['producto_id']
+                        for nombre_prod, datos_prod in self._cache_productos.items():
+                            if datos_prod['id'] == producto_id:
+                                if not precio_max or datos_prod['precio'] <= precio_max:
+                                    if datos_prod['id'] not in productos_ids_agregados:
+                                        productos_encontrados_directos.append(datos_prod)
+                                        productos_ids_agregados.add(datos_prod['id'])
+                                        print(f"  Por sinónimo semántico '{sinonimo}': {datos_prod['nombre']}")
+                                        break
+        
+        # Formatear productos encontrados
+        for producto in productos_encontrados_directos[:limit]:
+            producto_formateado = self._formatear_producto(producto)
+            # Ajustar score y reasons para búsqueda semántica
+            producto_formateado['match_score'] = 0.9
+            producto_formateado['match_reasons'] = ['semantica_avanzada', 'expansion_inteligente', 'imagen_incluida']
+            producto_formateado['source'] = 'mysql_lcln_semantico'
+            productos.append(producto_formateado)
+        
+        print(f"  Total productos semánticos encontrados: {len(productos)}")
+        return productos
     
     def _buscar_por_categoria(self, categoria: str, precio_max: Optional[float], limit: int) -> List[Dict]:
         """Buscar productos por categoría con filtros"""
