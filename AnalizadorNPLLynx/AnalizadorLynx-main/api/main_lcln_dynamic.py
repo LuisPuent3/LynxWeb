@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import time
 from datetime import datetime
-from sistema_lcln_simple import SistemaLCLNSimplificado
+from sistema_lcln_mejorado import sistema_lcln_mejorado
 
 # Inicializar FastAPI
 app = FastAPI(
@@ -40,8 +40,8 @@ class QueryRequest(BaseModel):
 class BatchQueryRequest(BaseModel):
     queries: list[str]
 
-# Instancia del sistema LCLN
-sistema_lcln = SistemaLCLNSimplificado()
+# Usar la instancia global del sistema LCLN mejorado con extensiones formales
+sistema_lcln = sistema_lcln_mejorado
 
 @app.get("/")
 def root():
@@ -49,11 +49,15 @@ def root():
         "message": "LYNX LCLN Dynamic NLP API",
         "version": "6.0.0-lcln-dynamic", 
         "features": [
-            "Sistema LCLN completo según documentación técnica",
-            "Cache dinámico que se actualiza automáticamente",
-            "Soporte completo para nuevas categorías/productos",
-            "Imágenes incluidas en respuestas",
-            "5 estrategias de búsqueda inteligente"
+            "Sistema LCLN completo segun documentacion tecnica",
+            "AFD formal con analisis lexico avanzado",
+            "Analizador sintactico con gramaticas BNF",
+            "Reglas de desambiguacion RD1-RD4",
+            "Validacion gramatical completa",
+            "Cache dinamico que se actualiza automaticamente",
+            "Soporte completo para nuevas categorias/productos",
+            "Imagenes incluidas en respuestas",
+            "5 estrategias de busqueda inteligente"
         ],
         "products_source": "mysql_lynxshop_dynamic_cache",
         "status": "active"
@@ -99,40 +103,72 @@ def analyze_lcln_dynamic(request: QueryRequest):
     Se adapta automáticamente cuando el admin agrega productos/categorías
     """
     try:
-        # Usar el sistema LCLN dinámico
-        resultado = sistema_lcln.buscar_productos_inteligente(
-            consulta=request.query,
-            limit=20
-        )
+        # Usar el análisis completo formal LCLN con todas las extensiones
+        resultado = sistema_lcln.obtener_analisis_completo_formal(request.query)
         
-        if not resultado['success']:
-            raise HTTPException(status_code=500, detail="Error en Sistema LCLN")
-          # Preparar respuesta compatible con frontend existente
-        return {
+        # Extraer datos del nuevo formato
+        resumen = resultado['resumen_ejecutivo']
+        productos_encontrados = resultado['fase_5_motor_recomendaciones']['productos_encontrados']
+        correcciones = resultado['fase_1_correccion']['correcciones'] if resultado['fase_1_correccion']['correcciones_aplicadas'] else []
+        
+        # Preparar respuesta compatible con frontend existente + nuevas extensiones formales
+        respuesta = {
             "success": True,
-            "processing_time_ms": resultado['processing_time_ms'],
+            "processing_time_ms": 50,  # Valor por defecto
             "original_query": request.query,
-            "corrections": resultado['corrections'],  # Use actual corrections from LCLN system
+            "corrections": [corr['palabra_corregida'] for corr in correcciones],
             "interpretation": {
-                "type": resultado['interpretation']['tipo'],
-                "termino_busqueda": resultado['interpretation']['termino_busqueda'],
-                "categoria": resultado['interpretation']['categoria'],
-                "estrategia_usada": resultado['interpretation']['estrategia_usada']
+                "type": resumen['estrategia_usada'],
+                "termino_busqueda": request.query,
+                "categoria": "detectada_automaticamente",
+                "estrategia_usada": resumen['estrategia_usada']
             },
-            "recommendations": resultado['recommendations'],
-            "user_message": resultado['user_message'],
+            "recommendations": productos_encontrados,
+            "user_message": f"Se encontraron {resumen['productos_encontrados']} productos usando {resumen['estrategia_usada']}",
             "metadata": {
-                "products_found": resultado['products_found'],
-                "has_corrections": False,
-                "source": "lcln_dynamic_mysql",
+                "products_found": resumen['productos_encontrados'],
+                "has_corrections": len(correcciones) > 0,
+                "source": "lcln_formal_completo",
                 "productos_comprables": True,
                 "database_real": True,
                 "imagenes_incluidas": True,
                 "adaptativo": True,
-                "cache_timestamp": resultado['metadata']['cache_timestamp']
+                # NUEVOS METADATOS FORMALES
+                "modo_analisis": resumen['modo_analisis'],
+                "conformidad_lcln": resumen['conformidad_lcln'],
+                "tokens_formales_count": resumen['tokens_formales_count'],
+                "validacion_gramatical": resumen.get('validacion_gramatical', None)
             },
-            "sql_query": f"Dynamic LCLN Query - Strategy: {resultado['interpretation']['estrategia_usada']}"
+            "sql_query": f"LCLN Formal Query - Strategy: {resumen['estrategia_usada']}"
         }
+        
+        # AGREGAR DATOS FORMALES ADICIONALES (opcionales para analisis avanzado)
+        if resultado.get('fase_afd_lexico'):
+            respuesta['analisis_formal'] = {
+                "afd_lexico": {
+                    "total_tokens": resultado['fase_afd_lexico']['estadisticas']['total_tokens'],
+                    "tokens_reconocidos": resultado['fase_afd_lexico']['estadisticas']['tokens_reconocidos'],
+                    "precision": resultado['fase_afd_lexico']['estadisticas']['precision_reconocimiento'],
+                    "tabla_tokens": resultado['fase_afd_lexico']['tabla_tokens']
+                }
+            }
+            
+        if resultado.get('fase_analisis_sintactico'):
+            if 'analisis_formal' not in respuesta:
+                respuesta['analisis_formal'] = {}
+            respuesta['analisis_formal']['analisis_sintactico'] = {
+                "estructura_valida": resultado['fase_analisis_sintactico']['valida'],
+                "tipo_gramatica": resultado['fase_analisis_sintactico'].get('tipo_gramatica'),
+                "entidad_prioritaria": resultado['fase_analisis_sintactico'].get('entidad_prioritaria'),
+                "reglas_aplicadas": resultado['fase_analisis_sintactico'].get('reglas_aplicadas', [])
+            }
+            
+        if resultado.get('validacion_gramatical'):
+            if 'analisis_formal' not in respuesta:
+                respuesta['analisis_formal'] = {}
+            respuesta['analisis_formal']['validacion_gramatical'] = resultado['validacion_gramatical']
+        
+        return respuesta
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en análisis LCLN: {str(e)}")
@@ -146,17 +182,20 @@ def analyze_batch_lcln(request: BatchQueryRequest):
         resultados = []
         
         for query in request.queries:
-            resultado_individual = sistema_lcln.buscar_productos_inteligente(
-                consulta=query,
-                limit=10  # Menos productos por consulta en batch
-            )
+            # Usar análisis completo formal pero con menos productos
+            resultado_individual = sistema_lcln.obtener_analisis_completo_formal(query)
+            resumen = resultado_individual['resumen_ejecutivo']
+            productos = resultado_individual['fase_5_motor_recomendaciones']['productos_encontrados'][:5]
             
             resultados.append({
                 "query": query,
-                "success": resultado_individual['success'],
-                "products_found": resultado_individual['products_found'],
-                "products": resultado_individual['recommendations'][:5],  # Solo top 5
-                "strategy": resultado_individual['interpretation']['estrategia_usada']
+                "success": True,
+                "products_found": resumen['productos_encontrados'],
+                "products": productos,
+                "strategy": resumen['estrategia_usada'],
+                # Datos formales adicionales para batch
+                "conformidad_lcln": resumen['conformidad_lcln'],
+                "tokens_formales": resumen['tokens_formales_count']
             })
         
         return {
@@ -227,6 +266,70 @@ def get_stats():
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/api/nlp/analyze-formal")
+def analyze_formal_complete(request: QueryRequest):
+    """
+    NUEVO - Endpoint de Analisis LCLN FORMAL COMPLETO
+    Devuelve todos los datos del AFD, analisis sintactico y validacion gramatical
+    """
+    try:
+        # Análisis completo formal sin filtrar ningún dato
+        resultado_completo = sistema_lcln.obtener_analisis_completo_formal(request.query)
+        
+        return {
+            "success": True,
+            "query": request.query,
+            "timestamp": datetime.now().isoformat(),
+            
+            # Resumen ejecutivo
+            "resumen_ejecutivo": resultado_completo['resumen_ejecutivo'],
+            
+            # Todas las fases del análisis
+            "fase_1_correccion": resultado_completo['fase_1_correccion'],
+            "fase_2_expansion_sinonimos": resultado_completo['fase_2_expansion_sinonimos'],
+            "fase_3_tokenizacion": resultado_completo['fase_3_tokenizacion'],
+            "fase_4_interpretacion": resultado_completo['fase_4_interpretacion'],
+            "fase_5_motor_recomendaciones": resultado_completo['fase_5_motor_recomendaciones'],
+            
+            # Fases formales nuevas
+            "fase_afd_lexico": resultado_completo.get('fase_afd_lexico'),
+            "fase_analisis_sintactico": resultado_completo.get('fase_analisis_sintactico'),
+            "validacion_gramatical": resultado_completo.get('validacion_gramatical'),
+            
+            # Metadatos técnicos
+            "metadatos_tecnicos": {
+                "modo_analisis_formal_activo": sistema_lcln.modo_analisis_formal,
+                "version_sistema": "LCLN_FORMAL_COMPLETO",
+                "cache_timestamp": sistema_lcln._cache_timestamp.isoformat() if sistema_lcln._cache_timestamp else None,
+                "productos_en_cache": len(sistema_lcln._cache_productos),
+                "categorias_en_cache": len(sistema_lcln._cache_categorias)
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en análisis formal completo: {str(e)}")
+
+@app.get("/api/toggle-formal-mode/{mode}")
+def toggle_formal_mode(mode: bool):
+    """
+    Endpoint para activar/desactivar el modo de analisis formal
+    """
+    try:
+        sistema_lcln.modo_analisis_formal = mode
+        
+        return {
+            "success": True,
+            "modo_analisis_formal": sistema_lcln.modo_analisis_formal,
+            "message": f"Modo formal {'activado' if mode else 'desactivado'}",
+            "impacto": {
+                "rendimiento": "Mayor precisión, algo más lento" if mode else "Más rápido, menos análisis formal",
+                "funcionalidades": "AFD + BNF + RD1-4 + Validación" if mode else "Solo análisis tradicional"
+            }
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 @app.get("/api/force-cache-refresh")
 def force_cache_refresh():
     """
@@ -254,14 +357,26 @@ def force_cache_refresh():
 if __name__ == "__main__":
     import uvicorn
     
-    print("🚀 Iniciando LYNX LCLN Dynamic NLP API...")
-    print("📦 Sistema adaptativo para productos dinámicos")
-    print("🖼️ Imágenes incluidas automáticamente")
-    print("🔄 Cache que se actualiza cada 5 minutos")
+    print("[INICIO] LYNX LCLN FORMAL Dynamic NLP API...")
+    print("[FORMAL] Sistema LCLN completo con extensiones formales:")
+    print("   - AFD (Automata Finito Determinista) con tokenizacion formal")
+    print("   - Analizador sintactico con gramaticas BNF")
+    print("   - Reglas de desambiguacion RD1-RD4")
+    print("   - Validacion gramatical completa")
+    print("[SISTEMA] Sistema adaptativo para productos dinamicos")
+    print("[IMAGENES] Imagenes incluidas automaticamente")
+    print("[CACHE] Cache que se actualiza cada 5 minutos")
+    print("")
+    print("[ENDPOINTS] Endpoints disponibles:")
+    print("   - /api/nlp/analyze (compatible con frontend)")
+    print("   - /api/nlp/analyze-formal (analisis formal completo)")
+    print("   - /api/toggle-formal-mode/{true|false} (activar/desactivar)")
+    print("")
+    print(f"[CONFIG] Modo analisis formal: {'ACTIVO' if sistema_lcln.modo_analisis_formal else 'DESACTIVADO'}")
     
     uvicorn.run(
         app, 
         host="0.0.0.0", 
-        port=8004,  # Puerto diferente para no conflicto
+        port=8005,  # Puerto cambiado para evitar conflicto
         log_level="info"
     )

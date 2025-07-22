@@ -213,3 +213,11 @@ Límite: Máximo 5 productos por búsqueda++
   - "crujitos fuego 59g" 🌶️
   - "susalia flama 200g" 🌶️
 
+
+● Listo. Los cambios implementados eliminan los sinónimos parciales
+  inútiles:
+
+  1. Stop words: Filtra 'productos', 'menores', 'pesos', 'pero', 'es'
+  2. Longitud mínima: Requiere ≥3 caracteres (elimina 'pr', 'es')
+  3. Umbral dinámico: 85% confianza para términos ≤4 caracteres, 70% para     
+   más largos

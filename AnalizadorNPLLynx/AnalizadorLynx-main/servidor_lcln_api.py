@@ -11,9 +11,13 @@ from contextlib import asynccontextmanager
 import uvicorn
 import asyncio
 from sistema_lcln_simple import SistemaLCLNSimplificado
+from sistema_lcln_mejorado import sistema_lcln_mejorado
 
-# Inicializar sistema LCLN
+# Inicializar sistema LCLN original (el que ya funcionaba)
 sistema_lcln = SistemaLCLNSimplificado()
+
+# Sistema mejorado como PLUS opcional (solo para análisis adicional)
+sistema_lcln_plus = sistema_lcln_mejorado
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,8 +37,8 @@ async def lifespan(app: FastAPI):
 # Inicializar FastAPI
 app = FastAPI(
     title="LYNX Sistema LCLN API",
-    description="API para búsqueda inteligente de productos usando análisis semántico",
-    version="2.0.0",
+    description="API para búsqueda inteligente de productos + análisis léxico formal como PLUS opcional",
+    version="2.1.0-plus",
     lifespan=lifespan
 )
 
@@ -76,10 +80,16 @@ async def root():
     """Endpoint raíz"""
     return {
         "message": "LYNX Sistema LCLN API",
-        "version": "2.0.0",
+        "version": "2.1.0-plus",
         "status": "active",
+        "sistema_principal": "Sistema LCLN original que ya funcionaba perfectamente",
+        "plus_agregado": {
+            "analisis_lexico_formal": "AFD + BNF + RD1-RD4 como información adicional",
+            "nota": "El PLUS no afecta el funcionamiento principal"
+        },
         "endpoints": {
-            "search": "/search",
+            "search": "/search (sistema principal - compatible con frontend)",
+            "analisis_lexico_plus": "/analisis-lexico-plus?query=... (PLUS opcional)",
             "health": "/health",
             "docs": "/docs"
         }
@@ -94,12 +104,17 @@ async def health_check():
         
         return {
             "status": "healthy",
-            "system": "lcln",
-            "version": "2.0.0",
+            "system": "lcln_original_plus",
+            "version": "2.1.0-plus",
             "database": "mysql_connected",
             "cache_products": len(sistema_lcln._cache_productos),
             "cache_synonyms": len(sistema_lcln._cache_sinonimos),
-            "timestamp": sistema_lcln._cache_timestamp.isoformat() if sistema_lcln._cache_timestamp else None
+            "timestamp": sistema_lcln._cache_timestamp.isoformat() if sistema_lcln._cache_timestamp else None,
+            "sistema_principal": "funcionando_perfectamente",
+            "plus_opcional": {
+                "analisis_lexico_disponible": True,
+                "modo_activo": sistema_lcln_plus.modo_analisis_formal
+            }
         }
     except Exception as e:
         raise HTTPException(
@@ -125,11 +140,24 @@ async def search_products(request: SearchRequest):
 
         print(f"[API] Procesando consulta: '{request.query}'")
         
-        # Ejecutar búsqueda usando el sistema LCLN
+        # Ejecutar búsqueda usando el sistema LCLN ORIGINAL que ya funcionaba
         resultado = sistema_lcln.buscar_productos_inteligente(
             request.query,
             request.limit
         )
+        
+        # ➕ PLUS OPCIONAL: Agregar análisis léxico formal como información adicional
+        try:
+            resultado_plus = sistema_lcln_plus.obtener_analisis_completo_formal(request.query)
+            # Agregar datos del analizador léxico como metadatos adicionales
+            resultado['metadata']['analisis_lexico_plus'] = {
+                'conformidad_lcln': resultado_plus['resumen_ejecutivo']['conformidad_lcln'],
+                'tokens_formales': resultado_plus['resumen_ejecutivo']['tokens_formales_count'],
+                'precision_tokens': resultado_plus.get('fase_afd_lexico', {}).get('estadisticas', {}).get('precision_reconocimiento', 0)
+            }
+        except Exception as e:
+            # Si falla el análisis plus, no afecta la funcionalidad principal
+            resultado['metadata']['analisis_lexico_plus'] = {'error': str(e)}
         
         print(f"[API] Búsqueda completada: {resultado['products_found']} productos en {resultado['processing_time_ms']:.1f}ms")
         
@@ -158,6 +186,59 @@ async def search_products(request: SearchRequest):
             }
         )
 
+@app.get("/analisis-lexico-plus")
+async def analisis_lexico_plus(query: str):
+    """
+    ➕ ENDPOINT PLUS - Solo análisis léxico formal adicional
+    NO interfiere con el sistema principal que ya funciona
+    """
+    try:
+        if not query or query.strip() == "":
+            raise HTTPException(
+                status_code=400,
+                detail="Query parameter is required"
+            )
+
+        print(f"[PLUS] Analizando léxicamente: '{query}'")
+        
+        # Solo el análisis léxico formal, sin afectar el sistema principal
+        resultado_plus = sistema_lcln_plus.obtener_analisis_completo_formal(query)
+        
+        return {
+            "success": True,
+            "query": query,
+            "analisis_lexico": {
+                "conformidad_lcln": resultado_plus['resumen_ejecutivo']['conformidad_lcln'],
+                "tokens_formales_count": resultado_plus['resumen_ejecutivo']['tokens_formales_count'],
+                "afd_lexico": resultado_plus.get('fase_afd_lexico', {}),
+                "analisis_sintactico": resultado_plus.get('fase_analisis_sintactico', {}),
+                "validacion_gramatical": resultado_plus.get('validacion_gramatical', {})
+            },
+            "nota": "Este es un análisis PLUS que no afecta el sistema principal"
+        }
+        
+    except Exception as e:
+        print(f"[PLUS] Error en análisis léxico plus: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "nota": "Error en análisis PLUS - el sistema principal sigue funcionando normal"
+        }
+
+@app.get("/toggle-plus/{mode}")
+async def toggle_plus_analysis(mode: bool):
+    """Activar/desactivar el análisis PLUS (no afecta sistema principal)"""
+    try:
+        sistema_lcln_plus.modo_analisis_formal = mode
+        return {
+            "success": True,
+            "modo_plus": sistema_lcln_plus.modo_analisis_formal,
+            "mensaje": f"Análisis PLUS {'activado' if mode else 'desactivado'}",
+            "nota": "Esto no afecta el funcionamiento del sistema principal"
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 @app.get("/cache-stats")
 async def cache_statistics():
     """Obtener estadísticas del cache"""
@@ -180,7 +261,22 @@ async def cache_statistics():
         )
 
 if __name__ == "__main__":
-    print("Iniciando Servidor LCLN API en puerto 8004...")
+    print("=== INICIANDO SERVIDOR LCLN API (Sistema Original + PLUS) ===")
+    print("Puerto: 8004")
+    print("")
+    print("✅ SISTEMA PRINCIPAL: El que ya funcionaba perfectamente")
+    print("  - Endpoint: POST /search")
+    print("  - Compatible 100% con tu frontend")
+    print("  - Misma funcionalidad de siempre")
+    print("")
+    print("➕ PLUS AGREGADO: Análisis léxico formal")
+    print("  - Endpoint: GET /analisis-lexico-plus?query=...")
+    print("  - AFD + Análisis sintáctico + Validación")
+    print("  - NO interfiere con el sistema principal")
+    print("")
+    print(f"PLUS activo: {'SÍ' if sistema_lcln_plus.modo_analisis_formal else 'NO'}")
+    print("===========================================================")
+    
     uvicorn.run(
         "servidor_lcln_api:app",
         host="127.0.0.1",
