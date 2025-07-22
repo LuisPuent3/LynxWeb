@@ -84,6 +84,7 @@ const recommendationRoutes = require('./routes/recommendations');
 const uploadRoutes = require('./routes/uploadRoutes');
 const passwordResetRoutes = require('./routes/passwordResetRoutes');
 const sinonimosRoutes = require('./routes/sinonimosRoutes');
+const lclnRoutes = require('./routes/lcln');
 
 // Logger avanzado para depuración
 app.use((req, res, next) => {
@@ -101,6 +102,7 @@ app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/admin/sinonimos', sinonimosRoutes);
+app.use('/api/lcln', lclnRoutes);
 
 // Ruta temporal de pruebas (sin autenticación)
 const testSinonimosRoutes = require('./routes/testSinonimosRoutes');

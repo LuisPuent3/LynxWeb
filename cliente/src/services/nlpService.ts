@@ -1,6 +1,6 @@
 /**
  * Servicio NLP para integrar con el sistema LYNX LCLN Dinámico
- * Conecta con el microservicio FastAPI LCLN en puerto 8004
+ * Conecta con el backend Node.js que proxy al microservicio FastAPI LCLN
  */
 
 interface ProductRecommendation {
@@ -54,29 +54,50 @@ interface NLPInterpretation {
 
 interface NLPSearchResponse {
   success: boolean;
-  message: string;
-  query: string;
+  message?: string;
+  query?: string; // Mantener compatibilidad
+  original_query?: string; // Nuevo formato
   processing_time_ms: number;
+  products_found?: number;
+  user_message?: string;
   interpretation: NLPInterpretation;
   recommendations: ProductRecommendation[];
+  products?: ProductRecommendation[]; // Campo adicional del backend
   corrections?: {
     applied: boolean;
+    original_query?: string;
     corrected_query?: string;
+    corrections_details?: NLPCorrection[];
     changes?: NLPCorrection[];
   };
+  metadata?: {
+    database?: string;
+    cache_timestamp?: string;
+    imagenes_incluidas?: boolean;
+    filtro_precio_aplicado?: boolean;
+    producto_original_rechazado?: boolean;
+  };
   sql_query?: string;
-  user_message?: string;
 }
 
 interface HealthResponse {
-  status: string;
+  success: boolean;
+  lcln_service: string;
+  status?: {
+    status?: string;
+    system?: string;
+    version?: string;
+    database?: string;
+    cache_products?: number;
+    cache_synonyms?: number;
+    timestamp?: string;
+  };
+  error?: string;
   timestamp?: string;
-  version?: string;
-  // Formato original (otros sistemas)
+  // Formato legacy (mantener compatibilidad)
   components?: {
     [key: string]: string;
   };
-  // Formato AFD (nuestro sistema)
   productos?: number;
   sinonimos?: number;
 }
@@ -84,7 +105,7 @@ interface HealthResponse {
 class NLPService {
   private baseUrl: string;
   private isHealthy: boolean = false;  constructor() {
-    this.baseUrl = 'http://localhost:8007'; // API LCLN con AFDs limpio (puerto 8007)
+    this.baseUrl = 'http://localhost:5000'; // Backend Node.js que proxy al servicio LCLN Python
     this.checkHealth();
   }
   /**
@@ -92,7 +113,7 @@ class NLPService {
    */
   async checkHealth(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/health`, {
+      const response = await fetch(`${this.baseUrl}/api/lcln/status`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -106,11 +127,11 @@ class NLPService {
       }
 
       const health: HealthResponse = await response.json();
-      this.isHealthy = health.status === 'healthy';
+      this.isHealthy = health.success && health.lcln_service === 'available';
       
       if (this.isHealthy) {
-        const products = health.productos || health.components?.products || '0';
-        const synonyms = health.sinonimos || health.components?.synonyms || '0';
+        const products = health.status?.cache_products || '0';
+        const synonyms = health.status?.cache_synonyms || '0';
         console.log(`🧠 LYNX NLP Service ready: ${products} productos, ${synonyms} sinónimos`);
       }
 
@@ -133,19 +154,14 @@ class NLPService {
         return null;
       }
     }    try {
-      const response = await fetch(`${this.baseUrl}/api/nlp/analyze`, {
+      const response = await fetch(`${this.baseUrl}/api/lcln/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           query: query.trim(),
-          options: {
-            max_recommendations: limit,
-            enable_correction: true,
-            enable_recommendations: true,
-            enable_sql_generation: true
-          }
+          limit: limit
         }),
       });
 
@@ -156,17 +172,34 @@ class NLPService {
 
       const result: NLPSearchResponse = await response.json();
       
+      // Debug completo para ver la estructura
+      console.log('🐛 DEBUG - Respuesta completa del backend:', result);
+      
+      // Mapear la respuesta del backend al formato esperado del frontend
+      const mappedResult: NLPSearchResponse = {
+        success: result.success,
+        processing_time_ms: result.processing_time_ms,
+        query: result.query,
+        original_query: result.query, 
+        products_found: result.products_found,
+        user_message: result.message,
+        recommendations: result.products || [], // Mapear 'products' a 'recommendations'
+        interpretation: result.interpretation || {},
+        corrections: result.corrections || { applied: false },
+        metadata: result.metadata
+      };
+      
       // Log de debug para desarrollo
       if (process.env.NODE_ENV === 'development') {
         console.log('🔍 NLP Search Result:', {
-          query: result.query,
-          time: `${result.processing_time_ms}ms`,
-          products: result.recommendations.length,
-          corrected: result.corrections?.applied || false
+          query: mappedResult.query || mappedResult.original_query,
+          time: `${mappedResult.processing_time_ms}ms`,
+          products: mappedResult.recommendations?.length || 0,
+          corrected: mappedResult.corrections?.applied || false
         });
       }
 
-      return result;
+      return mappedResult;
     } catch (error) {
       console.error('NLP Service error:', error);
       return null;
