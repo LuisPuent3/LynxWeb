@@ -298,7 +298,7 @@ class SistemaLCLNSimplificado:
             return f"'{producto_original['nombre']}' cuesta ${producto_original['precio']:.0f} (más de ${precio_max:.0f}). Te mostramos {len(productos)} alternativas más baratas"
             
         elif estrategia == 'semantica_bebidas_sin_azucar':
-            precio_str = f" ≤ ${precio_max:.0f}" if precio_max else ""
+            precio_str = f" <= ${precio_max:.0f}" if precio_max else ""
             if len(productos) > 1:
                 return f"Encontradas {len(productos)} bebidas sin azúcar (incluyendo aguas){precio_str}"
             else:
@@ -307,19 +307,19 @@ class SistemaLCLNSimplificado:
         elif estrategia.startswith('afd_'):
             if 'atributos' in estrategia:
                 attrs_str = ', '.join(atributos) if atributos else 'atributos específicos'
-                precio_str = f" ≤ ${precio_max:.0f}" if precio_max else ""
+                precio_str = f" <= ${precio_max:.0f}" if precio_max else ""
                 return f"Encontrados {len(productos)} productos con {attrs_str}{precio_str} (AFD)"
             elif 'producto' in estrategia:
-                precio_str = f" con precio ≤ ${precio_max:.0f}" if precio_max else ""
+                precio_str = f" con precio <= ${precio_max:.0f}" if precio_max else ""
                 return f"Producto encontrado por AFD{precio_str}"
             elif 'categoria' in estrategia:
                 categoria = analisis.get('categoria', {}).get('nombre', 'categoría')
-                precio_str = f" ≤ ${precio_max:.0f}" if precio_max else ""
+                precio_str = f" <= ${precio_max:.0f}" if precio_max else ""
                 attrs_str = f" con {', '.join(atributos)}" if atributos else ""
                 return f"Encontrados {len(productos)} productos de {categoria}{attrs_str}{precio_str} (AFD)"
             
         elif estrategia == 'sinonimo_directo' and precio_max:
-            return f"Encontrado 1 producto por sinónimo con precio ≤ ${precio_max:.0f}"
+            return f"Encontrado 1 producto por sinónimo con precio <= ${precio_max:.0f}"
             
         elif estrategia == 'sinonimo_directo':
             return f"Encontrado 1 producto por sinónimo"
@@ -329,25 +329,25 @@ class SistemaLCLNSimplificado:
             
         elif estrategia == 'coincidencia_exacta_multiple':
             termino = analisis.get('termino_busqueda', 'término')
-            precio_str = f" con precio ≤ ${precio_max:.0f}" if precio_max else ""
+            precio_str = f" con precio <= ${precio_max:.0f}" if precio_max else ""
             return f"Encontrados {len(productos)} productos relacionados con '{termino}'{precio_str}"
             
         elif estrategia == 'filtro_precio':
-            return f"Encontrados {len(productos)} productos ≤ ${precio_max:.0f}"
+            return f"Encontrados {len(productos)} productos <= ${precio_max:.0f}"
             
         elif estrategia == 'categoria_con_filtros' and precio_max:
             categoria = analisis.get('categoria', {}).get('nombre', 'categoría')
-            return f"Encontrados {len(productos)} productos de {categoria} ≤ ${precio_max:.0f}"
+            return f"Encontrados {len(productos)} productos de {categoria} <= ${precio_max:.0f}"
             
         elif estrategia == 'categoria_semantica_con_atributos':
             categoria = analisis.get('categoria', 'categoría')
             atributo = analisis.get('atributo', 'atributo')
-            precio_str = f" ≤ ${precio_max:.0f}" if precio_max else ""
+            precio_str = f" <= ${precio_max:.0f}" if precio_max else ""
             return f"Encontrados {len(productos)} productos {categoria} {atributo}{precio_str} (búsqueda semántica)"
             
         elif estrategia == 'busqueda_por_palabra_clave_semantica':
             termino = analisis.get('termino_busqueda', 'término')
-            precio_str = f" con precio ≤ ${precio_max:.0f}" if precio_max else ""
+            precio_str = f" con precio <= ${precio_max:.0f}" if precio_max else ""
             return f"Encontrados {len(productos)} productos que coinciden con '{termino}'{precio_str} (análisis semántico)"
             
         else:
@@ -880,7 +880,7 @@ class SistemaLCLNSimplificado:
         
         # PASO 4: Detectar solo filtros de precio
         if precio_max:
-            print(f"Solo filtro de precio detectado: ≤ ${precio_max}")
+            print(f"Solo filtro de precio detectado: <= ${precio_max}")
             return {
                 'tipo_busqueda': 'precio',
                 'categoria': None,
@@ -946,7 +946,7 @@ class SistemaLCLNSimplificado:
             match = re.search(patron, consulta, re.IGNORECASE)
             if match:
                 precio = float(match.group(1))
-                print(f"Filtro precio detectado (operador): ≤ ${precio}")
+                print(f"Filtro precio detectado (operador): <= ${precio}")
                 return precio
         
         # Estrategia 2: Números seguidos de "pesos"
@@ -955,7 +955,7 @@ class SistemaLCLNSimplificado:
             precio = float(match.group(1))
             # Si hay palabras como "menor", "menos", "hasta" antes del número
             if any(palabra in consulta for palabra in ['menor', 'menos', 'hasta', 'máximo', 'max', 'barato', 'economico']):
-                print(f"Filtro precio detectado (pesos): ≤ ${precio}")
+                print(f"Filtro precio detectado (pesos): <= ${precio}")
                 return precio
         
         # Estrategia 3: Adjetivos de precio
@@ -970,7 +970,7 @@ class SistemaLCLNSimplificado:
         numeros = re.findall(r'\d+(?:\.\d+)?', consulta)
         if numeros and any(palabra in consulta for palabra in ['menor', 'menos', 'bajo', 'hasta', 'máximo', 'max']):
             precio = float(numeros[-1])  # Tomar el último número
-            print(f"Filtro precio detectado (contexto): ≤ ${precio}")
+            print(f"Filtro precio detectado (contexto): <= ${precio}")
             return precio
         
         return None
