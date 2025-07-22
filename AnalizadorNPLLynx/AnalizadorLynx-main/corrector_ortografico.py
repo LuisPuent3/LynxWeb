@@ -24,6 +24,11 @@ class CorrectorOrtografico:
             "brata": "barata",
             "varata": "barata",
             "picabte": "picante",
+            "pixnatw": "picante",  # Specific case from requirements
+            "picnatw": "picante",   # Similar typo
+            "pixante": "picante",   # Common substitution
+            "pikante": "picante",   # Common substitution  
+            "picamte": "picante",   # Common typo
             "picante": "picante",
             "azucar": "azúcar",
             "asucar": "azúcar",
@@ -87,11 +92,20 @@ class CorrectorOrtografico:
         """Crea índices fonéticos para español"""
         indices = {}
         
-        # Mapeo de sonidos similares en español
+        # Mapeo de sonidos similares en español (expandido)
         equivalencias_foneticas = {
             'b': ['v', 'b'],
             'v': ['b', 'v'],
-            'c': ['s', 'k', 'c'],
+            'c': ['s', 'k', 'c', 'q'],
+            'q': ['c', 'k', 'q'],
+            'k': ['c', 'k', 'q'],
+            's': ['z', 's', 'c'],
+            'z': ['s', 'z', 'c'],
+            'x': ['s', 'ks', 'cs', 'x'],  # For "pixnatw" case
+            'i': ['y', 'i'],
+            'y': ['i', 'y'],
+            'n': ['ñ', 'n', 'm'],  # Common confusions
+            'ñ': ['n', 'ñ'],
             's': ['c', 's', 'z'],
             'z': ['s', 'c', 'z'],
             'y': ['ll', 'y'],

@@ -304,6 +304,13 @@ class SistemaLCLNSimplificado:
             else:
                 return f"Encontrada {len(productos)} bebida sin azúcar{precio_str}"
         
+        elif estrategia == 'semantica_bebidas_con_azucar':
+            precio_str = f" <= ${precio_max:.0f}" if precio_max else ""
+            if len(productos) > 1:
+                return f"Encontradas {len(productos)} bebidas con azúcar (refrescos regulares){precio_str}"
+            else:
+                return f"Encontrada {len(productos)} bebida con azúcar{precio_str}"
+        
         elif estrategia.startswith('afd_'):
             if 'atributos' in estrategia:
                 attrs_str = ', '.join(atributos) if atributos else 'atributos específicos'
@@ -503,6 +510,7 @@ class SistemaLCLNSimplificado:
         # Detectar negaciones y modificadores
         modificadores = {
             'sin_azucar': ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'],
+            'con_azucar': ['con azucar', 'con azúcar', 'dulce', 'endulzado', 'endulzada', 'regular', 'original'],
             'sin_sal': ['sin sal', 'light'],
             'natural': ['natural', 'organico', 'orgánico', 'puro', 'pura'],
             'frio': ['frio', 'frío', 'helado', 'congelado'],
@@ -535,6 +543,19 @@ class SistemaLCLNSimplificado:
             resultado['expansion_consulta'] = 'bebidas_sin_azucar_incluye_aguas'
             
             print(f"Análisis semántico: bebidas sin azúcar detectado, incluyendo aguas")
+        
+        # 3B. NUEVA LÓGICA ESPECIAL: "bebidas con azúcar" (refrescos regulares)
+        elif (resultado['categoria_detectada'] == 'bebidas' and 
+              'con_azucar' in resultado['modificadores_detectados']):
+            
+            resultado['productos_semanticos_sugeridos'] = [
+                'coca cola', 'coca-cola', 'pepsi', 'sprite', 'fanta', 'boing', 
+                'limonada', 'naranjada', 'jugos', 'te', 'té', 'fuze tea',
+                'powerade', 'gatorade'  # Bebidas deportivas con azúcar
+            ]
+            resultado['expansion_consulta'] = 'bebidas_con_azucar_excluye_aguas'
+            
+            print(f"Análisis semántico: bebidas con azúcar detectado, excluyendo aguas y productos zero")
             
         # 4. LÓGICA ESPECIAL: consultas de hidratación
         elif any(palabra in consulta.lower() for palabra in ['hidratacion', 'hidratante', 'sed', 'refrescante']):
@@ -606,8 +627,10 @@ class SistemaLCLNSimplificado:
             # Detectar atributos específicos
             if 'sin' in palabras and any(a in palabras for a in ['azucar', 'azúcar']):
                 atributo_detectado = 'sin_azucar'
-            elif palabra in ['dulces', 'dulce', 'sweet']:
-                atributo_detectado = 'dulce'
+            elif 'con' in palabras and any(a in palabras for a in ['azucar', 'azúcar']):
+                atributo_detectado = 'con_azucar'
+            elif palabra in ['dulces', 'dulce', 'sweet', 'endulzado', 'endulzada']:
+                atributo_detectado = 'con_azucar'  # Dulce implies con azucar for beverages
             elif palabra in ['salados', 'salado', 'sal']:
                 atributo_detectado = 'salado'
             elif palabra in ['picantes', 'picante', 'fuego', 'hot']:
@@ -627,6 +650,13 @@ class SistemaLCLNSimplificado:
                     
                     if atributo_detectado == 'sin_azucar':
                         if 'sin azúcar' in nombre_prod.lower() or 'sin azucar' in nombre_prod.lower():
+                            incluir_producto = True
+                    elif atributo_detectado == 'con_azucar':
+                        # Bebidas con azúcar: refrescos regulares, tés endulzados, etc.
+                        nombre_lower = nombre_prod.lower()
+                        if (categoria_detectada == 'bebidas' and 
+                            not nombre_lower.startswith('agua') and  # Excluir aguas
+                            not any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])):
                             incluir_producto = True
                     elif atributo_detectado == 'dulce':
                         # Palabras que indican dulce en snacks
@@ -930,24 +960,59 @@ class SistemaLCLNSimplificado:
     
     def _extraer_filtro_precio(self, consulta: str) -> Optional[float]:
         """Extraer filtros de precio de la consulta usando múltiples estrategias"""
+        resultado = self._extraer_filtro_precio_completo(consulta)
+        if resultado:
+            # Para rangos, devolver el precio máximo para compatibilidad
+            if resultado.get('operador') == 'BETWEEN':
+                return resultado['precio_max'] 
+            else:
+                return resultado['precio']
+        return None
+    
+    def _extraer_filtro_precio_completo(self, consulta: str) -> Optional[Dict]:
+        """Extraer filtros de precio con operador usando múltiples estrategias"""
         import re
         
+        # NUEVA: Estrategia 0: Rangos de precio (mayor a X pero menor a Y)
+        patron_rango = r'(?:mayor|mayores?)\s+(?:a|que)\s+(\d+(?:\.\d+)?).{1,15}(?:pero|y|,)?\s*(?:menor|menores?)\s+(?:a|que)\s+(\d+(?:\.\d+)?)'
+        match_rango = re.search(patron_rango, consulta, re.IGNORECASE)
+        if match_rango:
+            precio_min = float(match_rango.group(1))
+            precio_max = float(match_rango.group(2))
+            print(f"Filtro rango de precio detectado: ${precio_min} - ${precio_max}")
+            return {
+                'precio_min': precio_min,
+                'precio_max': precio_max, 
+                'operador': 'BETWEEN',
+                'tipo': 'rango'
+            }
+        
         # Estrategia 1: Operadores explícitos con números
-        # "menor a 15", "menos de 20", "máximo 25", etc.
+        # "menor a 15", "menores a 20", "mayor a 10", "más de 15", etc.
         patrones_operadores = [
-            r'menor\s+(?:a|que)\s+(\d+(?:\.\d+)?)',
+            r'menores?\s+(?:a|que)\s+(\d+(?:\.\d+)?)',  # menores a, menor a, menor que
+            r'mayores?\s+(?:a|que)\s+(\d+(?:\.\d+)?)',  # mayores a, mayor a, mayor que  
             r'menos\s+(?:de|que)\s+(\d+(?:\.\d+)?)',
+            r'(?:más|mas)\s+de\s+(\d+(?:\.\d+)?)',
             r'(?:máximo|max|tope)\s+(\d+(?:\.\d+)?)',
             r'(?:hasta|por)\s+(\d+(?:\.\d+)?)',
             r'(?:no\s+)?(?:más|mas)\s+(?:de|que)\s+(\d+(?:\.\d+)?)'
         ]
         
-        for patron in patrones_operadores:
+        for i, patron in enumerate(patrones_operadores):
             match = re.search(patron, consulta, re.IGNORECASE)
             if match:
                 precio = float(match.group(1))
-                print(f"Filtro precio detectado (operador): <= ${precio}")
-                return precio
+                # Identificar si es "mayor a" vs "menor a"
+                if i == 1:  # mayores?/mayor patrón
+                    print(f"Filtro precio detectado (mayor a): >= ${precio}")
+                    return {'precio': precio, 'operador': '>=', 'tipo': 'mayor_que'}
+                elif i == 3:  # más de patrón  
+                    print(f"Filtro precio detectado (más de): >= ${precio}")
+                    return {'precio': precio, 'operador': '>=', 'tipo': 'mayor_que'}
+                else:
+                    print(f"Filtro precio detectado (operador): <= ${precio}")
+                    return {'precio': precio, 'operador': '<=', 'tipo': 'menor_que'}
         
         # Estrategia 2: Números seguidos de "pesos"
         match = re.search(r'(\d+(?:\.\d+)?)\s*pesos?', consulta, re.IGNORECASE)
@@ -956,24 +1021,45 @@ class SistemaLCLNSimplificado:
             # Si hay palabras como "menor", "menos", "hasta" antes del número
             if any(palabra in consulta for palabra in ['menor', 'menos', 'hasta', 'máximo', 'max', 'barato', 'economico']):
                 print(f"Filtro precio detectado (pesos): <= ${precio}")
-                return precio
+                return {'precio': precio, 'operador': '<=', 'tipo': 'menor_que'}
         
         # Estrategia 3: Adjetivos de precio
         if any(palabra in consulta for palabra in ['barato', 'baratos', 'barata', 'baratas', 'economico', 'economica']):
             print(f"Filtro precio detectado (adjetivo): <= $20.0")
-            return 20.0
+            return {'precio': 20.0, 'operador': '<=', 'tipo': 'menor_que'}
         elif any(palabra in consulta for palabra in ['caro', 'caros', 'cara', 'caras', 'premium']):
             print(f"Filtro precio detectado (caro): >= $50.0")
-            return 100.0  # Productos caros hasta $100
+            return {'precio': 50.0, 'operador': '>=', 'tipo': 'mayor_que'}
         
         # Estrategia 4: Contexto de números sueltos con palabras clave
         numeros = re.findall(r'\d+(?:\.\d+)?', consulta)
         if numeros and any(palabra in consulta for palabra in ['menor', 'menos', 'bajo', 'hasta', 'máximo', 'max']):
             precio = float(numeros[-1])  # Tomar el último número
             print(f"Filtro precio detectado (contexto): <= ${precio}")
-            return precio
+            return {'precio': precio, 'operador': '<=', 'tipo': 'menor_que'}
         
         return None
+    
+    def _cumple_filtro_precio(self, precio_producto: float, filtro_precio: Optional[Dict]) -> bool:
+        """Verifica si un producto cumple con el filtro de precio"""
+        if not filtro_precio:
+            return True
+            
+        operador = filtro_precio['operador']
+        
+        if operador == 'BETWEEN':
+            # Rango de precios
+            precio_min = filtro_precio['precio_min']
+            precio_max = filtro_precio['precio_max']
+            return precio_min < precio_producto <= precio_max
+        elif operador == '<=':
+            precio_filtro = filtro_precio['precio']
+            return precio_producto <= precio_filtro
+        elif operador == '>=':
+            precio_filtro = filtro_precio['precio']
+            return precio_producto >= precio_filtro
+        else:
+            return True  # Por defecto, incluir el producto
     
     def _ejecutar_busqueda_estrategias(self, analisis: Dict, limit: int) -> List[Dict]:
         """Ejecutar búsqueda usando diferentes estrategias"""
@@ -1218,6 +1304,44 @@ class SistemaLCLNSimplificado:
                                 productos_ids_agregados.add(datos_prod['id'])
                                 print(f"  Bebida sin azúcar: {datos_prod['nombre']}")
         
+        # NUEVA ESTRATEGIA 2B: Buscar bebidas CON azúcar (refrescos regulares)
+        elif categoria == 'bebidas' and 'con_azucar' in modificadores:
+            categoria_id = 1  # ID de bebidas
+            
+            # Buscar todos los productos de bebidas que contengan azúcar
+            for nombre_prod, datos_prod in self._cache_productos.items():
+                if datos_prod.get('categoria_id') == categoria_id or datos_prod.get('id_categoria') == categoria_id:
+                    nombre_lower = nombre_prod.lower()
+                    
+                    # Criterios para "bebidas con azúcar": 
+                    es_con_azucar = (
+                        # Refrescos regulares (Coca-Cola normal, Sprite normal, etc.)
+                        ('coca' in nombre_lower and not any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])) or
+                        # Tés endulzados
+                        ('té' in nombre_lower and 'sin azucar' not in nombre_lower and 'zero' not in nombre_lower and 'diet' not in nombre_lower) or
+                        ('te' in nombre_lower and 'sin azucar' not in nombre_lower and 'zero' not in nombre_lower and 'diet' not in nombre_lower) or
+                        # Jugos y refrescos con azúcar
+                        (any(palabra in nombre_lower for palabra in ['jugo', 'boing', 'jumex', 'sprite', 'fanta', 'limonada', 'naranjada']) and 
+                         not any(palabra in nombre_lower for palabra in ['sin azucar', 'sin azúcar', 'zero', 'light', 'diet'])) or
+                        # Bebidas deportivas regulares
+                        ('powerade' in nombre_lower and not any(palabra in nombre_lower for palabra in ['zero', 'light'])) or
+                        ('gatorade' in nombre_lower and not any(palabra in nombre_lower for palabra in ['zero', 'light']))
+                    )
+                    
+                    # EXCLUSIONES: No incluir aguas (naturalmente sin azúcar)
+                    es_agua = nombre_lower.startswith('agua')
+                    
+                    # Solo incluir si tiene azúcar Y NO es agua
+                    es_con_azucar = es_con_azucar and not es_agua
+                    
+                    if es_con_azucar:
+                        if not precio_max or datos_prod['precio'] <= precio_max:
+                            # Evitar duplicados
+                            if datos_prod['id'] not in productos_ids_agregados:
+                                productos_encontrados_directos.append(datos_prod)
+                                productos_ids_agregados.add(datos_prod['id'])
+                                print(f"  Bebida con azúcar: {datos_prod['nombre']}")
+        
         # ESTRATEGIA 3: Si no encuentra suficientes, expandir búsqueda
         if len(productos_encontrados_directos) < 3:
             print("  Expandiendo búsqueda semántica...")
@@ -1252,6 +1376,8 @@ class SistemaLCLNSimplificado:
         """Buscar productos por categoría con filtros"""
         productos = []
         
+        print(f"Búsqueda por categoría: '{categoria}', filtro precio: {precio_max}")
+        
         for producto in self._cache_productos.values():
             if producto['categoria'].lower() == categoria.lower():
                 # Aplicar filtro de precio si existe
@@ -1259,9 +1385,11 @@ class SistemaLCLNSimplificado:
                     continue
                 
                 productos.append(self._formatear_producto(producto))
+                print(f"  Producto encontrado: {producto['nombre']} (${producto['precio']})")
         
         # Ordenar por precio y limitar
         productos.sort(key=lambda x: x['precio'])
+        print(f"  Total productos en categoría '{categoria}': {len(productos)}")
         return productos[:limit]
     
     def _buscar_por_precio(self, precio_max: float, limit: int) -> List[Dict]:
