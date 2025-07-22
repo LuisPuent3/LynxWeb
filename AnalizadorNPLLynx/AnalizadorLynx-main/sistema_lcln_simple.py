@@ -717,39 +717,118 @@ class SistemaLCLNSimplificado:
                     'estrategia_usada': 'categoria_semantica_con_atributos'
                 }
 
-        # PASO 1: Verificar sinónimos directamente (MÁXIMA PRIORIDAD)
+        # PASO 1: BÚSQUEDA EXPANDIDA CON SINÓNIMOS - NO RETORNAR INMEDIATAMENTE
+        consulta_normalizada = consulta.lower().strip()
+        productos_encontrados_expansion = []
+        productos_ids_agregados_expansion = set()
+        sinonimos_encontrados = []
+        
+        print(f"PASO 1: Búsqueda expandida de sinónimos para: '{consulta}'")
+        
+        # Primera pasada: Encontrar todos los sinónimos relevantes
         for sinonimo, productos_sinonimo in self._cache_sinonimos.items():
-            if sinonimo in consulta:
-                # Tomar el primer producto asociado al sinónimo
-                primer_producto = productos_sinonimo[0]
-                producto_id = primer_producto['producto_id']
+            sinonimo_lower = sinonimo.lower()
+            
+            es_relevante = False
+            tipo_coincidencia = ""
+            
+            # Tipos de coincidencias
+            if consulta_normalizada == sinonimo_lower:
+                es_relevante = True
+                tipo_coincidencia = "exacta"
+            elif sinonimo_lower in consulta_normalizada or consulta_normalizada in sinonimo_lower:
+                es_relevante = True
+                tipo_coincidencia = "parcial"
+            
+            if es_relevante:
+                print(f"  Sinónimo {tipo_coincidencia}: '{sinonimo}' -> {len(productos_sinonimo)} productos")
+                sinonimos_encontrados.append((sinonimo, productos_sinonimo, tipo_coincidencia))
                 
-                # Encontrar el producto completo por ID
+                # Agregar productos de este sinónimo
+                for prod_info in productos_sinonimo:
+                    producto_id = prod_info['producto_id']
+                    
+                    for nombre_prod, datos_prod in self._cache_productos.items():
+                        if datos_prod['id'] == producto_id:
+                            if (datos_prod['id'] not in productos_ids_agregados_expansion and
+                                (not precio_max or datos_prod['precio'] <= precio_max)):
+                                productos_encontrados_expansion.append(datos_prod)
+                                productos_ids_agregados_expansion.add(datos_prod['id'])
+                                print(f"    + {datos_prod['nombre']} (${datos_prod['precio']})")
+                            break
+        
+        # PASO 2: Buscar productos adicionales que contengan palabras del término
+        palabras_busqueda = consulta_normalizada.split()
+        for palabra in palabras_busqueda:
+            if len(palabra) > 2:  # Evitar palabras muy cortas
+                print(f"  Buscando productos que contengan '{palabra}'...")
+                
+                # Buscar en nombres de productos
                 for nombre_prod, datos_prod in self._cache_productos.items():
-                    if datos_prod['id'] == producto_id:
-                        print(f"Producto encontrado por sinónimo: '{sinonimo}'  ->  {datos_prod['nombre']}")
+                    if (palabra in nombre_prod.lower() and 
+                        datos_prod['id'] not in productos_ids_agregados_expansion):
                         
-                        # Si hay filtro de precio, verificar si el producto lo cumple
-                        if precio_max and datos_prod['precio'] > precio_max:
-                            # Producto encontrado pero no cumple filtro de precio
-                            return {
-                                'tipo_busqueda': 'producto_con_filtro_precio_no_cumplido',
-                                'producto_encontrado': datos_prod,
-                                'termino_busqueda': sinonimo,
-                                'categoria': None,
-                                'precio_max': precio_max,
-                                'precio_producto': datos_prod['precio'],
-                                'estrategia_usada': 'sinonimo_con_filtro_precio_rechazado'
-                            }
-                        
-                        return {
-                            'tipo_busqueda': 'producto_especifico',
-                            'producto_encontrado': datos_prod,
-                            'termino_busqueda': sinonimo,
-                            'categoria': None,
-                            'precio_max': precio_max,
-                            'estrategia_usada': 'sinonimo_directo'
-                        }
+                        if not precio_max or datos_prod['precio'] <= precio_max:
+                            productos_encontrados_expansion.append(datos_prod)
+                            productos_ids_agregados_expansion.add(datos_prod['id'])
+                            print(f"    + {datos_prod['nombre']} (${datos_prod['precio']}) [nombre directo]")
+        
+        # PASO 3: Para categorías específicas, agregar productos relacionados
+        if consulta_normalizada in ['chicle', 'chicles']:
+            print(f"  Búsqueda especial para chicles/gomitas...")
+            for nombre_prod, datos_prod in self._cache_productos.items():
+                nombre_lower = nombre_prod.lower()
+                if (('goma' in nombre_lower or 'chicle' in nombre_lower or 'trident' in nombre_lower or
+                     'dulcigoma' in nombre_lower) and 
+                    datos_prod['id'] not in productos_ids_agregados_expansion):
+                    
+                    if not precio_max or datos_prod['precio'] <= precio_max:
+                        productos_encontrados_expansion.append(datos_prod)
+                        productos_ids_agregados_expansion.add(datos_prod['id'])
+                        print(f"    + {datos_prod['nombre']} (${datos_prod['precio']}) [chicles/gomitas]")
+        
+        # PASO 4: Para snacks, buscar categorías relacionadas  
+        elif consulta_normalizada in ['papitas', 'papas', 'chips', 'cheetos', 'snacks', 'botanas']:
+            print(f"  Búsqueda especial para snacks...")
+            for nombre_prod, datos_prod in self._cache_productos.items():
+                nombre_lower = nombre_prod.lower()
+                # Buscar todos los snacks relacionados
+                if (('papa' in nombre_lower or 'chip' in nombre_lower or 'frito' in nombre_lower or
+                     'dorito' in nombre_lower or 'cheeto' in nombre_lower or 'crujito' in nombre_lower or
+                     datos_prod.get('categoria', '').lower() == 'snacks') and 
+                    datos_prod['id'] not in productos_ids_agregados_expansion):
+                    
+                    if not precio_max or datos_prod['precio'] <= precio_max:
+                        productos_encontrados_expansion.append(datos_prod)
+                        productos_ids_agregados_expansion.add(datos_prod['id'])
+                        print(f"    + {datos_prod['nombre']} (${datos_prod['precio']}) [snacks relacionados]")
+        
+        # PASO 5: Para picantes, buscar todos los productos con términos picantes
+        elif consulta_normalizada in ['picante', 'picantes']:
+            print(f"  Búsqueda especial para productos picantes...")
+            terminos_picantes = ['picante', 'chile', 'fuego', 'flama', 'dinamita', 'ardiente', 'hot']
+            for nombre_prod, datos_prod in self._cache_productos.items():
+                nombre_lower = nombre_prod.lower()
+                if (any(termino in nombre_lower for termino in terminos_picantes) and 
+                    datos_prod['id'] not in productos_ids_agregados_expansion):
+                    
+                    if not precio_max or datos_prod['precio'] <= precio_max:
+                        productos_encontrados_expansion.append(datos_prod)
+                        productos_ids_agregados_expansion.add(datos_prod['id'])
+                        print(f"    + {datos_prod['nombre']} (${datos_prod['precio']}) [producto picante]")
+        
+        # Si encontramos productos en la búsqueda expandida, devolverlos
+        if productos_encontrados_expansion:
+            print(f"  TOTAL: {len(productos_encontrados_expansion)} productos encontrados en búsqueda expandida")
+            return {
+                'tipo_busqueda': 'busqueda_expandida_sinonimos',
+                'productos_encontrados': productos_encontrados_expansion,
+                'termino_busqueda': consulta,
+                'sinonimos_encontrados': sinonimos_encontrados,
+                'categoria': None,
+                'precio_max': precio_max,
+                'estrategia_usada': 'busqueda_expandida_con_sinonimos'
+            }
         
         # PASO 1.5: BÚSQUEDA MEJORADA PARA PALABRAS SIMPLES 
         # Para casos como "limón" - buscar TODOS los productos relacionados, no solo coincidencia exacta
@@ -1095,6 +1174,20 @@ class SistemaLCLNSimplificado:
             productos_encontrados = analisis.get('productos_encontrados', [])
             return [self._formatear_producto(prod) for prod in productos_encontrados[:limit]]
         
+        elif analisis['tipo_busqueda'] == 'productos_multiple_sinonimo':
+            # NUEVA ESTRATEGIA: múltiples productos para un sinónimo (ej: "picante" -> 3 productos)
+            productos_encontrados = analisis.get('productos_encontrados', [])
+            print(f"Procesando {len(productos_encontrados)} productos de sinónimo '{analisis['termino_busqueda']}'")
+            return [self._formatear_producto(prod) for prod in productos_encontrados[:limit]]
+        
+        elif analisis['tipo_busqueda'] == 'busqueda_expandida_sinonimos':
+            # NUEVA ESTRATEGIA: búsqueda expandida que incluye sinónimos + productos relacionados
+            productos_encontrados = analisis.get('productos_encontrados', [])
+            sinonimos_encontrados = analisis.get('sinonimos_encontrados', [])
+            print(f"Procesando {len(productos_encontrados)} productos de búsqueda expandida para '{analisis['termino_busqueda']}'")
+            print(f"Sinónimos encontrados: {[s[0] for s in sinonimos_encontrados]}")
+            return [self._formatear_producto(prod) for prod in productos_encontrados[:limit]]
+        
         elif analisis['tipo_busqueda'] == 'producto_con_filtro_precio_no_cumplido':
             # El producto específico no cumple el filtro de precio
             # Buscar productos alternativos que sí lo cumplan
@@ -1420,23 +1513,80 @@ class SistemaLCLNSimplificado:
                                 productos_ids_agregados.add(datos_prod['id'])
                                 print(f"  Snack sin picante: {datos_prod['nombre']}")
         
-        # ESTRATEGIA 3: Si no encuentra suficientes, expandir búsqueda
-        if len(productos_encontrados_directos) < 3:
-            print("  Expandiendo búsqueda semántica...")
+        # ESTRATEGIA 3: Si no encuentra suficientes, expandir búsqueda con SINÓNIMOS MEJORADA
+        if len(productos_encontrados_directos) < 5:  # Buscar más productos para mejor calidad
+            print("  Expandiendo búsqueda semántica con sinónimos...")
             
-            # Buscar sinónimos relacionados con los modificadores
+            # Crear términos de búsqueda relacionados según la categoría y modificadores
+            terminos_busqueda = []
+            
+            if categoria == 'bebidas':
+                if 'sin_azucar' in modificadores:
+                    terminos_busqueda.extend(['agua', 'natural', 'zero', 'light', 'diet', 'sin azucar'])
+                elif 'con_azucar' in modificadores:
+                    terminos_busqueda.extend(['cola', 'refresco', 'jugo', 'té', 'te'])
+                else:
+                    terminos_busqueda.extend(['bebida', 'refresco', 'agua', 'jugo', 'cola'])
+            elif categoria == 'snacks':
+                if 'sin_picante' in modificadores:
+                    terminos_busqueda.extend(['papa', 'chips', 'galleta', 'dulce'])
+                else:
+                    terminos_busqueda.extend(['snack', 'botana', 'papa', 'chips'])
+            
+            # Buscar sinónimos que contengan estos términos
             for sinonimo, productos_sinonimo in self._cache_sinonimos.items():
-                if any(mod in sinonimo for mod in ['agua', 'natural', 'zero', 'light']):
+                sinonimo_lower = sinonimo.lower()
+                
+                # Verificar si el sinónimo es relevante
+                es_relevante = False
+                
+                # Coincidencia con términos específicos
+                if any(termino in sinonimo_lower for termino in terminos_busqueda):
+                    es_relevante = True
+                
+                # También buscar sinónimos que contengan palabras de los productos sugeridos
+                elif productos_sugeridos:
+                    for producto_sugerido in productos_sugeridos:
+                        if (producto_sugerido.lower() in sinonimo_lower or 
+                            any(palabra in sinonimo_lower for palabra in producto_sugerido.lower().split())):
+                            es_relevante = True
+                            break
+                
+                if es_relevante:
                     for prod_info in productos_sinonimo:
                         producto_id = prod_info['producto_id']
                         for nombre_prod, datos_prod in self._cache_productos.items():
                             if datos_prod['id'] == producto_id:
-                                if not precio_max or datos_prod['precio'] <= precio_max:
-                                    if datos_prod['id'] not in productos_ids_agregados:
-                                        productos_encontrados_directos.append(datos_prod)
-                                        productos_ids_agregados.add(datos_prod['id'])
-                                        print(f"  Por sinónimo semántico '{sinonimo}': {datos_prod['nombre']}")
-                                        break
+                                # Aplicar filtros de categoría y modificadores
+                                include_producto = True
+                                
+                                # Filtros específicos por categoría
+                                if categoria == 'bebidas':
+                                    if datos_prod.get('categoria_id') != 1 and datos_prod.get('id_categoria') != 1:
+                                        include_producto = False
+                                elif categoria == 'snacks':
+                                    if datos_prod.get('categoria_id') != 2 and datos_prod.get('id_categoria') != 2:
+                                        include_producto = False
+                                
+                                # Filtros por modificadores
+                                if include_producto and 'sin_azucar' in modificadores:
+                                    nombre_lower = nombre_prod.lower()
+                                    if not (nombre_lower.startswith('agua') or 
+                                           any(palabra in nombre_lower for palabra in ['sin azucar', 'zero', 'light', 'diet'])):
+                                        include_producto = False
+                                
+                                if include_producto and 'sin_picante' in modificadores:
+                                    nombre_lower = nombre_prod.lower()
+                                    if any(palabra in nombre_lower for palabra in ['picante', 'flama', 'dinamita', 'fuego', 'chile']):
+                                        include_producto = False
+                                
+                                if (include_producto and 
+                                    (not precio_max or datos_prod['precio'] <= precio_max) and
+                                    datos_prod['id'] not in productos_ids_agregados):
+                                    productos_encontrados_directos.append(datos_prod)
+                                    productos_ids_agregados.add(datos_prod['id'])
+                                    print(f"  Por sinónimo semántico '{sinonimo}': {datos_prod['nombre']}")
+                                    break
         
         # Formatear productos encontrados
         for producto in productos_encontrados_directos[:limit]:
@@ -1483,21 +1633,108 @@ class SistemaLCLNSimplificado:
         return productos[:limit]
     
     def _buscar_generica(self, termino: str, limit: int) -> List[Dict]:
-        """Búsqueda genérica en nombres de productos"""
+        """Búsqueda genérica mejorada con soporte completo de sinónimos"""
         productos = []
+        productos_ids_agregados = set()
+        termino_lower = termino.lower().strip()
         
+        print(f"Búsqueda genérica mejorada para: '{termino}'")
+        
+        # PASO 1: Búsqueda directa en nombres de productos
         for producto in self._cache_productos.values():
-            if termino in producto['nombre'].lower():
-                productos.append(self._formatear_producto(producto))
+            if termino_lower in producto['nombre'].lower():
+                if producto['id'] not in productos_ids_agregados:
+                    productos.append(self._formatear_producto(producto))
+                    productos_ids_agregados.add(producto['id'])
+                    print(f"  Coincidencia directa: {producto['nombre']}")
         
-        # Si no encuentra nada, devolver productos económicos
+        # PASO 2: Búsqueda en sinónimos (MEJORADO)
+        for sinonimo, productos_sinonimo in self._cache_sinonimos.items():
+            sinonimo_lower = sinonimo.lower()
+            
+            # Coincidencias flexibles de sinónimos
+            coincidencia_sinonimo = False
+            
+            # Tipo 1: Coincidencia exacta
+            if termino_lower == sinonimo_lower:
+                coincidencia_sinonimo = True
+                print(f"  Sinónimo exacto encontrado: '{sinonimo}'")
+            
+            # Tipo 2: Término contenido en sinónimo
+            elif termino_lower in sinonimo_lower:
+                coincidencia_sinonimo = True
+                print(f"  Sinónimo parcial encontrado: '{sinonimo}' (contiene '{termino}')")
+            
+            # Tipo 3: Sinónimo contenido en término (para queries más largas)
+            elif len(sinonimo_lower) > 3 and sinonimo_lower in termino_lower:
+                coincidencia_sinonimo = True
+                print(f"  Sinónimo contenido encontrado: '{sinonimo}' (en '{termino}')")
+            
+            # Tipo 4: Coincidencias por palabras individuales
+            elif len(termino_lower) > 3:
+                palabras_termino = termino_lower.split()
+                palabras_sinonimo = sinonimo_lower.split()
+                
+                # Si alguna palabra coincide exactamente
+                if any(palabra in palabras_sinonimo for palabra in palabras_termino if len(palabra) > 2):
+                    coincidencia_sinonimo = True
+                    print(f"  Sinónimo por palabra encontrado: '{sinonimo}' (palabras comunes)")
+            
+            if coincidencia_sinonimo:
+                # Agregar todos los productos de este sinónimo
+                for prod_info in productos_sinonimo:
+                    producto_id = prod_info['producto_id']
+                    for nombre_prod, datos_prod in self._cache_productos.items():
+                        if datos_prod['id'] == producto_id:
+                            if datos_prod['id'] not in productos_ids_agregados:
+                                productos.append(self._formatear_producto(datos_prod))
+                                productos_ids_agregados.add(datos_prod['id'])
+                                print(f"    -> Producto por sinónimo: {datos_prod['nombre']}")
+                            break
+        
+        # PASO 3: Si aún no encuentra suficientes, búsqueda ampliada
+        if len(productos) < 3:
+            print(f"  Solo {len(productos)} productos encontrados, expandiendo búsqueda...")
+            
+            # Búsqueda más flexible: palabras parciales
+            palabras_termino = termino_lower.split()
+            for palabra in palabras_termino:
+                if len(palabra) > 2:  # Evitar palabras muy cortas
+                    # Buscar en nombres de productos
+                    for producto in self._cache_productos.values():
+                        if (palabra in producto['nombre'].lower() and 
+                            producto['id'] not in productos_ids_agregados):
+                            productos.append(self._formatear_producto(producto))
+                            productos_ids_agregados.add(producto['id'])
+                            print(f"    Coincidencia expandida: {producto['nombre']} (por '{palabra}')")
+                            if len(productos) >= 10:  # Límite para no saturar
+                                break
+                    
+                    # Buscar en sinónimos más flexible
+                    for sinonimo, productos_sinonimo in self._cache_sinonimos.items():
+                        if (palabra in sinonimo.lower() and 
+                            len(productos) < 10):  # Límite
+                            
+                            for prod_info in productos_sinonimo:
+                                producto_id = prod_info['producto_id']
+                                for nombre_prod, datos_prod in self._cache_productos.items():
+                                    if datos_prod['id'] == producto_id:
+                                        if datos_prod['id'] not in productos_ids_agregados:
+                                            productos.append(self._formatear_producto(datos_prod))
+                                            productos_ids_agregados.add(datos_prod['id'])
+                                            print(f"      Sinónimo expandido: {datos_prod['nombre']} ('{sinonimo}' por '{palabra}')")
+                                        break
+        
+        # PASO 4: Si todavía no hay resultados, mostrar productos populares/económicos
         if not productos:
+            print(f"  No se encontraron coincidencias, mostrando productos económicos")
             for producto in self._cache_productos.values():
                 if producto['precio'] <= 25.0:
                     productos.append(self._formatear_producto(producto))
         
         # Ordenar por precio y limitar
         productos.sort(key=lambda x: x['precio'])
+        print(f"  Total productos encontrados: {len(productos)}")
         return productos[:limit]
     
     def _formatear_producto(self, producto: Dict) -> Dict:
