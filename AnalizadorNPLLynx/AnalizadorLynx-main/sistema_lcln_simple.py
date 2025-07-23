@@ -616,8 +616,9 @@ class SistemaLCLNSimplificado:
     def _analizar_consulta_fallback(self, consulta: str) -> Dict:
         """Análisis inteligente mejorado como sistema principal"""
         
-        # Detectar filtros de precio PRIMERO
-        precio_max = self._extraer_filtro_precio(consulta)
+        # Detectar filtros de precio PRIMERO (tanto para compatibilidad como completo)
+        precio_max = self._extraer_filtro_precio(consulta)  # Para compatibilidad
+        filtro_precio_completo = self._extraer_filtro_precio_completo(consulta)  # Para filtros avanzados
         
         # NUEVA FUNCIONALIDAD: Análisis semántico avanzado
         analisis_semantico = self._analizar_semanticamente(consulta)
@@ -815,20 +816,43 @@ class SistemaLCLNSimplificado:
         palabras_snacks_en_consulta = [palabra for palabra in palabras_busqueda 
                                       if palabra in ['papitas', 'papas', 'chips', 'cheetos', 'snacks', 'botanas', 'fritos', 'doritos']]
         
+        # Detectar si también hay palabras picantes (para ser más selectivo)
+        hay_palabras_picantes = any(palabra in ['picante', 'picantes', 'fuego', 'dinamita', 'flama', 'chile', 'ardiente', 'hot'] 
+                                   for palabra in palabras_busqueda)
+        
         if palabras_snacks_en_consulta or consulta_normalizada in ['papitas', 'papas', 'chips', 'cheetos', 'snacks', 'botanas']:
-            print(f"  Búsqueda especial para snacks...")
-            for nombre_prod, datos_prod in self._cache_productos.items():
-                nombre_lower = nombre_prod.lower()
-                # Buscar todos los snacks relacionados
-                if (('papa' in nombre_lower or 'chip' in nombre_lower or 'frito' in nombre_lower or
-                     'dorito' in nombre_lower or 'cheeto' in nombre_lower or 'crujito' in nombre_lower or
-                     datos_prod.get('categoria', '').lower() == 'snacks') and 
-                    datos_prod['id'] not in productos_ids_agregados_expansion):
+            if hay_palabras_picantes:
+                print(f"  Búsqueda especial para snacks PICANTES (modo selectivo)...")
+                # Modo selectivo: solo agregar snacks que sean realmente picantes
+                terminos_picantes = ['picante', 'chile', 'fuego', 'flama', 'dinamita', 'ardiente', 'hot']
+                for nombre_prod, datos_prod in self._cache_productos.items():
+                    nombre_lower = nombre_prod.lower()
+                    # Solo snacks que contengan términos picantes
+                    es_snack = ('papa' in nombre_lower or 'chip' in nombre_lower or 'frito' in nombre_lower or
+                               'dorito' in nombre_lower or 'cheeto' in nombre_lower or 'crujito' in nombre_lower or
+                               datos_prod.get('categoria', '').lower() == 'snacks')
+                    es_picante = any(termino in nombre_lower for termino in terminos_picantes)
                     
-                    if not precio_max or datos_prod['precio'] <= precio_max:
-                        productos_encontrados_expansion.append(datos_prod)
-                        productos_ids_agregados_expansion.add(datos_prod['id'])
-                        print(f"    + {datos_prod['nombre']} (${datos_prod['precio']}) [snacks relacionados]")
+                    if (es_snack and es_picante and datos_prod['id'] not in productos_ids_agregados_expansion):
+                        if not precio_max or datos_prod['precio'] <= precio_max:
+                            productos_encontrados_expansion.append(datos_prod)
+                            productos_ids_agregados_expansion.add(datos_prod['id'])
+                            print(f"    + {datos_prod['nombre']} (${datos_prod['precio']}) [snack picante específico]")
+            else:
+                print(f"  Búsqueda especial para snacks...")
+                # Modo normal: agregar todos los snacks
+                for nombre_prod, datos_prod in self._cache_productos.items():
+                    nombre_lower = nombre_prod.lower()
+                    # Buscar todos los snacks relacionados
+                    if (('papa' in nombre_lower or 'chip' in nombre_lower or 'frito' in nombre_lower or
+                         'dorito' in nombre_lower or 'cheeto' in nombre_lower or 'crujito' in nombre_lower or
+                         datos_prod.get('categoria', '').lower() == 'snacks') and 
+                        datos_prod['id'] not in productos_ids_agregados_expansion):
+                        
+                        if not precio_max or datos_prod['precio'] <= precio_max:
+                            productos_encontrados_expansion.append(datos_prod)
+                            productos_ids_agregados_expansion.add(datos_prod['id'])
+                            print(f"    + {datos_prod['nombre']} (${datos_prod['precio']}) [snacks relacionados]")
         
         # PASO 5: Para picantes, buscar todos los productos con términos picantes
         # Detectar búsquedas relacionadas con picante
@@ -1038,6 +1062,7 @@ class SistemaLCLNSimplificado:
                     'categoria': datos_categoria,
                     'termino_busqueda': '',
                     'precio_max': precio_max,
+                    'filtro_precio': filtro_precio_completo,
                     'estrategia_usada': 'categoria_con_filtros'
                 }
         
@@ -1121,10 +1146,12 @@ class SistemaLCLNSimplificado:
             }
         
         # Estrategia 1: Operadores explícitos con números
-        # "menor a 15", "menores a 20", "mayor a 10", "más de 15", etc.
+        # "menor a 15", "menores a 20", "mayor a 10", "mayor 20", "más de 15", etc.
         patrones_operadores = [
-            r'menores?\s+(?:a|que)\s+(\d+(?:\.\d+)?)',  # menores a, menor a, menor que
-            r'mayores?\s+(?:a|que)\s+(\d+(?:\.\d+)?)',  # mayores a, mayor a, mayor que  
+            r'menor(?:es)?\s+(?:a|que)\s+(\d+(?:\.\d+)?)',      # menores a, menor a, menor que
+            r'menor(?:es)?\s+(\d+(?:\.\d+)?)',                  # menor 20 (sin "a")
+            r'mayor(?:es)?\s+(?:a|que)\s+(\d+(?:\.\d+)?)',      # mayores a, mayor a, mayor que  
+            r'mayor(?:es)?\s+(\d+(?:\.\d+)?)',                  # mayor 20 (sin "a")
             r'menos\s+(?:de|que)\s+(\d+(?:\.\d+)?)',
             r'(?:más|mas)\s+de\s+(\d+(?:\.\d+)?)',
             r'(?:máximo|max|tope)\s+(\d+(?:\.\d+)?)',
@@ -1136,14 +1163,14 @@ class SistemaLCLNSimplificado:
             match = re.search(patron, consulta, re.IGNORECASE)
             if match:
                 precio = float(match.group(1))
-                # Identificar si es "mayor a" vs "menor a"
-                if i == 1:  # mayores?/mayor patrón
+                # Identificar si es "mayor a" vs "menor a" basado en el índice del patrón
+                if i in [2, 3]:  # mayores? patrones (con y sin "a")
                     print(f"Filtro precio detectado (mayor a): >= ${precio}")
                     return {'precio': precio, 'operador': '>=', 'tipo': 'mayor_que'}
-                elif i == 3:  # más de patrón  
+                elif i == 5:  # más de patrón  
                     print(f"Filtro precio detectado (más de): >= ${precio}")
                     return {'precio': precio, 'operador': '>=', 'tipo': 'mayor_que'}
-                else:
+                else:  # menores?, menos, máximo, hasta, no más de
                     print(f"Filtro precio detectado (operador): <= ${precio}")
                     return {'precio': precio, 'operador': '<=', 'tipo': 'menor_que'}
         
@@ -1245,7 +1272,7 @@ class SistemaLCLNSimplificado:
         elif analisis['tipo_busqueda'] == 'categoria':
             return self._buscar_por_categoria(
                 analisis['categoria']['nombre'],
-                analisis.get('precio_max'),
+                analisis.get('filtro_precio'),
                 limit
             )
         
@@ -1631,16 +1658,22 @@ class SistemaLCLNSimplificado:
         print(f"  Total productos semánticos encontrados: {len(productos)}")
         return productos
     
-    def _buscar_por_categoria(self, categoria: str, precio_max: Optional[float], limit: int) -> List[Dict]:
-        """Buscar productos por categoría con filtros"""
+    def _buscar_por_categoria(self, categoria: str, filtro_precio: Optional[Dict], limit: int) -> List[Dict]:
+        """Buscar productos por categoría con filtros de precio completos"""
         productos = []
         
-        print(f"Búsqueda por categoría: '{categoria}', filtro precio: {precio_max}")
+        # Mostrar información del filtro
+        if filtro_precio:
+            operador = filtro_precio.get('operador', 'N/A')
+            precio = filtro_precio.get('precio', 'N/A')
+            print(f"Búsqueda por categoría: '{categoria}', filtro precio: {operador} ${precio}")
+        else:
+            print(f"Búsqueda por categoría: '{categoria}', sin filtro precio")
         
         for producto in self._cache_productos.values():
             if producto['categoria'].lower() == categoria.lower():
                 # Aplicar filtro de precio si existe
-                if precio_max and producto['precio'] > precio_max:
+                if filtro_precio and not self._cumple_filtro_precio(producto['precio'], filtro_precio):
                     continue
                 
                 productos.append(self._formatear_producto(producto))
