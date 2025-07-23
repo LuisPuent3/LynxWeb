@@ -729,16 +729,33 @@ class SistemaLCLNSimplificado:
         for sinonimo, productos_sinonimo in self._cache_sinonimos.items():
             sinonimo_lower = sinonimo.lower()
             
+            # FILTRO: Saltar sinónimos muy cortos que causan ambigüedades
+            if len(sinonimo_lower) <= 2:
+                continue  # Evita problemas como "te" en "menores"
+            
             es_relevante = False
             tipo_coincidencia = ""
             
-            # Tipos de coincidencias
+            # Tipos de coincidencias (más restrictivas)
             if consulta_normalizada == sinonimo_lower:
                 es_relevante = True
                 tipo_coincidencia = "exacta"
-            elif sinonimo_lower in consulta_normalizada or consulta_normalizada in sinonimo_lower:
-                es_relevante = True
-                tipo_coincidencia = "parcial"
+            elif len(sinonimo_lower) > 3:
+                # Para sinónimos más largos, usar coincidencias de palabra completa
+                import re
+                
+                # Sinónimo contenido en consulta como palabra completa
+                patron_sinonimo = r'\b' + re.escape(sinonimo_lower) + r'\b'
+                if re.search(patron_sinonimo, consulta_normalizada):
+                    es_relevante = True
+                    tipo_coincidencia = "parcial"
+                
+                # Consulta contenida en sinónimo como palabra completa (menos común)
+                elif len(consulta_normalizada) > 3:
+                    patron_consulta = r'\b' + re.escape(consulta_normalizada) + r'\b'
+                    if re.search(patron_consulta, sinonimo_lower):
+                        es_relevante = True
+                        tipo_coincidencia = "parcial"
             
             if es_relevante:
                 print(f"  Sinónimo {tipo_coincidencia}: '{sinonimo}' -> {len(productos_sinonimo)} productos")
@@ -760,12 +777,18 @@ class SistemaLCLNSimplificado:
         # PASO 2: Buscar productos adicionales que contengan palabras del término
         palabras_busqueda = consulta_normalizada.split()
         for palabra in palabras_busqueda:
-            if len(palabra) > 2:  # Evitar palabras muy cortas
+            # Filtro más estricto: evitar palabras muy cortas Y palabras comunes
+            if (len(palabra) > 3 and 
+                palabra not in ['menores', 'menor', 'mayor', 'mayores', 'pesos', 'para', 'tipo', 'como']):
                 print(f"  Buscando productos que contengan '{palabra}'...")
                 
-                # Buscar en nombres de productos
+                # Buscar en nombres de productos usando coincidencia de palabra completa
+                import re
+                patron_palabra = r'\b' + re.escape(palabra) + r'\b'
+                
                 for nombre_prod, datos_prod in self._cache_productos.items():
-                    if (palabra in nombre_prod.lower() and 
+                    # Usar regex para buscar palabra completa, no subcadena
+                    if (re.search(patron_palabra, nombre_prod.lower()) and 
                         datos_prod['id'] not in productos_ids_agregados_expansion):
                         
                         if not precio_max or datos_prod['precio'] <= precio_max:
@@ -787,8 +810,12 @@ class SistemaLCLNSimplificado:
                         productos_ids_agregados_expansion.add(datos_prod['id'])
                         print(f"    + {datos_prod['nombre']} (${datos_prod['precio']}) [chicles/gomitas]")
         
-        # PASO 4: Para snacks, buscar categorías relacionadas  
-        elif consulta_normalizada in ['papitas', 'papas', 'chips', 'cheetos', 'snacks', 'botanas']:
+        # PASO 4: Para snacks, buscar categorías relacionadas
+        # Detectar búsquedas relacionadas con snacks
+        palabras_snacks_en_consulta = [palabra for palabra in palabras_busqueda 
+                                      if palabra in ['papitas', 'papas', 'chips', 'cheetos', 'snacks', 'botanas', 'fritos', 'doritos']]
+        
+        if palabras_snacks_en_consulta or consulta_normalizada in ['papitas', 'papas', 'chips', 'cheetos', 'snacks', 'botanas']:
             print(f"  Búsqueda especial para snacks...")
             for nombre_prod, datos_prod in self._cache_productos.items():
                 nombre_lower = nombre_prod.lower()
@@ -804,7 +831,11 @@ class SistemaLCLNSimplificado:
                         print(f"    + {datos_prod['nombre']} (${datos_prod['precio']}) [snacks relacionados]")
         
         # PASO 5: Para picantes, buscar todos los productos con términos picantes
-        elif consulta_normalizada in ['picante', 'picantes']:
+        # Detectar búsquedas relacionadas con picante
+        palabras_picantes_en_consulta = [palabra for palabra in palabras_busqueda 
+                                        if palabra in ['picante', 'picantes', 'fuego', 'dinamita', 'flama', 'chile', 'ardiente', 'hot']]
+        
+        if palabras_picantes_en_consulta or consulta_normalizada in ['picante', 'picantes']:
             print(f"  Búsqueda especial para productos picantes...")
             terminos_picantes = ['picante', 'chile', 'fuego', 'flama', 'dinamita', 'ardiente', 'hot']
             for nombre_prod, datos_prod in self._cache_productos.items():
@@ -1648,9 +1679,13 @@ class SistemaLCLNSimplificado:
                     productos_ids_agregados.add(producto['id'])
                     print(f"  Coincidencia directa: {producto['nombre']}")
         
-        # PASO 2: Búsqueda en sinónimos (MEJORADO)
+        # PASO 2: Búsqueda en sinónimos (MEJORADO y FILTRADO)
         for sinonimo, productos_sinonimo in self._cache_sinonimos.items():
             sinonimo_lower = sinonimo.lower()
+            
+            # FILTRO: Evitar sinónimos problemáticos muy cortos
+            if len(sinonimo_lower) <= 2:
+                continue  # Saltar palabras como "te", "de", "la", etc.
             
             # Coincidencias flexibles de sinónimos
             coincidencia_sinonimo = False
@@ -1660,15 +1695,23 @@ class SistemaLCLNSimplificado:
                 coincidencia_sinonimo = True
                 print(f"  Sinónimo exacto encontrado: '{sinonimo}'")
             
-            # Tipo 2: Término contenido en sinónimo
-            elif termino_lower in sinonimo_lower:
-                coincidencia_sinonimo = True
-                print(f"  Sinónimo parcial encontrado: '{sinonimo}' (contiene '{termino}')")
+            # Tipo 2: Término contenido en sinónimo (más estricto)
+            elif len(termino_lower) > 3 and termino_lower in sinonimo_lower:
+                # Verificar que sea una palabra significativa, no solo subcadena
+                import re
+                patron = r'\b' + re.escape(termino_lower) + r'\b'
+                if re.search(patron, sinonimo_lower):
+                    coincidencia_sinonimo = True
+                    print(f"  Sinónimo parcial encontrado: '{sinonimo}' (contiene palabra completa '{termino}')")
             
-            # Tipo 3: Sinónimo contenido en término (para queries más largas)
-            elif len(sinonimo_lower) > 3 and sinonimo_lower in termino_lower:
-                coincidencia_sinonimo = True
-                print(f"  Sinónimo contenido encontrado: '{sinonimo}' (en '{termino}')")
+            # Tipo 3: Sinónimo contenido en término (SOLO como palabra completa)
+            elif len(sinonimo_lower) > 3:
+                # Usar regex para buscar palabra completa, no subcadena
+                import re
+                patron = r'\b' + re.escape(sinonimo_lower) + r'\b'
+                if re.search(patron, termino_lower):
+                    coincidencia_sinonimo = True
+                    print(f"  Sinónimo contenido encontrado: '{sinonimo}' (palabra completa en '{termino}')")
             
             # Tipo 4: Coincidencias por palabras individuales
             elif len(termino_lower) > 3:
