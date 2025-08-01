@@ -392,4 +392,4 @@ Para reportar bugs o solicitar features:
 
 **Desarrollado con ❤️ por el equipo LynxWeb**
 
-*Última actualización: Enero 2025*
+*Última actualización: Julio 2025*
