@@ -249,6 +249,9 @@ class SistemaLCLNSimplificado:
         # Eliminar duplicados por ID
         productos = self._eliminar_duplicados(productos)
         
+        # NUEVO: Ordenar productos por relevancia
+        productos = self._ordenar_productos_por_relevancia(productos, consulta_original)
+        
         tiempo_proceso = (time.time() - inicio) * 1000
         
         # Generar mensaje personalizado según la estrategia
@@ -484,6 +487,89 @@ class SistemaLCLNSimplificado:
                     productos_unicos[producto_id] = producto
         
         return list(productos_unicos.values())
+    
+    def _clasificar_relevancia_producto(self, producto: Dict, consulta: str) -> tuple:
+        """Clasificar la relevancia del producto según la consulta"""
+        nombre = producto.get('nombre', '').lower()
+        consulta = consulta.lower()
+        categoria = producto.get('categoria', '').lower()
+        
+        # Relevancia PERFECTA: nombre contiene términos clave específicos
+        if any(term in nombre for term in ['fuego', 'dinamita', 'flama', 'takis'] if 'picante' in consulta):
+            return 'perfecta', 'snack picante específico'
+        
+        if 'negro' in consulta and 'negro' in nombre:
+            return 'perfecta', 'color específico solicitado'
+            
+        if any(term in consulta for term in ['dulce', 'dulces']) and categoria == 'golosinas':
+            return 'perfecta', 'golosina dulce'
+            
+        if any(term in consulta for term in ['fruta', 'frutas']) and categoria == 'frutas':
+            return 'perfecta', 'fruta solicitada'
+            
+        if any(term in consulta for term in ['golosina', 'golosinas', 'caramelo', 'chocolate']) and categoria == 'golosinas':
+            return 'perfecta', 'golosina solicitada'
+        
+        # Relevancia PERFECTA: términos de papelería/escolares
+        if any(term in consulta for term in ['papeleria', 'papelería', 'escolar', 'escolares', 'cosas escolares', 'productos escolares']) and categoria == 'papeleria':
+            return 'perfecta', 'artículo de papelería'
+            
+        if any(term in consulta for term in ['boligrafo', 'bolígrafo', 'pluma', 'lápiz']) and categoria == 'papeleria':
+            return 'perfecta', 'utensilio de escritura'
+            
+        if any(term in consulta for term in ['cuaderno', 'libreta', 'marcador', 'marcatexto']) and categoria == 'papeleria':
+            return 'perfecta', 'material escolar específico'
+        
+        # Relevancia PERFECTA: bebidas específicas
+        if any(term in consulta for term in ['bebida', 'bebidas', 'refresco', 'jugo']) and categoria == 'bebidas':
+            return 'perfecta', 'bebida solicitada'
+            
+        if 'sin azúcar' in consulta and 'sin azúcar' in nombre:
+            return 'perfecta', 'bebida sin azúcar específica'
+        
+        # Relevancia ALTA: categoría coincide
+        if categoria in consulta:
+            return 'alta', f'categoría {categoria}'
+            
+        if 'snack' in consulta and categoria == 'snacks':
+            return 'alta', 'categoría snacks'
+        
+        # Relevancia MEDIA: sinónimo válido pero no exacto
+        if 'picante' in consulta and categoria == 'golosinas' and any(term in nombre for term in ['pelo', 'rockaleta', 'tamarindo']):
+            return 'media', 'dulce picante (sinónimo)'
+        
+        # Relevancia BAJA: no muy relacionado
+        return 'baja', 'resultado genérico'
+    
+    def _ordenar_productos_por_relevancia(self, productos: List[Dict], consulta: str) -> List[Dict]:
+        """Ordenar productos por relevancia: perfecta > alta > media > baja"""
+        if not productos:
+            return productos
+        
+        # Clasificar cada producto
+        productos_clasificados = {
+            'perfecta': [],
+            'alta': [],
+            'media': [],
+            'baja': []
+        }
+        
+        for producto in productos:
+            relevancia, razon = self._clasificar_relevancia_producto(producto, consulta)
+            # Agregar la clasificación al producto para referencia
+            producto['_relevancia'] = relevancia
+            producto['_razon_relevancia'] = razon
+            productos_clasificados[relevancia].append(producto)
+        
+        # Ordenar por relevancia: perfecta -> alta -> media -> baja
+        productos_ordenados = []
+        for relevancia in ['perfecta', 'alta', 'media', 'baja']:
+            # Dentro de cada categoría, ordenar por precio (ascendente)
+            productos_categoria = sorted(productos_clasificados[relevancia], 
+                                       key=lambda x: x.get('precio', 0))
+            productos_ordenados.extend(productos_categoria)
+        
+        return productos_ordenados
     
     def _analizar_semanticamente(self, consulta: str) -> Dict:
         """Análisis semántico avanzado para detectar patrones complejos como 'bebidas sin azúcar'"""
