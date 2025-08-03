@@ -34,12 +34,18 @@ COPY backed/ ./
 # Copiar el microservicio de recomendaciones y sus requisitos
 COPY services/recommender/ ./recommender/
 
+# Copiar el microservicio NLP LCLN
+COPY AnalizadorNPLLynx/AnalizadorLynx-main/ ./nlp/
+
 # Instalar dependencias de Python (intentar reducir OOM instalando pesados primero)
 RUN pip3 install --no-cache-dir --break-system-packages pandas
 RUN pip3 install --no-cache-dir --break-system-packages numpy
 RUN pip3 install --no-cache-dir --break-system-packages scikit-learn
 # Instalar el resto de las dependencias de Python
 RUN pip3 install --no-cache-dir --break-system-packages -r ./recommender/requirements.txt
+
+# Instalar dependencias del microservicio NLP
+RUN pip3 install --no-cache-dir --break-system-packages -r ./nlp/requirements.txt
 
 # Copiar el build del frontend al directorio público del backend
 COPY --from=frontend-builder /app/cliente/dist ./public
@@ -57,41 +63,60 @@ set -e
 
 echo "🚀 Starting LynxWeb monolith..."
 
-# Iniciar el servicio Python en segundo plano
+# Iniciar el servicio Python de recomendaciones en segundo plano
 echo "🐍 Starting Python recommender service on port 8000..."
 cd /app/recommender
 
 # Verificar que main.py existe
 if [ -f "main.py" ]; then
-    echo "✓ Found main.py"
+    echo "✓ Found recommender main.py"
 else
-    echo "❌ main.py not found!"
+    echo "❌ Recommender main.py not found!"
     ls -la
 fi
 
 # Iniciar Python con logs dirigidos a stdout
-uvicorn main:app --host 0.0.0.0 --port 8000 > /tmp/python.log 2>&1 &
-PYTHON_PID=$!
-echo "Python service started with PID: $PYTHON_PID"
+uvicorn main:app --host 0.0.0.0 --port 8000 > /tmp/recommender.log 2>&1 &
+RECOMMENDER_PID=$!
+echo "Recommender service started with PID: $RECOMMENDER_PID"
 
-# Esperar un momento para que Python se inicie
-sleep 5
+# Iniciar el servicio NLP en segundo plano
+echo "🧠 Starting NLP LCLN service on port 8005..."
+cd /app/nlp/api
 
-# Verificar si Python sigue corriendo
-if kill -0 $PYTHON_PID 2>/dev/null; then
-    echo "✅ Python service is running on PID $PYTHON_PID"
-    # Verificar el puerto
-    if netstat -tuln | grep :8000; then
-        echo "✅ Python service listening on port 8000"
-    else
-        echo "⚠️ Python service running but port 8000 not detected"
-        echo "Python logs:"
-        tail -n 20 /tmp/python.log || echo "No logs found"
-    fi
+# Verificar que main_lcln_dynamic.py existe
+if [ -f "main_lcln_dynamic.py" ]; then
+    echo "✓ Found NLP main_lcln_dynamic.py"
 else
-    echo "❌ Python service failed to start"
-    echo "Python logs:"
-    cat /tmp/python.log || echo "No logs found"
+    echo "❌ NLP main_lcln_dynamic.py not found!"
+    ls -la
+fi
+
+# Iniciar NLP con uvicorn dirigido a stdout  
+uvicorn main_lcln_dynamic:app --host 0.0.0.0 --port 8005 > /tmp/nlp.log 2>&1 &
+NLP_PID=$!
+echo "NLP service started with PID: $NLP_PID"
+
+# Esperar un momento para que ambos servicios se inicien
+sleep 8
+
+# Verificar si ambos servicios siguen corriendo
+echo "🔍 Checking services status..."
+
+if kill -0 $RECOMMENDER_PID 2>/dev/null; then
+    echo "✅ Recommender service is running on PID $RECOMMENDER_PID"
+else
+    echo "❌ Recommender service failed to start"
+    echo "Recommender logs:"
+    cat /tmp/recommender.log || echo "No logs found"
+fi
+
+if kill -0 $NLP_PID 2>/dev/null; then
+    echo "✅ NLP service is running on PID $NLP_PID"
+else
+    echo "❌ NLP service failed to start"  
+    echo "NLP logs:"
+    cat /tmp/nlp.log || echo "No logs found"
 fi
 
 # Iniciar Node.js
@@ -109,6 +134,7 @@ EXPOSE $PORT
 # Variables de entorno por defecto
 ENV NODE_ENV=production
 ENV RECOMMENDER_SERVICE_URL=http://localhost:8000
+ENV NLP_SERVICE_URL=http://localhost:8005
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
