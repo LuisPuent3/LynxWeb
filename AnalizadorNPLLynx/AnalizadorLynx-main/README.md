@@ -116,29 +116,70 @@ python main.py --modo-desarrollo
 | `"leche descremada menos de 15"` | - | Lácteos filtrados | 88% |
 | `"votana brata"` | ✅ `"botana barata"` | Productos snacks | 85% |
 
-## 🏗️ Arquitectura del Microservicio
+## 🏗️ Arquitectura Técnica Detallada
 
+```mermaid
+graph TD
+    A[Cliente HTTP] --> B[FastAPI Router]
+    B --> C{/api/nlp/analyze}
+    C --> D[AnalizadorLexicoLYNX]
+    
+    D --> E[CorrectorOrtografico]
+    E --> F{¿Requiere corrección?}
+    F -->|Sí| G[Levenshtein Distance]
+    F -->|No| H[AFD Pipeline]
+    G --> H
+    
+    H --> I[AFD Palabras]
+    H --> J[AFD Números] 
+    H --> K[AFD Operadores]
+    H --> L[AFD Unidades]
+    H --> M[AFD Multipalabra]
+    
+    I --> N[Motor 5 Estrategias]
+    J --> N
+    K --> N
+    L --> N
+    M --> N
+    
+    N --> O[Estrategia 1: Atributos]
+    N --> P[Estrategia 2: Específicos]
+    N --> Q[Estrategia 3: Categorías]
+    N --> R[Estrategia 4: Combinada]
+    N --> S[Estrategia 5: Fallback]
+    
+    O --> T[(SQLite DB)]
+    P --> T
+    Q --> T
+    R --> T
+    S --> T
+    
+    T --> U[BaseDatosEscalable]
+    U --> V[productos_lynx_escalable.db<br/>1,304 productos]
+    U --> W[sinonimos_lynx.db<br/>82,768 sinónimos]
+    
+    V --> X[InterpretadorSemantico]
+    W --> X
+    X --> Y[MotorRecomendaciones]
+    Y --> Z[JSON Response]
+    Z --> B
+    
+    style D fill:#e1f5fe
+    style N fill:#f3e5f5
+    style T fill:#e8f5e8
+    style B fill:#fff3e0
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    LYNX 3.0 MICROSERVICE                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Frontend/Client                                                │
-│      ↓                                                          │
-│  [FastAPI] HTTP REST API                                        │
-│      ↓                                                          │
-│  [LYNX Core] AnalizadorLexicoLYNX                              │
-│      • Motor 5 Estrategias                                     │
-│      • Corrección Ortográfica (92% precisión)                  │
-│      • AFDs: Productos, Números, Operadores, Unidades          │
-│      ↓                                                          │
-│  [Database Layer] SQLite/MySQL                                 │
-│      • 1,304 productos                                          │
-│      • 82,768 sinónimos                                        │
-│      • Configuración escalable                                 │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+
+### **Flujo de Procesamiento:**
+
+1. **Request HTTP** → FastAPI recibe query
+2. **Corrección Ortográfica** → Levenshtein si es necesario
+3. **Análisis Léxico** → 5 AFDs procesan tokens en paralelo
+4. **Motor Estrategias** → Jerarquía de búsqueda (Atributos → Específicos → Categorías → Combinada → Fallback)
+5. **Base Datos** → SQLite con 1,304 productos + 82,768 sinónimos
+6. **Interpretación** → Contexto semántico y relevancia
+7. **Recomendaciones** → Lista rankeada por score
+8. **Response JSON** → Resultados + metadata (tiempo, correcciones, SQL)
 
 ## 📁 Estructura del Código
 
