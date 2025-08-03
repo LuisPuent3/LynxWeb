@@ -219,12 +219,12 @@ graph TD
     II --> JJ[JSON Response Final]
     JJ --> B
     
-    style D fill:#e1f5fe
-    style E fill:#c8e6c9
-    style F fill:#fff3e0
-    style G fill:#ffcdd2
-    style BB fill:#e8f5e8
-    style X fill:#f3e5f5
+    style D fill:#e1f5fe,color:#000000
+    style E fill:#c8e6c9,color:#000000
+    style F fill:#fff3e0,color:#000000
+    style G fill:#ffcdd2,color:#000000
+    style BB fill:#e8f5e8,color:#000000
+    style X fill:#f3e5f5,color:#000000
 ```
 
 ### **Sistema de Análisis Léxico Formal (AFD + BNF)**
@@ -250,9 +250,9 @@ graph LR
     J --> K[Reglas de Desambiguación<br/>RD1-RD4]
     K --> L[Interpretación Semántica]
     
-    style C fill:#e3f2fd
-    style I fill:#f3e5f5
-    style K fill:#fff3e0
+    style C fill:#e3f2fd,color:#000000
+    style I fill:#f3e5f5,color:#000000
+    style K fill:#fff3e0,color:#000000
 ```
 
 ### **Flujo Real del Compilador NLP:**
