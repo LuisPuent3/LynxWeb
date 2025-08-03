@@ -116,70 +116,144 @@ python main.py --modo-desarrollo
 | `"leche descremada menos de 15"` | - | Lácteos filtrados | 88% |
 | `"votana brata"` | ✅ `"botana barata"` | Productos snacks | 85% |
 
-## 🏗️ Arquitectura Técnica Detallada
+## 🏗️ Arquitectura Técnica Completa del Sistema LCLN
 
 ```mermaid
 graph TD
     A[Cliente HTTP] --> B[FastAPI Router]
-    B --> C{/api/nlp/analyze}
-    C --> D[AnalizadorLexicoLYNX]
+    B --> C[Endpoint /api/nlp/analyze]
     
-    D --> E[CorrectorOrtografico]
-    E --> F{¿Requiere corrección?}
-    F -->|Sí| G[Levenshtein Distance]
-    F -->|No| H[AFD Pipeline]
-    G --> H
+    C --> D[Sistema LCLN Inteligente]
+    D --> E[🥇 PRIORIDAD 1: Búsqueda Exacta]
+    D --> F[🥈 PRIORIDAD 2: Análisis Semántico]  
+    D --> G[🥉 PRIORIDAD 3: Corrección + Fallback]
     
-    H --> I[AFD Palabras]
-    H --> J[AFD Números] 
-    H --> K[AFD Operadores]
-    H --> L[AFD Unidades]
-    H --> M[AFD Multipalabra]
+    E --> H[Búsqueda por Sinónimos Específicos]
+    H --> I[(producto_sinonimos)]
+    I --> J[Match Directo con Productos]
     
-    I --> N[Motor 5 Estrategias]
-    J --> N
-    K --> N
-    L --> N
-    M --> N
+    F --> K[Análisis Léxico con AFDs]
+    K --> L[AFD Productos Multi-palabra]
+    K --> M[AFD Números + Operadores]
+    K --> N[AFD Atributos + Negaciones]
+    K --> O[AFD Categorías]
+    K --> P[AFD Unidades de Medida]
     
-    N --> O[Estrategia 1: Atributos]
-    N --> P[Estrategia 2: Específicos]
-    N --> Q[Estrategia 3: Categorías]
-    N --> R[Estrategia 4: Combinada]
-    N --> S[Estrategia 5: Fallback]
+    L --> Q[Tokenización Inteligente]
+    M --> Q
+    N --> Q
+    O --> Q
+    P --> Q
     
-    O --> T[(SQLite DB)]
-    P --> T
-    Q --> T
-    R --> T
-    S --> T
+    Q --> R[Analizador de Negaciones]
+    R --> S[Detector de Filtros de Precio]
+    S --> T[Motor de Búsqueda por Categorías]
     
-    T --> U[BaseDatosEscalable]
-    U --> V[productos_lynx_escalable.db<br/>1,304 productos]
-    U --> W[sinonimos_lynx.db<br/>82,768 sinónimos]
+    G --> U[Corrector Ortográfico]
+    U --> V[Levenshtein Distance]
+    V --> W[Re-análisis con Query Corregida]
     
-    V --> X[InterpretadorSemantico]
+    J --> X[Scoring Inteligente]
+    T --> X
     W --> X
-    X --> Y[MotorRecomendaciones]
-    Y --> Z[JSON Response]
-    Z --> B
+    
+    X --> Y[Ranking por Relevancia]
+    Y --> Z[Filtros Aplicados]
+    Z --> AA[Generación SQL Dinámica]
+    
+    AA --> BB[(Base de Datos)]
+    BB --> CC[productos_lynx_escalable.db<br/>1,304 productos]
+    BB --> DD[sinonimos_lynx.db<br/>82,768 sinónimos]
+    BB --> EE[producto_atributos<br/>Negaciones]
+    BB --> FF[busqueda_metricas<br/>ML Learning]
+    
+    CC --> GG[Enriquecimiento de Resultados]
+    DD --> GG
+    EE --> GG
+    FF --> GG
+    
+    GG --> HH[Interpretador Semántico]
+    HH --> II[Motor de Recomendaciones]
+    II --> JJ[JSON Response Final]
+    JJ --> B
     
     style D fill:#e1f5fe
-    style N fill:#f3e5f5
-    style T fill:#e8f5e8
-    style B fill:#fff3e0
+    style E fill:#c8e6c9
+    style F fill:#fff3e0
+    style G fill:#ffcdd2
+    style BB fill:#e8f5e8
+    style X fill:#f3e5f5
 ```
 
-### **Flujo de Procesamiento:**
+### **Sistema de Análisis Léxico Formal (AFD + BNF)**
 
-1. **Request HTTP** → FastAPI recibe query
-2. **Corrección Ortográfica** → Levenshtein si es necesario
-3. **Análisis Léxico** → 5 AFDs procesan tokens en paralelo
-4. **Motor Estrategias** → Jerarquía de búsqueda (Atributos → Específicos → Categorías → Combinada → Fallback)
-5. **Base Datos** → SQLite con 1,304 productos + 82,768 sinónimos
-6. **Interpretación** → Contexto semántico y relevancia
-7. **Recomendaciones** → Lista rankeada por score
-8. **Response JSON** → Resultados + metadata (tiempo, correcciones, SQL)
+```mermaid
+graph LR
+    A[Query Input] --> B[Validación Inicial]
+    B --> C[Análisis Léxico AFD]
+    
+    C --> D[🔤 AFD Productos<br/>coca cola sin azucar]
+    C --> E[🔢 AFD Números<br/>20, 15.5, entre 10 y 20]
+    C --> F[⚡ AFD Operadores<br/>menor a, mayor a, sin]
+    C --> G[📏 AFD Unidades<br/>pesos, litros, gramos]
+    C --> H[🏷️ AFD Palabras<br/>categorías, atributos]
+    
+    D --> I[Parser BNF]
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+    
+    I --> J[Gramática LCLN:<br/>&lt;consulta&gt; ::= &lt;entidad_prioritaria&gt; &lt;modificadores&gt;]
+    J --> K[Reglas de Desambiguación<br/>RD1-RD4]
+    K --> L[Interpretación Semántica]
+    
+    style C fill:#e3f2fd
+    style I fill:#f3e5f5
+    style K fill:#fff3e0
+```
+
+### **Flujo Detallado de Procesamiento:**
+
+#### **Fase 1: Análisis de Entrada**
+1. **Validación**: Longitud, caracteres válidos, protección DoS
+2. **Tokenización AFD**: 5 autómatas procesan en paralelo
+3. **Look-ahead**: Detección de productos multi-palabra con prioridad
+
+#### **Fase 2: Sistema de Prioridades Jerárquico**
+- **🥇 Sinónimos Específicos** (95% confianza): `"chettos" → Cheetos Mix ID:15`
+- **🥈 Análisis Semántico** (80% confianza): AFDs + BNF + negaciones
+- **🥉 Corrección Ortográfica** (70% confianza): `"koka kola" → "coca cola"`
+
+#### **Fase 3: Interpretación Inteligente**
+```python
+# Ejemplo: "sin picante barato menor a 20 pesos"
+{
+  "negaciones": [{"atributo": "picante", "confianza": 0.9}],
+  "filtros_precio": {"max": 20, "tendency": "low"},
+  "categoria_inferida": "snacks",
+  "sql_generado": "SELECT * FROM productos p 
+                   LEFT JOIN producto_atributos pa ON p.id = pa.producto_id 
+                   WHERE (pa.atributo='picante' AND pa.valor=FALSE) 
+                   AND p.precio <= 20"
+}
+```
+
+#### **Fase 4: Machine Learning y Optimización**
+- **Métricas de Usuario**: Clicks, tiempo en página, conversiones
+- **Sugerencias Automáticas**: Nuevos sinónimos basados en búsquedas reales
+- **Scoring Dinámico**: Popularidad + precisión + disponibilidad
+
+### **Especificaciones Técnicas:**
+
+| Componente | Implementación | Performance |
+|------------|----------------|-------------|
+| **AFD Léxico** | 5 autómatas paralelos | <10ms tokenización |
+| **BNF Parser** | Gramática LCLN formal | <5ms validación |
+| **Sinónimos** | 82,768 términos en BD | <15ms búsqueda |
+| **Negaciones** | Detección contextual | <3ms procesamiento |
+| **SQL Generation** | Queries dinámicas | <8ms construcción |
+| **Total Pipeline** | End-to-end | **<50ms** (95% casos) |
 
 ## 📁 Estructura del Código
 
