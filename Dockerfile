@@ -20,9 +20,8 @@ RUN apt-get update && apt-get install -y \
 # Copiar archivos del proyecto
 COPY . .
 
-# Crear directorio uploads y copiar imágenes
+# Asegurar que el directorio uploads esté disponible
 RUN mkdir -p /app/uploads
-COPY uploads/ /app/uploads/
 
 # Build del frontend con fix para Rollup
 WORKDIR /app/cliente

@@ -105,7 +105,7 @@ interface HealthResponse {
 class NLPService {
   private baseUrl: string;
   private isHealthy: boolean = false;  constructor() {
-    this.baseUrl = 'http://localhost:5000'; // Backend Node.js que proxy al servicio LCLN Python
+    this.baseUrl = import.meta.env.PROD ? '' : 'http://localhost:5000'; // En producción usa la URL actual, en desarrollo localhost
     this.checkHealth();
   }
   /**
