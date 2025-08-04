@@ -62,7 +62,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000 &\n\
 # Iniciar microservicio NLP LCLN\n\
 echo "🧠 Starting NLP LCLN service..."\n\
 cd /app/AnalizadorNPLLynx/AnalizadorLynx-main/api\n\
-uvicorn main_lcln_dynamic:app --host 0.0.0.0 --port 8005 &\n\
+uvicorn main_lcln_simple:app --host 0.0.0.0 --port 8005 &\n\
 \n\
 # Dar tiempo a los microservicios\n\
 sleep 3\n\
