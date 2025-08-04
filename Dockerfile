@@ -2,27 +2,35 @@
 # Multi-stage build para optimizar tamaño
 
 # Stage 1: Build del frontend
-FROM node:18-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 
-# Copiar todo el contexto primero para resolver dependencias de tsconfig
+# Configurar timeouts y reintentos para mayor estabilidad
+RUN apk add --no-cache curl
+
+# Copiar solo archivos necesarios para el frontend primero
 WORKDIR /app
-COPY . ./
+COPY cliente/package*.json ./cliente/
+COPY tsconfig*.json vite.config.mts ./
+COPY cliente/src ./cliente/src/
+COPY cliente/public ./cliente/public/
+COPY cliente/index.html ./cliente/
+COPY cliente/vite.config.ts ./cliente/
 
 # Moverse al directorio del cliente y hacer el build
 WORKDIR /app/cliente
-RUN rm -rf node_modules package-lock.json # Limpiar para resolver problema de rollup
-RUN npm install --no-audit --no-fund # Usar npm install en lugar de npm ci
+RUN rm -rf node_modules package-lock.json
+RUN npm install --no-audit --no-fund --timeout=300000
 ENV NODE_OPTIONS=--max-old-space-size=2048
 RUN npm run build
 ENV NODE_OPTIONS=
 
 # Stage 2: Imagen principal - Backend + Frontend estático + Microservicio Python
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Instalar Python y pip en Alpine con herramientas de debug
-RUN apk add --no-cache python3 py3-pip python3-dev gcc g++ musl-dev # Añadido g++
+# Instalar dependencias del sistema con timeouts más largos
+RUN apk add --no-cache python3 py3-pip python3-dev gcc g++ musl-dev curl
 
 # Instalar dependencias del backend Node.js
 COPY backed/package*.json ./
