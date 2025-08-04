@@ -9,6 +9,7 @@ COPY cliente/ ./cliente/
 COPY tsconfig*.json vite.config.mts ./
 
 WORKDIR /app/cliente
+RUN rm -rf node_modules package-lock.json
 RUN npm install
 ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npm run build
