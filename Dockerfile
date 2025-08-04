@@ -45,21 +45,25 @@ RUN echo '#!/bin/bash\n\
 set -e\n\
 echo "🚀 Starting LynxWeb monolith..."\n\
 \n\
-# Inicializar base de datos\n\
+# Inicializar base de datos (opcional)\n\
 echo "📋 Initializing database..."\n\
-python3 /app/init-db.py\n\
+python3 /app/init-db.py || echo "⚠️  BD initialization failed, continuing..."\n\
 \n\
 # Iniciar microservicio de recomendaciones\n\
+echo "📊 Starting recommender service..."\n\
 cd /app/services/recommender\n\
 uvicorn main:app --host 0.0.0.0 --port 8000 &\n\
 \n\
 # Iniciar microservicio NLP LCLN\n\
+echo "🧠 Starting NLP LCLN service..."\n\
 cd /app/AnalizadorNPLLynx/AnalizadorLynx-main/api\n\
 uvicorn main_lcln_dynamic:app --host 0.0.0.0 --port 8005 &\n\
 \n\
-sleep 5\n\
+# Dar tiempo a los microservicios\n\
+sleep 3\n\
 \n\
 # Iniciar backend principal\n\
+echo "🌐 Starting main backend..."\n\
 cd /app/backed\n\
 exec node index.js' > /app/start.sh
 
