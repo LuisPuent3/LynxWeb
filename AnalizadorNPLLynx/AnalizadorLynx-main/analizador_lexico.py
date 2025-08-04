@@ -224,11 +224,13 @@ class AnalizadorLexicoLYNX:
         # Agregar filtros de productos
         if interpretacion['productos']:
             nombres = [p['nombre'] for p in interpretacion['productos']]
-            condiciones.append(f"nombre IN ({', '.join([f'\'{n}\'' for n in nombres])})")
+            nombres_quoted = [f"'{n}'" for n in nombres]
+            condiciones.append(f"nombre IN ({', '.join(nombres_quoted)})")
         
         # Agregar filtros de categorías
         if interpretacion['categorias']:
-            condiciones.append(f"categoria IN ({', '.join([f'\'{c}\'' for c in interpretacion['categorias']])})")
+            categorias_quoted = [f"'{c}'" for c in interpretacion['categorias']]
+            condiciones.append(f"categoria IN ({', '.join(categorias_quoted)})")
         
         # Agregar filtros de precio
         if 'max' in interpretacion['filtros']['precio']:
