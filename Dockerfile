@@ -17,19 +17,19 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar archivos del proyecto
+# Asegurar que las imágenes estén en la ubicación correcta PRIMERO
+RUN mkdir -p /app/uploads
+
+# Copiar solo el directorio uploads primero (si existe)
+COPY uploads /app/uploads
+
+# Luego copiar el resto del proyecto
 COPY . .
 
-# Asegurar que las imágenes estén en la ubicación correcta
-RUN mkdir -p /app/uploads
-# Copiar todas las imágenes del directorio uploads
-COPY . /tmp/build/
-RUN if [ -d "/tmp/build/uploads" ]; then \
-        cp -r /tmp/build/uploads/* /app/uploads/ || echo "No files to copy"; \
-        echo "Verificando copia de imágenes:" && ls -la /app/uploads/ && echo "Total files: $(ls /app/uploads/ 2>/dev/null | wc -l)"; \
-    else \
-        echo "No uploads directory found in build context"; \
-    fi
+# Verificar que las imágenes se copiaron correctamente
+RUN echo "Verificando copia de imágenes:" && \
+    ls -la /app/uploads/ && \
+    echo "Total files: $(ls /app/uploads/ 2>/dev/null | wc -l)"
 
 # Build del frontend con fix para Rollup
 WORKDIR /app/cliente

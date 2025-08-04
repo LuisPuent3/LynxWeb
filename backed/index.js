@@ -59,7 +59,14 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // Configuración para servir archivos estáticos desde el directorio uploads
-const uploadsPath = path.join(__dirname, '../uploads');
+// En Docker las imágenes están en /app/uploads, en desarrollo en ../uploads
+let uploadsPath;
+if (process.env.NODE_ENV === 'production') {
+  uploadsPath = '/app/uploads';
+} else {
+  uploadsPath = path.join(__dirname, '../uploads');
+}
+
 console.log('📂 Uploads path:', uploadsPath);
 console.log('📂 Uploads directory exists:', require('fs').existsSync(uploadsPath));
 if (require('fs').existsSync(uploadsPath)) {
