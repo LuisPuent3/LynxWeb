@@ -11,8 +11,8 @@ COPY . ./
 # Moverse al directorio del cliente y hacer el build
 WORKDIR /app/cliente
 RUN rm -rf node_modules package-lock.json # Limpiar para resolver problema de rollup
-RUN npm install # Usar npm install en lugar de npm ci
-ENV NODE_OPTIONS=--max-old-space-size=4096
+RUN npm install --no-audit --no-fund # Usar npm install en lugar de npm ci
+ENV NODE_OPTIONS=--max-old-space-size=2048
 RUN npm run build
 ENV NODE_OPTIONS=
 
@@ -37,15 +37,27 @@ COPY services/recommender/ ./recommender/
 # Copiar el microservicio NLP LCLN
 COPY AnalizadorNPLLynx/AnalizadorLynx-main/ ./nlp/
 
-# Instalar dependencias de Python (intentar reducir OOM instalando pesados primero)
-RUN pip3 install --no-cache-dir --break-system-packages pandas
-RUN pip3 install --no-cache-dir --break-system-packages numpy
-RUN pip3 install --no-cache-dir --break-system-packages scikit-learn
-# Instalar el resto de las dependencias de Python
-RUN pip3 install --no-cache-dir --break-system-packages -r ./recommender/requirements.txt
+# Instalar dependencias de Python de forma más eficiente
+# Primero instalar las dependencias básicas de ciencia de datos
+RUN pip3 install --no-cache-dir --break-system-packages wheel setuptools
+RUN pip3 install --no-cache-dir --break-system-packages numpy==1.24.3
+RUN pip3 install --no-cache-dir --break-system-packages pandas==2.0.3
+RUN pip3 install --no-cache-dir --break-system-packages scikit-learn==1.3.0
 
-# Instalar dependencias del microservicio NLP
-RUN pip3 install --no-cache-dir --break-system-packages -r ./nlp/requirements.txt
+# Verificar que los archivos requirements.txt existen antes de instalar
+RUN if [ -f "./recommender/requirements.txt" ]; then \
+        echo "Installing recommender requirements..."; \
+        pip3 install --no-cache-dir --break-system-packages -r ./recommender/requirements.txt; \
+    else \
+        echo "⚠️ Warning: ./recommender/requirements.txt not found"; \
+    fi
+
+RUN if [ -f "./nlp/requirements.txt" ]; then \
+        echo "Installing NLP requirements..."; \
+        pip3 install --no-cache-dir --break-system-packages -r ./nlp/requirements.txt; \
+    else \
+        echo "⚠️ Warning: ./nlp/requirements.txt not found"; \
+    fi
 
 # Copiar el build del frontend al directorio público del backend
 COPY --from=frontend-builder /app/cliente/dist ./public
