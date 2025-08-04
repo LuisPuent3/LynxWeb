@@ -35,7 +35,7 @@ WORKDIR /app
 RUN npm ci --production --prefix backed
 
 # Instalar dependencias Python
-RUN pip3 install --no-cache-dir fastapi uvicorn python-dotenv pymysql pandas numpy scikit-learn pydantic requests nltk unidecode mysql-connector-python python-multipart
+RUN pip3 install --no-cache-dir fastapi uvicorn python-dotenv pymysql pandas numpy scikit-learn pydantic requests nltk unidecode mysql-connector-python python-multipart graphviz
 
 # Mover el build del frontend
 RUN mkdir -p backed/public && cp -r cliente/dist/* backed/public/
