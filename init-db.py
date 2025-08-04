@@ -25,20 +25,23 @@ def init_database():
         
         # Verificar si las tablas críticas existen
         cursor = connection.cursor()
-        cursor.execute("SHOW TABLES LIKE 'categorias'")
-        categorias_exist = cursor.fetchone()
-        cursor.execute("SHOW TABLES LIKE 'pedidos'")  
-        pedidos_exist = cursor.fetchone()
-        cursor.execute("SHOW TABLES LIKE 'productos'")
-        productos_exist = cursor.fetchone()
         
-        if categorias_exist and pedidos_exist and productos_exist:
+        required_tables = ['categorias', 'pedidos', 'productos', 'detallepedido', 'usuarios', 'estadospedidos']
+        missing_tables = []
+        
+        for table in required_tables:
+            cursor.execute(f"SHOW TABLES LIKE '{table}'")
+            if not cursor.fetchone():
+                missing_tables.append(table)
+        
+        if not missing_tables:
             print("🔍 Todas las tablas críticas ya existen, saltando inicialización...")
             cursor.close()
             connection.close()
             return
         
-        print("📋 Iniciando carga de esquema de base de datos...")
+        print(f"📋 Tablas faltantes detectadas: {missing_tables}")
+        print("📋 Iniciando carga completa del esquema de base de datos...")
         
         # Leer el archivo SQL
         with open('/app/database/railway-import.sql', 'r', encoding='utf-8') as file:

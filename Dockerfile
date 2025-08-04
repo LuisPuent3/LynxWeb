@@ -22,8 +22,9 @@ COPY . .
 
 # Asegurar que las imágenes estén en la ubicación correcta
 RUN mkdir -p /app/uploads
-RUN if [ -d "/app/uploads" ]; then echo "Uploads directory exists with $(ls -la /app/uploads | wc -l) files"; fi
-RUN ls -la /app/uploads/ || echo "No uploads directory found"
+# Si las imágenes están en la raíz del proyecto, copiarlas explícitamente
+RUN if [ -d "uploads" ]; then cp -r uploads/* /app/uploads/ 2>/dev/null || echo "No files to copy"; fi
+RUN ls -la /app/uploads/ && echo "Total files: $(ls /app/uploads/ 2>/dev/null | wc -l)"
 
 # Build del frontend con fix para Rollup
 WORKDIR /app/cliente
