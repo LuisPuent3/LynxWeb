@@ -45,6 +45,10 @@ RUN echo '#!/bin/bash\n\
 set -e\n\
 echo "🚀 Starting LynxWeb monolith..."\n\
 \n\
+# Inicializar base de datos\n\
+echo "📋 Initializing database..."\n\
+python3 /app/init-db.py\n\
+\n\
 # Iniciar microservicio de recomendaciones\n\
 cd /app/services/recommender\n\
 uvicorn main:app --host 0.0.0.0 --port 8000 &\n\
