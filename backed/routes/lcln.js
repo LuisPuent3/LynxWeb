@@ -3,7 +3,7 @@ const router = express.Router();
 const axios = require('axios');
 
 // Configuración del servicio LCLN
-const LCLN_SERVICE_URL = 'http://127.0.0.1:8004'; // Puerto del servidor_lcln_api.py
+const LCLN_SERVICE_URL = process.env.NLP_SERVICE_URL || 'http://localhost:8005';
 
 /**
  * @route POST /api/lcln/search
