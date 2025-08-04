@@ -9,7 +9,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminHome from './pages/AdminHome';
 import AdminCategoriesPage from './pages/AdminCategoriesPage';
-import Home from './pages/home';
+import Home from './pages/Home';
 import CartPage from './pages/CartPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import OrderSummaryPage from './pages/OrderSummaryPage';

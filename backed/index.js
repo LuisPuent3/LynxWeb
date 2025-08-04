@@ -108,6 +108,18 @@ app.use('/api/lcln', lclnRoutes);
 const testSinonimosRoutes = require('./routes/testSinonimosRoutes');
 app.use('/api/test/sinonimos', testSinonimosRoutes);
 
+// Servir archivos estáticos del frontend (React build)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Ruta catch-all para servir index.html en rutas de frontend (SPA)
+app.get('*', (req, res, next) => {
+    // Solo servir index.html para rutas que NO sean de API
+    if (req.path.startsWith('/api/')) {
+        return next();
+    }
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Ruta de prueba para verificar que la API está en funcionamiento
 app.get('/api/test', (req, res) => {
     res.json({ message: 'API funcionando correctamente', timestamp: new Date().toISOString() });
