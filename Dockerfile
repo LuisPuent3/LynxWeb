@@ -128,8 +128,8 @@ EOF
 RUN sed -i 's/\r$//' /app/start.sh # Asegurar finales de línea LF
 RUN chmod +x /app/start.sh
 
-# Exponer solo el puerto principal (Railway usa PORT)
-EXPOSE $PORT
+# Exponer puerto por defecto (Railway asignará automáticamente)
+EXPOSE 5000
 
 # Variables de entorno por defecto
 ENV NODE_ENV=production
