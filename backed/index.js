@@ -19,7 +19,8 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173', 
   'http://localhost:5174',  // Add the actual port the frontend is using
-  'http://localhost:8004'   // Add the NLP API port
+  'http://localhost:8004',   // Add the NLP API port
+  'https://lynx-shop-production.up.railway.app'  // Railway production URL
 ]; 
 
 const productionOrigin = process.env.CORS_ORIGIN;
