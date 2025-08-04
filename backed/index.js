@@ -102,6 +102,10 @@ app.use((req, res, next) => {
     next();
 });
 
+// Configurar base de datos para las rutas
+const dbPool = require('./config/db');
+app.locals.db = dbPool;
+
 // Usar rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/productos', productRoutes);

@@ -26,7 +26,7 @@ def init_database():
         # Verificar si las tablas críticas existen
         cursor = connection.cursor()
         
-        required_tables = ['categorias', 'pedidos', 'productos', 'detallepedido', 'usuarios', 'estadospedidos']
+        required_tables = ['categorias', 'pedidos', 'productos', 'detallepedido', 'usuarios', 'estadospedidos', 'producto_sinonimos', 'busqueda_metricas']
         missing_tables = []
         
         for table in required_tables:

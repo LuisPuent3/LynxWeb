@@ -297,4 +297,54 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
+--
+-- Table structure for table `producto_sinonimos`
+--
+
+DROP TABLE IF EXISTS `producto_sinonimos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `producto_sinonimos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `producto_id` int(11) NOT NULL,
+  `sinonimo` varchar(255) NOT NULL,
+  `popularidad` int(11) DEFAULT '1',
+  `precision_score` decimal(3,2) DEFAULT '1.00',
+  `fuente` varchar(50) DEFAULT 'manual',
+  `activo` tinyint(1) DEFAULT '1',
+  `fecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `fecha_ultima_actualizacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_producto_id` (`producto_id`),
+  KEY `idx_sinonimo` (`sinonimo`),
+  KEY `idx_activo` (`activo`),
+  CONSTRAINT `fk_producto_sinonimos_producto` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id_producto`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `busqueda_metricas`
+--
+
+DROP TABLE IF EXISTS `busqueda_metricas`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `busqueda_metricas` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `termino_busqueda` varchar(255) NOT NULL,
+  `producto_id` int(11) DEFAULT NULL,
+  `clicks` int(11) DEFAULT '1',
+  `resultado_encontrado` tinyint(1) DEFAULT '1',
+  `fecha_busqueda` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `usuario_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_termino_busqueda` (`termino_busqueda`),
+  KEY `idx_producto_id` (`producto_id`),
+  KEY `idx_usuario_id` (`usuario_id`),
+  KEY `idx_fecha_busqueda` (`fecha_busqueda`),
+  CONSTRAINT `fk_busqueda_metricas_producto` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id_producto`) ON DELETE SET NULL,
+  CONSTRAINT `fk_busqueda_metricas_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
 -- Dump completed on 2025-05-24 14:58:49

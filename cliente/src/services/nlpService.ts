@@ -174,6 +174,8 @@ class NLPService {
       
       // Debug completo para ver la estructura
       console.log('🐛 DEBUG - Respuesta completa del backend:', result);
+      console.log('🐛 DEBUG - Productos en result.recommendations:', result.recommendations);
+      console.log('🐛 DEBUG - Productos en result.products:', result.products);
       
       // Mapear la respuesta del backend al formato esperado del frontend
       const mappedResult: NLPSearchResponse = {
@@ -183,11 +185,14 @@ class NLPService {
         original_query: result.query, 
         products_found: result.products_found,
         user_message: result.message,
-        recommendations: result.products || [], // Mapear 'products' a 'recommendations'
+        recommendations: result.recommendations || result.products || [], // Usar recommendations primero, luego products
         interpretation: result.interpretation || {},
         corrections: result.corrections || { applied: false },
         metadata: result.metadata
       };
+      
+      console.log('🐛 DEBUG - Mapped result recommendations:', mappedResult.recommendations);
+      console.log('🐛 DEBUG - Mapped result recommendations length:', mappedResult.recommendations?.length);
       
       // Log de debug para desarrollo
       if (process.env.NODE_ENV === 'development') {
@@ -235,24 +240,42 @@ class NLPService {
    * Convertir respuesta NLP a formato compatible con el frontend
    */
   mapNLPProductsToFrontend(nlpProducts: ProductRecommendation[]): any[] {
-    return nlpProducts.map(product => ({
-      // Mapeo flexible - soporta tanto formato español como inglés
-      id_producto: product.id_producto || product.id,
-      nombre: product.nombre || product.name,
-      precio: product.precio || product.price,
-      cantidad: product.cantidad || product.stock || (product.available ? 10 : 0),
-      id_categoria: product.id_categoria || 1,
-      imagen: product.imagen || product.image || 'default.jpg',
-      categoria: product.categoria || product.category,
-      categoria_nombre: product.categoria_nombre || product.category,
-      // Propiedades adicionales del NLP
-      match_score: product.match_score || product.relevance || 0.8,
-      match_reasons: product.match_reasons || [],
-      // Propiedades por defecto que espera el frontend
-      descripcion: product.descripcion || '',
-      // Asegurar disponibilidad
-      available: (product.cantidad || product.stock || 0) > 0
-    }));
+    console.log('🐛 DEBUG mapNLPProductsToFrontend - Input products:', nlpProducts);
+    console.log('🐛 DEBUG mapNLPProductsToFrontend - Products length:', nlpProducts?.length);
+    
+    if (!nlpProducts || nlpProducts.length === 0) {
+      console.log('🐛 DEBUG mapNLPProductsToFrontend - No products to map');
+      return [];
+    }
+    
+    const mapped = nlpProducts.map((product, index) => {
+      console.log(`🐛 DEBUG mapNLPProductsToFrontend - Mapping product ${index}:`, product);
+      
+      const mappedProduct = {
+        // Mapeo flexible - soporta tanto formato español como inglés
+        id_producto: product.id_producto || product.id,
+        nombre: product.nombre || product.name,
+        precio: product.precio || product.price,
+        cantidad: product.cantidad || product.stock || (product.available ? 10 : 0),
+        id_categoria: product.id_categoria || 1,
+        imagen: product.imagen || product.image || 'default.jpg',
+        categoria: product.categoria || product.category,
+        categoria_nombre: product.categoria_nombre || product.category,
+        // Propiedades adicionales del NLP
+        match_score: product.match_score || product.relevance || 0.8,
+        match_reasons: product.match_reasons || [],
+        // Propiedades por defecto que espera el frontend
+        descripcion: product.descripcion || '',
+        // Asegurar disponibilidad
+        available: (product.cantidad || product.stock || 0) > 0
+      };
+      
+      console.log(`🐛 DEBUG mapNLPProductsToFrontend - Mapped product ${index}:`, mappedProduct);
+      return mappedProduct;
+    });
+    
+    console.log('🐛 DEBUG mapNLPProductsToFrontend - Final mapped products:', mapped);
+    return mapped;
   }
 
   /**

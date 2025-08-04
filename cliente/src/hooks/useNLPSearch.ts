@@ -70,11 +70,19 @@ export const useNLPSearch = (): UseNLPSearchResult => {
     try {
       const result = await nlpService.search(query.trim(), 20);
       
+      console.log('🐛 DEBUG useNLPSearch - Search result:', result);
+      
       if (result) {
         setNlpResults(result);
         
+        console.log('🐛 DEBUG useNLPSearch - result.recommendations:', result.recommendations);
+        console.log('🐛 DEBUG useNLPSearch - result.recommendations length:', result.recommendations?.length);
+        
         // Convertir productos NLP al formato del frontend
         const convertedProducts = nlpService.mapNLPProductsToFrontend(result.recommendations);
+        console.log('🐛 DEBUG useNLPSearch - convertedProducts:', convertedProducts);
+        console.log('🐛 DEBUG useNLPSearch - convertedProducts length:', convertedProducts?.length);
+        
         setSuggestedProducts(convertedProducts as Producto[]);
         
         console.log(`🔍 NLP Search completed: ${result.recommendations.length} products in ${result.processing_time_ms}ms`);

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 API Simple para servicio LCLN
-Versión simplificada sin dependencias complejas
+Versión ultra-simplificada para garantizar inicio
 """
 
 from fastapi import FastAPI, HTTPException
@@ -15,6 +15,10 @@ import logging
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Log de inicio
+print("🧠 LCLN Service - Iniciando FastAPI...")
+logger.info("LCLN Service - Starting up...")
 
 app = FastAPI(
     title="LCLN Simple API",
