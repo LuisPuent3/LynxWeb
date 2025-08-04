@@ -1,10 +1,19 @@
-# Dockerfile simplificado para Railway - Single Stage
-FROM node:18-alpine
+# Dockerfile simplificado para Railway - Ubuntu base
+FROM ubuntu:22.04
 
 WORKDIR /app
 
-# Instalar dependencias del sistema
-RUN apk add --no-cache python3 py3-pip python3-dev gcc g++ musl-dev
+# Instalar Node.js, Python y dependencias del sistema
+RUN apt-get update && apt-get install -y \
+    curl \
+    python3 \
+    python3-pip \
+    python3-dev \
+    build-essential \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copiar archivos del proyecto
 COPY . .
@@ -20,7 +29,7 @@ WORKDIR /app
 RUN npm ci --production --prefix backed
 
 # Instalar dependencias Python básicas
-RUN pip3 install --no-cache-dir --break-system-packages fastapi uvicorn python-dotenv pymysql pandas numpy scikit-learn pydantic requests nltk unidecode mysql-connector-python python-multipart
+RUN pip3 install --no-cache-dir fastapi uvicorn python-dotenv pymysql pandas numpy scikit-learn pydantic requests nltk unidecode mysql-connector-python python-multipart
 
 # Mover el build del frontend
 RUN cp -r cliente/dist/* backed/public/ 2>/dev/null || mkdir -p backed/public && cp -r cliente/dist/* backed/public/
