@@ -20,8 +20,10 @@ RUN apt-get update && apt-get install -y \
 # Copiar archivos del proyecto
 COPY . .
 
-# Asegurar que el directorio uploads esté disponible
+# Asegurar que las imágenes estén en la ubicación correcta
 RUN mkdir -p /app/uploads
+RUN if [ -d "/app/uploads" ]; then echo "Uploads directory exists with $(ls -la /app/uploads | wc -l) files"; fi
+RUN ls -la /app/uploads/ || echo "No uploads directory found"
 
 # Build del frontend con fix para Rollup
 WORKDIR /app/cliente

@@ -59,7 +59,15 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // Configuración para servir archivos estáticos desde el directorio uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+const uploadsPath = path.join(__dirname, '../uploads');
+console.log('📂 Uploads path:', uploadsPath);
+console.log('📂 Uploads directory exists:', require('fs').existsSync(uploadsPath));
+if (require('fs').existsSync(uploadsPath)) {
+    const files = require('fs').readdirSync(uploadsPath);
+    console.log(`📂 Found ${files.length} files in uploads:`, files.slice(0, 5));
+}
+
+app.use('/uploads', express.static(uploadsPath, {
   maxAge: '1d', // Caché por 1 día
   setHeaders: function (res, path, stat) {
     res.set('Cache-Control', 'public, max-age=86400'); // 1 día en segundos
@@ -146,6 +154,33 @@ app.get('/api/health', async (req, res) => {
             database: 'disconnected',
             service: 'backend',
             error: error.message 
+        });
+    }
+});
+
+// Endpoint de debug para verificar imágenes
+app.get('/api/debug/uploads', (req, res) => {
+    const fs = require('fs');
+    const uploadsPath = path.join(__dirname, '../uploads');
+    
+    try {
+        const exists = fs.existsSync(uploadsPath);
+        let files = [];
+        
+        if (exists) {
+            files = fs.readdirSync(uploadsPath);
+        }
+        
+        res.json({
+            uploadsPath,
+            exists,
+            fileCount: files.length,
+            files: files.slice(0, 10) // Primeros 10 archivos
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message,
+            uploadsPath
         });
     }
 });
