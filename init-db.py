@@ -23,11 +23,17 @@ def init_database():
         
         print("✅ Conexión exitosa a Railway MySQL")
         
-        # Verificar si las tablas ya existen
+        # Verificar si las tablas críticas existen
         cursor = connection.cursor()
         cursor.execute("SHOW TABLES LIKE 'categorias'")
-        if cursor.fetchone():
-            print("🔍 Las tablas ya existen, saltando inicialización...")
+        categorias_exist = cursor.fetchone()
+        cursor.execute("SHOW TABLES LIKE 'pedidos'")  
+        pedidos_exist = cursor.fetchone()
+        cursor.execute("SHOW TABLES LIKE 'productos'")
+        productos_exist = cursor.fetchone()
+        
+        if categorias_exist and pedidos_exist and productos_exist:
+            print("🔍 Todas las tablas críticas ya existen, saltando inicialización...")
             cursor.close()
             connection.close()
             return

@@ -4,7 +4,7 @@ Sistema LCLN Mejorado - Módulo principal
 Integra todos los componentes del analizador léxico LYNX
 """
 
-from analizador_lexico import AnalizadorLexico
+from analizador_lexico import AnalizadorLexicoLYNX as AnalizadorLexico
 from interpretador_semantico import InterpretadorSemantico
 from motor_recomendaciones import MotorRecomendaciones
 
